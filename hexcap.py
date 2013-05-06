@@ -104,7 +104,7 @@ def sectionCenter(sid):
 
 # Debugging output
 def dbg(str):
-  if(cfg.dbg):
+  if(cfg.debug):
     dbgF.write(str + '\n')
 
 class Section:
@@ -422,8 +422,8 @@ class Capture:
   # Writes our capture to the passed filehandle
   def write(self, f):
     out = dpkt.pcap.Writer(f)
-#    for pkt in self.packets:
-#      out.writepkt(pkt.data())
+    for pkt in self.packets:
+      out.writepkt(pkt.data())
 
 class Packet:
   def __init__(self, ts, packet, pid):
@@ -445,12 +445,16 @@ class Packet:
   # Does not work with timestamps
   def data(self):
     for lay in self.layers:
-      p = []
       if(lay.sName == 'pid' or lay.sName == 'tstamp'):
         continue
-      p.append(lay.toPcap())
-    dbg(repr(p))
-    return dpkt.Packet(p)
+      elif(lay.sName == 'ethernet'):
+        p = lay.toPcap()
+      else:
+        d = p
+        while(len(d.data) != 0):
+          d = d.data
+        d.data = lay.toPcap()
+    return p
 
   # Possibly inaccurate debug dump of pcap info
   def dump(self):

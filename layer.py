@@ -60,11 +60,12 @@ class Ethernet(Layer):
     self.c['eth-src'] = self.pcapToHexStr(data.src, 2, ":")
     self.c['etype'] = self.intToHexStr(data.type).rjust(4, "0")
 
+  # Returns dpkt Ethernet data structure 
   def toPcap(self):
-    rv = dict()
-    rv['dst'] = self.hexStrToPcap(self.c['eth-dst'], ":")
-    rv['src'] = self.hexStrToPcap(self.c['eth-src'], ":")
-    rv['type'] = int(self.c['etype'], 16)
+    rv = dpkt.ethernet.Ethernet()
+    rv.dst = self.hexStrToPcap(self.c['eth-dst'], ":")
+    rv.src = self.hexStrToPcap(self.c['eth-src'], ":")
+    rv.type = int(self.c['etype'], 16)
     return rv
 
 class IPv4(Layer):
@@ -82,15 +83,15 @@ class IPv4(Layer):
     self.c['id'] = data.id
 
   def toPcap(self):
-    rv = dict()
-    rv['dst'] = self.hexStrToPcap(self.c['ipv4-dst'], ".")
-    rv['src'] = self.hexStrToPcap(self.c['ipv4-src'], ".")
-    rv['p'] = int(self.c['proto'], 16)
-    rv['off'] = self.c['off']
-    rv['tos'] = self.c['tos']
-    rv['sum'] = self.c['sum']
-    rv['len'] = self.c['len']
-    rv['id'] = self.c['id']
+    rv = dpkt.ip.IP()
+    rv.dst = self.hexStrToPcap(self.c['ipv4-dst'], ".")
+    rv.src = self.hexStrToPcap(self.c['ipv4-src'], ".")
+    rv.p = int(self.c['proto'], 16)
+    rv.off = self.c['off']
+    rv.tos = self.c['tos']
+    rv.sum = self.c['sum']
+    rv.len = self.c['len']
+    rv.id = self.c['id']
     return rv
 
 class ICMP(Layer):
@@ -106,12 +107,12 @@ class ICMP(Layer):
 
   # BROKEN:Need to further deal with data inside of other data
   def toPcap(self):
-    rv = dict()
-    rv['type'] = int(self.c['type'], 16)
-    rv['sum'] = int(self.c['sum'], 16)
-    rv['id'] = int(self.c['id'], 16)
-    rv['seq'] = int(self.c['seq'], 16)
-    rv['data'] = self.hexStrToPcap(self.c['data'], "?")
+    rv = dpkt.icmp.ICMP()
+    rv.type = int(self.c['type'], 16)
+    rv.sum = int(self.c['sum'], 16)
+    rv.id = int(self.c['id'], 16)
+    rv.seq = int(self.c['seq'], 16)
+    rv.data = self.hexStrToPcap(self.c['data'], "?")
     return rv
 
 class TCP(Layer):
@@ -136,16 +137,16 @@ class TCP(Layer):
     self.opts = dpkt.tcp.parse_opts(data.opts)
 
   def toPcap(self):
-    rv = dict()
-    rv['dport'] = int(self.c['dport'], 16)
-    rv['sport'] = int(self.c['sport'], 16)
-    rv['seq'] = int(self.c['seq'], 16)
-    rv['ack'] = int(self.c['ack'], 16)
-    rv['win'] = int(self.c['win'], 16)
-    rv['off_x2'] = self.c['off_x2']
-    rv['sum'] = self.c['sum']
-    rv['flags'] = self.c['flags']
-    rv['data'] = self.c['data']
+    rv = dpkt.tcp.TCP()
+    rv.dport = int(self.c['dport'], 16)
+    rv.sport = int(self.c['sport'], 16)
+    rv.seq = int(self.c['seq'], 16)
+    rv.ack = int(self.c['ack'], 16)
+    rv.win = int(self.c['win'], 16)
+    rv.off_x2 = self.c['off_x2']
+    rv.sum = self.c['sum']
+    rv.flags = self.c['flags']
+    rv.data = self.c['data']
     return rv
 
 
