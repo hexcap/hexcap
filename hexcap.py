@@ -178,7 +178,7 @@ class EdScreen:
     self.code = locale.getpreferredencoding()
     self.stdscr = curses.initscr()
     curses.noecho()
-    curses.cbreak()
+    curses.raw()
     self.stdscr.keypad(1)
 
     self.headerRows = 2 # Section / Column names
@@ -195,14 +195,13 @@ class EdScreen:
   # Initializes our ncurses pad
   def initPad(self, cap):
     self.cap = cap
-    self.ppadTopY = self.headerRows
-    self.ppadBottomY = self.maxY - self.miniBufferRows 
-    self.ppadRightX = self.maxX
+    self.ppadTopY = self.headerRows # Topmost ppad position on screen
+    self.ppadBottomY = self.maxY - self.miniBufferRows # Bottommost ppad position on screen
     self.ppadCurY = 0 # Current topmost visible line in ppad
-    self.ppadCurX = 0 # Current leftmost visible column in ppad
-    self.ppadCols = self.maxX
-    self.ppadRows = len(self.cap.packets)
+    self.ppadCols = self.maxX # Width of screen
+    self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.ppad = curses.newpad(self.ppadRows, self.ppadCols)
+#    self.ppad = curses.newpad(self.ppadRows, tableWidth())
     self.drawPpad()
     self.refresh()
 
@@ -220,6 +219,7 @@ class EdScreen:
 
   def refresh(self):
     if(curses.is_term_resized(self.maxY, self.maxX)):
+      dbg("Caught resize event. Consider using immedok()")
       self.tearDown()
 
     self.ppadRightX = tableWidth()
@@ -227,7 +227,7 @@ class EdScreen:
     self.drawFooter()
     self.stdscr.move(self.cY, self.cX)
     self.refreshBoldPacket()
-    self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.ppadRightX)
+    self.ppad.refresh(self.ppadCurY, 0, self.ppadTopY, 0, self.ppadBottomY, self.ppadRightX)
     self.stdscr.refresh()
     curses.doupdate()
 
@@ -252,8 +252,8 @@ class EdScreen:
       self.drawPktLine(boldPkt, self.cap.packets[boldPkt].out(), True)
       self.drawPktLine(boldPkt + 1, self.cap.packets[boldPkt + 1].out())
 
+  # Draws a packet line onto our ppad
   # Takes a y value and list of cells that correlates to our global header list
-  # Sets the 'present' attribute of each section
   def drawPktLine(self, y, row, bold=False):
 #    dbg("drawPktLine y:" + str(y) + " pkt:" + str(row['pid']['pid']) + " bold:" + str(bold))
     x = 0
@@ -273,14 +273,6 @@ class EdScreen:
                 self.ppad.addstr(y, x, " ".rjust(width + 1))
                 x += width + 1
 
-  def drawFooter(self):
-    y = self.maxY - self.miniBufferRows
-    self.stdscr.hline(y, 0, "-", 1)
-    self.stdscr.addstr(y, 1, "y:" + str(self.cY).rjust(3))
-    self.stdscr.addstr(y, 7, "x:" + str(self.cX).rjust(3))
-    self.stdscr.addstr(y, 13, "p:" + str(self.ppadCurY + self.cY - self.ppadTopY + 1).rjust(3))
-    self.stdscr.hline(y, 18, "-", self.maxX)
-
   def drawHeader(self):
     x0 = 0
     x1 = 0
@@ -297,8 +289,30 @@ class EdScreen:
         self.stdscr.addstr(0, x0, head)
         x0 += s.width
 
+  def drawFooter(self):
+    y = self.maxY - self.miniBufferRows
+    fName = "[" + self.cap.fName + "]"
+    divide = 3
+    posWidth = 6
+    dashPos = 3 + len(fName)
+    yPos = dashPos + 3
+    xPos = yPos + posWidth + 1
+    pPos = xPos + posWidth
+    lPos = pPos + posWidth
+
+    self.stdscr.hline(y, 0, "-", divide)
+    self.stdscr.addstr(y, divide, fName)
+    self.stdscr.hline(y, dashPos, "-", divide)
+    self.stdscr.addstr(y, yPos, "[y:" + str(self.cY).rjust(3))
+    self.stdscr.addstr(y, xPos, "x:" + str(self.cX).rjust(3))
+    self.stdscr.addstr(y, pPos, "p:" + str(self.ppadCurY + self.cY - self.ppadTopY + 1).rjust(3) + "]")
+    self.stdscr.hline(y, lPos, "-", self.maxX)
+
   # Handles pageUp and pageDown
   def page(self, dY):
+    if(self.ppadBottomY >= self.ppadRows):
+      return
+
     ppadPos = self.cY - self.ppadTopY + self.ppadCurY
     self.drawPktLine(ppadPos, self.cap.packets[ppadPos].out())
 
@@ -366,7 +380,6 @@ class EdScreen:
     return self.stdscr.getch()
 
   def tearDown(self):
-    curses.nocbreak()
     self.stdscr.keypad(0)
     curses.echo()
     curses.endwin()
@@ -397,6 +410,19 @@ class EdScreen:
         self.shiftColumn(cols + 1)
       else:
         return
+
+  # Not yet implemented
+  def markSet(self):
+    return False
+
+  def yank(self):
+    return False
+
+  def paste(self):
+    return False
+
+  def yankPacket(self):
+    return False
 
 class Capture:
   # Takes a filehandle to a pcap file
@@ -528,6 +554,8 @@ fName = sys.argv[1]
 f = open(fName, 'rb')
 pc = Capture(f)
 f.close()
+pc.fName = fName
+
 mainScr = EdScreen()
 mainScr.initPad(pc)
 
@@ -537,6 +565,8 @@ while True:
     c = mainScr.getch()
 
     if(c != -1):
+      dbg("KeyInput:" + str(c))
+
       if(c == curses.KEY_RIGHT):
         mainScr.move(0, 1)
 
@@ -555,7 +585,7 @@ while True:
       elif(c == cfg.KEY_CTRL_B): # Page Up
         mainScr.page(-10)
 
-      elif(c == ord("s")): # Save file
+      elif(c == cfg.KEY_CTRL_S): # Save file
         f = open('outF.pcap', 'wb')
         pc.write(f)
         f.close()
@@ -566,16 +596,28 @@ while True:
       elif(c == ord(">")): # Shift right 1 column
         mainScr.shiftColumn(1)
 
-      elif(c == ord("h")):
+      elif(c == cfg.KEY_CTRL_H): # Hide section
         mainScr.hideSection()
 
-      elif(c == ord("u")):
+      elif(c == cfg.KEY_CTRL_U): # Unhide last hidden section
         mainScr.unhideLastSection()
 
-      elif(c == ord("r")):
+      elif(c == cfg.KEY_CTRL_R): # Refresh screen
         mainScr.refresh()
 
-      elif(c == ord("q")):
+      elif(c == cfg.KEY_CTRL_SPACE): # Set new mark
+        mainScr.markSet()
+
+      elif(c == cfg.KEY_CTRL_Y): # Paste packet(s)
+        mainScr.paste()
+
+      elif(c == cfg.KEY_CTRL_W): # Yank packets
+        mainScr.yank()
+
+      elif(c == cfg.KEY_CTRL_K): # Yank packet
+        mainScr.yankPacket()
+
+      elif(c == cfg.KEY_CTRL_Q or c == ord("q")):
         if(cfg.debug):
           dbgF.close()
         mainScr.tearDown()

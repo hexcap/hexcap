@@ -4,13 +4,11 @@ import dpkt
 
 class Layer:
   # Convert int to hex without leading 0x
-  # Previously called chex()
   def intToHexStr(self, num):
     x,rv = hex(num).split("0x")
     return rv
 
   # Change pcap character data to padded hex string without leading 0x
-  # Previously called mex()
   def binToHexStr(self, val, ln):
     x,rv = hex(ord(val)).split("0x")
     return rv.rjust(ln, "0")
@@ -148,7 +146,6 @@ class TCP(Layer):
     rv.flags = self.c['flags']
     rv.data = self.c['data']
     return rv
-
 
 # Run through some tests for our Layers
 # Takes a capture file
