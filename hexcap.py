@@ -104,7 +104,7 @@ def sectionCenter(sid):
 
 # Debugging output
 def dbg(str):
-  if(dbg):
+  if(cfg.dbg):
     dbgF.write(str + '\n')
 
 class Section:
@@ -422,11 +422,12 @@ class Capture:
   # Writes our capture to the passed filehandle
   def write(self, f):
     out = dpkt.pcap.Writer(f)
-    for pkt in self.packets:
-      out.writepkt(pkt.data())
+#    for pkt in self.packets:
+#      out.writepkt(pkt.data())
 
 class Packet:
   def __init__(self, ts, packet, pid):
+    self.packet = packet # Should only be used for debugging
     self.unsupported = False
     self.layers = []
     self.layers.append(layer.PktID(pid))
@@ -440,11 +441,18 @@ class Packet:
   def __getattr__(self, key):
     return None
 
-  # Returns the pcap formatted packet and timestamp for writing to disk
+  # Returns the pcap formatted packet
   # Does not work with timestamps
   def data(self):
-    return dpkt.Packet.pack(self.eth)
+    for lay in self.layers:
+      p = []
+      if(lay.sName == 'pid' or lay.sName == 'tstamp'):
+        continue
+      p.append(lay.toPcap())
+    dbg(repr(p))
+    return dpkt.Packet(p)
 
+  # Possibly inaccurate debug dump of pcap info
   def dump(self):
     return repr(dpkt.ethernet.Ethernet(self.packet))
 
@@ -505,7 +513,7 @@ class Packet:
 # BEGIN PROGRAM EXECUTION #
 ###########################
 if(cfg.debug):
-  dbgF = open('edpcap.log', 'a', 0)
+  dbgF = open('hexcap.log', 'a', 0)
   
 # Check for bad args
 if(len(sys.argv) != 2): usage("Insufficient Arguments")
@@ -544,7 +552,7 @@ while True:
         mainScr.page(-10)
 
       elif(c == ord("s")): # Save file
-        f = open(fName, 'wb')
+        f = open('outF.pcap', 'wb')
         pc.write(f)
         f.close()
 
@@ -572,5 +580,4 @@ while True:
     mainScr.tearDown()
     if(cfg.debug):
       dbgF.close()
-    
-
+  
