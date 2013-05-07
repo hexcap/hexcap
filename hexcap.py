@@ -113,7 +113,7 @@ class Section:
     self.c = OrderedDict() # OrderedDict of columns
     self.width = 0 # Width of complete section
     self.present = False # Is this section present in our capture?
-    self.visible = True # Is this section visible?
+    self.visible = True # Is this section currently visible?
 
   def __len__(self):
     return len(self.c)
@@ -192,6 +192,9 @@ class EdScreen:
     # Our stack of hidden sections
     self.hiddenSectNames = []
 
+    # Are we in insert mode?
+    self.insert = False
+
   # Initializes our ncurses pad
   def initPad(self, cap):
     self.cap = cap
@@ -201,17 +204,27 @@ class EdScreen:
     self.ppadCols = self.maxX # Width of screen
     self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.ppad = curses.newpad(self.ppadRows, self.ppadCols)
-#    self.ppad = curses.newpad(self.ppadRows, tableWidth())
+
     self.drawPpad()
     self.refresh()
 
   # Completely redraws our ppad and determines which sections are present
+  # Sets self.displayTableWidth
   def drawPpad(self):
     for p in self.cap.packets:
-      for s in sections:
+     for s in sections:
         if(s.id in p.out()):
           s.present = True
 
+    self.displayTableWidth = 0 # Width of displayed columns
+    for s in sections:
+      if(s.present and s.visible):
+        if(self.displayTableWidth + s.width <= self.maxX):
+          self.displayTableWidth += s.width
+        else:
+          break
+
+    self.ppad.clear()
     y = 0
     for p in self.cap.packets:
       self.drawPktLine(y, p.out())
@@ -255,11 +268,13 @@ class EdScreen:
   # Draws a packet line onto our ppad
   # Takes a y value and list of cells that correlates to our global header list
   def drawPktLine(self, y, row, bold=False):
-#    dbg("drawPktLine y:" + str(y) + " pkt:" + str(row['pid']['pid']) + " bold:" + str(bold))
+#    dbg("drawPktLine y:" + str(y) + " pkt:" + str(row['pid']['pid']) + " bold:" + str(bold) \
+#    + " displayTableWidth:" + str(self.displayTableWidth))
+
     x = 0
     for s in sections:
-      if(s.visible):
-        if(x + s.width < self.maxX):
+      if(s.visible and s.present):
+        if(self.displayTableWidth >= x + s.width):
           for colName, width in s.c.iteritems():
             if(s.id in row):
               if(bold):
@@ -272,41 +287,74 @@ class EdScreen:
               if(s.present):
                 self.ppad.addstr(y, x, " ".rjust(width + 1))
                 x += width + 1
+        else:
+          return
 
+  # Draws our top 2 header rows
   def drawHeader(self):
     x0 = 0
     x1 = 0
     for s in sections:
       sectId = s.id
       if(s.visible and s.present):
-        for column, width in s.c.iteritems():
-          col = column.center(width, " ")
-          self.stdscr.addstr(1, x1, col + "|", curses.A_REVERSE)
-          x1 += width + 1
+        if(self.displayTableWidth >= x0 + s.width):
+          for column, width in s.c.iteritems():
+            col = column.center(width, " ")
+            self.stdscr.addstr(1, x1, col + "|", curses.A_REVERSE)
+            x1 += width + 1
 
-        head = "{" + sectId + "}"
-        head = head.center(s.width - 1, " ") + "|"
-        self.stdscr.addstr(0, x0, head)
-        x0 += s.width
+          head = "{" + sectId + "}"
+          head = head.center(s.width - 1, " ") + "|"
+          self.stdscr.addstr(0, x0, head)
+          x0 += s.width
+        else:
+          return
 
   def drawFooter(self):
     y = self.maxY - self.miniBufferRows
     fName = "[" + self.cap.fName + "]"
-    divide = 3
+    divider = 3
     posWidth = 6
-    dashPos = 3 + len(fName)
-    yPos = dashPos + 3
-    xPos = yPos + posWidth + 1
-    pPos = xPos + posWidth
-    lPos = pPos + posWidth
 
-    self.stdscr.hline(y, 0, "-", divide)
-    self.stdscr.addstr(y, divide, fName)
-    self.stdscr.hline(y, dashPos, "-", divide)
-    self.stdscr.addstr(y, yPos, "[y:" + str(self.cY).rjust(3))
-    self.stdscr.addstr(y, xPos, "x:" + str(self.cX).rjust(3))
-    self.stdscr.addstr(y, pPos, "p:" + str(self.ppadCurY + self.cY - self.ppadTopY + 1).rjust(3) + "]")
-    self.stdscr.hline(y, lPos, "-", self.maxX)
+    self.stdscr.hline(y, 0, "-", divider)
+    x = divider
+
+    self.stdscr.addstr(y, x, fName)
+    x += len(fName)
+
+    self.stdscr.hline(y, x, "-", divider)
+    x += divider
+
+    self.stdscr.addstr(y, x, "[y:" + str(self.cY).rjust(3))
+    x += posWidth
+
+    self.stdscr.addstr(y, x, " x:" + str(self.cX).rjust(3))
+    x += posWidth
+
+    txt = " p:" + str(self.ppadCurY + self.cY - self.ppadTopY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
+    self.stdscr.addstr(y, x, txt)
+    x += len(txt)
+
+    self.stdscr.hline(y, x, "-", divider)
+    x += divider
+
+    if(self.insert):
+      txt = "[INS]"
+    else:
+      txt = "[NAV]"
+    self.stdscr.addstr(y, x, txt)
+    x += len(txt)
+
+    self.stdscr.hline(y, x, "-", divider)
+    x += divider
+
+    s,c = cursorColumn(self.cX)
+    txt = "[" + s.id + "]"
+    self.stdscr.addstr(y, x, txt)
+    x += len(txt)
+
+    if(self.displayTableWidth > x):
+      self.stdscr.hline(y, x, "-", self.displayTableWidth - x)
 
   # Handles pageUp and pageDown
   def page(self, dY):
@@ -329,6 +377,33 @@ class EdScreen:
       else:
         self.cY = self.ppadTopY
 
+  # Moves cursor right and left by columns
+  def shiftColumn(self, cols):
+    if(cols == 0):
+      return
+
+    sect, col = cursorColumn(self.cX)
+    if(cols > 0):
+      if(self.cX + sect.c[col] < self.displayTableWidth - 1):
+        self.cX = columnLeft(sect.id, col)
+        for cName, cWidth in sect.c.iteritems():
+          if(cName == col):
+            self.cX += cWidth + 1
+
+        self.shiftColumn(cols - 1)
+      else:
+        return
+    else:
+      if(self.cX - sect.c[col] >= 0):
+        self.cX = columnRight(sect.id, col)
+        for cName, cWidth in sect.c.iteritems():
+          if(cName == col):
+            self.cX -= cWidth + 1
+
+        self.shiftColumn(cols + 1)
+      else:
+        return
+
   # Moves our cursor, takes deltaY and deltaX, one delta value MUST be 0 and the other MUST NOT be 0
   def move(self, dY, dX):
     if(dY != 0):
@@ -348,7 +423,7 @@ class EdScreen:
 
     elif(dX != 0):
       if(dX > 0):
-        if(self.cX + dX < self.ppadRightX):          
+        if(self.cX + dX < self.displayTableWidth - 1):
           self.cX += dX
       else:
         if(self.cX + dX >= 0):
@@ -359,10 +434,9 @@ class EdScreen:
       s = cursorSection(self.cX)
       s.visible = False
       self.hiddenSectNames.append(s.id)
-      self.cX -= int(math.floor(s.width / 2)) + 1
-      self.cX = min(max(self.cX, 0), tableWidth() - 1)
       self.stdscr.clear()
-      self.drawPpad()
+      self.drawPpad() # Sets self.displayTableWidth
+      self.cX = min(self.cX, self.displayTableWidth - 2)
       self.refresh()
 
   def unhideLastSection(self):
@@ -376,6 +450,12 @@ class EdScreen:
       self.drawPpad()
       self.refresh()
 
+  def toggleInsert(self):
+    if(self.insert == True):
+      self.insert = False
+    else:
+      self.insert = True
+
   def getch(self):
     return self.stdscr.getch()
 
@@ -384,32 +464,6 @@ class EdScreen:
     curses.echo()
     curses.endwin()
     sys.exit(0)
-
-  def shiftColumn(self, cols):
-    if(cols == 0):
-      return
-
-    sect, col = cursorColumn(self.cX)
-    if(cols > 0):
-      if(self.cX + sect.c[col] < self.ppadRightX):
-        self.cX = columnLeft(sect.id, col)
-        for cName, cWidth in sect.c.iteritems():
-          if(cName == col):
-            self.cX += cWidth + 1
-
-        self.shiftColumn(cols - 1)
-      else:
-        return
-    else:
-      if(self.cX - sect.c[col] >= 0):
-        self.cX = columnRight(sect.id, col)
-        for cName, cWidth in sect.c.iteritems():
-          if(cName == col):
-            self.cX -= cWidth + 1
-
-        self.shiftColumn(cols + 1)
-      else:
-        return
 
   # Not yet implemented
   def markSet(self):
@@ -565,7 +619,7 @@ while True:
     c = mainScr.getch()
 
     if(c != -1):
-      dbg("KeyInput:" + str(c))
+      dbg("KeyPress:" + str(c))
 
       if(c == curses.KEY_RIGHT):
         mainScr.move(0, 1)
@@ -604,6 +658,9 @@ while True:
 
       elif(c == cfg.KEY_CTRL_R): # Refresh screen
         mainScr.refresh()
+
+      elif(c == cfg.KEY_CTRL_I): # Toggle insert mode
+        mainScr.toggleInsert()
 
       elif(c == cfg.KEY_CTRL_SPACE): # Set new mark
         mainScr.markSet()
