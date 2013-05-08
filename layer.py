@@ -111,6 +111,7 @@ class IPv4(Layer):
     rv.id = self.c['id']
     return rv
 
+# Assumes ICMP type is either 0 or 8(echo or echo_reply)
 class ICMP(Layer):
   sName = "icmp"
   
@@ -120,16 +121,16 @@ class ICMP(Layer):
     self.c['sum'] = self.intToHexStr(data.sum)
     self.c['id'] = self.intToHexStr(data.data.id)
     self.c['seq'] = self.intToHexStr(data.data.seq)
-    self.c['data'] = self.pcapToHexStr(data.data.data, len(data.data.data), "?")
+    self.c['data'] = data.data.data
 
-  # BROKEN:Need to further deal with data inside of other data
   def toPcap(self):
     rv = dpkt.icmp.ICMP()
+    rv.data = dpkt.icmp.ICMP.Echo()
     rv.type = int(self.c['type'], 16)
     rv.sum = int(self.c['sum'], 16)
-    rv.id = int(self.c['id'], 16)
-    rv.seq = int(self.c['seq'], 16)
-    rv.data = self.hexStrToPcap(self.c['data'], "?")
+    rv.data.id = int(self.c['id'], 16)
+    rv.data.seq = int(self.c['seq'], 16)
+    rv.data.data = self.c['data']
     return rv
 
 class TCP(Layer):

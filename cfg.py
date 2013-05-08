@@ -27,6 +27,7 @@ debug = True
 pktIDWidth = 5
 
 # Key Constants
+# Consider using curses.keyname(k)
 KEY_CTRL_SPACE = 0
 KEY_CTRL_B = 2
 KEY_CTRL_F = 6
@@ -39,4 +40,14 @@ KEY_CTRL_U = 21
 KEY_CTRL_W = 23
 KEY_CTRL_Y = 25
 KEY_CTRL_H = 263
+
+hexChars = []
+for x in xrange(0,9):
+  hexChars.append(ord(str(x)))
+hexChars.append(ord('a'))
+hexChars.append(ord('b'))
+hexChars.append(ord('c'))
+hexChars.append(ord('d'))
+hexChars.append(ord('e'))
+hexChars.append(ord('f'))
 

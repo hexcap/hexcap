@@ -132,6 +132,7 @@ class Section:
     self.width = 0 # Width of complete section
     self.present = False # Is this section present in our capture?
     self.visible = True # Is this section currently visible?
+    self.RO = False # Is this section ReadOnly? Can it be modified by the user
 
   def __len__(self):
     return len(self.c)
@@ -159,9 +160,11 @@ class Section:
 
 pid = Section('pid')
 pid.append('pid', cfg.pktIDWidth)
+pid.RO = True
 
 tstamp = Section('tstamp')
 tstamp.append('tstamp', 13)
+tstamp.RO = True
 
 ethernet = Section('ethernet')
 ethernet.append('eth-dst', 17)
@@ -214,6 +217,7 @@ class EdScreen:
     self.insert = False
 
   # Initializes our ncurses pad
+  # Takes a Capture object
   def initPad(self, cap):
     self.cap = cap
     self.ppadTopY = self.headerRows # Topmost ppad position on screen
@@ -410,6 +414,8 @@ class EdScreen:
 
         self.shiftColumn(cols - 1)
       else:
+        curses.flash()
+        curses.napms(10)
         return
     else:
       if(self.cX - sect.c[col] >= 0):
@@ -420,6 +426,8 @@ class EdScreen:
 
         self.shiftColumn(cols + 1)
       else:
+        curses.flash()
+        curses.napms(10)
         return
 
   # Moves our cursor, takes deltaY and deltaX, one delta value MUST be 0 and the other MUST NOT be 0
@@ -477,6 +485,34 @@ class EdScreen:
   def getch(self):
     return self.stdscr.getch()
 
+  # Takes ppad relative y,x coordinates
+  # Returns list((int)attributes, (chr)character) at that location on our ppad
+  def inch(self, y, x):
+    inpt = hex(self.ppad.inch(y, x))
+    return list((int(inpt[2:4], 16), chr(int(inpt[4:], 16))))
+
+  # Handles our character insertion
+  def handleInsert(self, c):
+    ppadCY = self.ppadCurY + self.cY - self.ppadTopY
+    attr,char = self.inch(ppadCY, self.cX)
+    if(ord(char) not in cfg.hexChars): # immutable character
+      dbg("Attempted to modify immutable character")
+      return
+
+    sect,col = cursorColumn(self.cX)
+    leftX = columnLeft(sect.id, col)
+    rightX = columnRight(sect.id, col)
+
+    val = ""
+    for x in xrange(leftX, rightX + 1):
+      if(x == self.cX):
+        val += chr(c)
+      else:
+        attr,char = self.inch(ppadCY, x)
+        val += char
+
+    dbg("ppadCY:" + str(ppadCY) + " c:" + chr(c) + " " + val)
+
   def tearDown(self):
     self.stdscr.keypad(0)
     curses.echo()
@@ -498,7 +534,9 @@ class EdScreen:
 
 class Capture:
   # Takes a filehandle to a pcap file
-  def __init__(self, f):
+  def __init__(self, f, name=''):
+    if(len(name) > 0):
+      self.fName = name
     self.read(f)
 
   # Reads a filehandle to a pcap file
@@ -624,9 +662,8 @@ fName = sys.argv[1]
 
 # Initialize
 f = open(fName, 'rb')
-pc = Capture(f)
+pc = Capture(f, fName)
 f.close()
-pc.fName = fName
 
 mainScr = EdScreen()
 mainScr.initPad(pc)
@@ -638,6 +675,10 @@ while True:
 
     if(c != -1):
       dbg("KeyPress:" + str(c))
+
+      if(mainScr.insert):
+        if(c in cfg.hexChars):
+          mainScr.handleInsert(c)
 
       if(c == curses.KEY_RIGHT):
         mainScr.move(0, 1)
@@ -658,7 +699,7 @@ while True:
         mainScr.page(-10)
 
       elif(c == cfg.KEY_CTRL_S): # Save file
-        f = open('outF.pcap', 'wb')
+        f = open(pc.fName, 'wb')
         pc.write(f)
         f.close()
 
@@ -674,8 +715,12 @@ while True:
       elif(c == cfg.KEY_CTRL_U): # Unhide last hidden section
         mainScr.unhideLastSection()
 
-      elif(c == cfg.KEY_CTRL_R): # Refresh screen
-        mainScr.refresh()
+      elif(c == cfg.KEY_CTRL_R): # Reread packet capture from disk
+        fName = pc.fName
+        f = open(fName, 'rb')
+        pc = Capture(f, fName)
+        f.close()
+        mainScr.initPad(pc)
 
       elif(c == cfg.KEY_CTRL_I): # Toggle insert mode
         mainScr.toggleInsert()
