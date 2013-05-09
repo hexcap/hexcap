@@ -41,6 +41,7 @@ KEY_CTRL_W = 23
 KEY_CTRL_Y = 25
 KEY_CTRL_H = 263
 
+# Allowed hexidecimal characters
 hexChars = []
 for x in xrange(0,9):
   hexChars.append(ord(str(x)))
