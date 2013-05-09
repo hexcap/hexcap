@@ -48,6 +48,10 @@ class Layer:
       rv += chr(int(b, 16))
     return rv
 
+  # Sets column to val
+  def setColumn(self, col, val):
+    self.c[col] = val
+
 class PktID(Layer):
   sName = "pid"
 
