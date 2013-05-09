@@ -583,6 +583,7 @@ class EdScreen:
 class Capture:
   # Takes a filehandle to a pcap file
   def __init__(self, f, name=''):
+    self.clipboard = [] # Our buffer for yanking and pasting
     if(len(name) > 0):
       self.fName = name
     self.read(f)
@@ -609,6 +610,24 @@ class Capture:
     for pkt in self.packets:
       out.writepkt(pkt.data())
 
+  # Yanks packets from main capture and puts them in the clipboard
+  # Takes inclusive first and last packets to be yanked as integers(zero based)
+  def yank(self, first, last):
+    for ii in xrange(first, last + 1):
+      self.clipboard.append(self.packets.pop(ii))
+
+    # Reset pkt IDs
+    for ii in xrange(first, len(self.packets) + 1):
+      for lay in self.packets[ii].layers:
+        if(lay.sName == 'pid'):
+          lay.setColumn('pid', first + ii)
+
+  # Pastes packets from our clipboard to our main capture
+  # Takes the packet imediately following the paste point as an integer(zero based)
+  def paste(self, pkt):
+    for ii in xrange(0, len(self.clipboard)):
+      self.packets.insert(pkt + ii, self.clipboard.pop(0))
+  
 
 ###########################
 # BEGIN PROGRAM EXECUTION #
