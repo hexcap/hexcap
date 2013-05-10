@@ -59,6 +59,10 @@ class PktID(Layer):
     self.c = dict()
     self.c['pid'] = str(pid).rjust(cfg.pktIDWidth, "0")
 
+  # Overloading virtual since we're picky about pid
+  def setColumn(self, col, val):
+    self.c[col] = str(val).rjust(cfg.pktIDWidth, "0")
+
   def toPcap(self):
     return False
 

@@ -143,13 +143,12 @@ class Section:
     self.c = OrderedDict() # OrderedDict of columns
     self.width = 0 # Width of complete section
     self.present = False # Is this section present in our capture?
+    self.alwaysPresent = False # Is this section always present on screen? May still be made invisible.
     self.visible = True # Is this section currently visible?
     self.RO = False # Is this section ReadOnly? Can it be modified by the user
 
   def __len__(self):
     return len(self.c)
-
-#  def __iter__(self):
 
   def __getitem__(self, key):
     return self.c[key]
@@ -173,10 +172,14 @@ class Section:
 pid = Section('pid')
 pid.append('pid', cfg.pktIDWidth)
 pid.RO = True
+pid.present = True
+pid.alwaysPresent = True
 
 tstamp = Section('tstamp')
 tstamp.append('tstamp', 13)
 tstamp.RO = True
+tstamp.present = True
+tstamp.alwaysPresent = True
 
 ethernet = Section('ethernet')
 ethernet.append('eth-dst', 17)
@@ -232,8 +235,14 @@ class EdScreen:
     # Are we in insert mode?
     self.insert = False
 
-    # Packet ID of marked packet.
+    # Packet ID of marked packet. One based.
     self.mark = 0
+
+  def tearDown(self):
+    self.stdscr.keypad(0)
+    curses.echo()
+    curses.endwin()
+    sys.exit(0)
 
   # Initializes our ncurses pad
   # Takes a Capture object
@@ -253,10 +262,15 @@ class EdScreen:
   # Completely redraws our ppad and determines which sections are present
   # Sets self.displayTableWidth
   def drawPpad(self):
+
+    # Set section.present
+    for s in sections:
+      if(not s.alwaysPresent):
+        s.present = False
     for p in self.cap.packets:
      for s in sections:
-        if(s.id in p.out()):
-          s.present = True
+       if(s.id in p.out()):
+         s.present = True
 
     self.displayTableWidth = 0 # Width of displayed columns
     for s in sections:
@@ -266,6 +280,7 @@ class EdScreen:
         else:
           break
 
+    self.stdscr.clear()
     self.ppad.clear()
     y = 0
     for p in self.cap.packets:
@@ -288,6 +303,9 @@ class EdScreen:
 
   # Bold and unbold packets
   def refreshBoldPacket(self):
+    if(len(self.cap.packets) == 0):
+      return
+
 #    dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
     self.drawPktLine(self.ppadCY, self.cap.packets[self.ppadCY].out(), True)
 
@@ -332,6 +350,8 @@ class EdScreen:
   # Draws a packet line onto our ppad
   # Takes a y value and list of cells that correlates to our global header list
   def drawPktLine(self, y, row, bold=False):
+#    dbg("y:" + str(y) + " row['pid']:" + str(row['pid']))
+
     x = 0
     for s in sections:
       if(s.visible and s.present):
@@ -502,7 +522,6 @@ class EdScreen:
       s = cursorSection(self.cX)
       s.visible = False
       self.hiddenSectNames.append(s.id)
-      self.stdscr.clear()
       self.drawPpad() # Sets self.displayTableWidth
       self.cX = min(self.cX, self.displayTableWidth - 2)
       self.refresh()
@@ -514,7 +533,6 @@ class EdScreen:
         if(s.id == sectId):
           s.visible = True
           self.cX = sectionCenter(sectId)
-      self.stdscr.clear()
       self.drawPpad()
       self.refresh()
 
@@ -559,24 +577,37 @@ class EdScreen:
     self.cap.packets[self.ppadCY].setColumn(sect.id, col, val)
     self.move(0, 1)
 
-  def tearDown(self):
-    self.stdscr.keypad(0)
-    curses.echo()
-    curses.endwin()
-    sys.exit(0)
-
   def setMark(self):
     if(self.mark):
       self.drawPpad()
     self.mark = self.ppadCY + 1
 
-  # Not yet implemented
+  # Called after an action may cause cY or cX to be in illegal position
+  # Returns cY and cX to legal position(s)
+  def resetCursor(self):
+    if(len(self.cap.packets) == 0):
+      self.cY = self.ppadTopY
+
+    if(self.cX > self.displayTableWidth):
+      self.cX = self.displayTableWidth
+
   def yank(self):
-    return False
+#    dbg("ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
+    if(not self.mark):
+      return
+
+    if(self.ppadCY <= self.mark - 1):
+      self.cap.yank(self.ppadCY, self.mark - 1)
+    else:
+      self.cap.yank(self.mark - 1, self.ppadCY)
+    self.mark = 0
+    self.drawPpad()
+    self.resetCursor()
 
   def paste(self):
     return False
 
+  # Not yet implemented
   def yankPacket(self):
     return False
 
@@ -613,14 +644,13 @@ class Capture:
   # Yanks packets from main capture and puts them in the clipboard
   # Takes inclusive first and last packets to be yanked as integers(zero based)
   def yank(self, first, last):
+    dbg("def_yank len_packets:" + str(len(self.packets)) + " first:" + str(first) + " last:" + str(last))
     for ii in xrange(first, last + 1):
-      self.clipboard.append(self.packets.pop(ii))
-
-    # Reset pkt IDs
-    for ii in xrange(first, len(self.packets) + 1):
-      for lay in self.packets[ii].layers:
-        if(lay.sName == 'pid'):
-          lay.setColumn('pid', first + ii)
+      if(ii >= len(self.packets)):
+        self.clipboard.append(self.packets.pop())
+      else:
+        self.clipboard.append(self.packets.pop(ii))
+    self.resetPIDs(first)
 
   # Pastes packets from our clipboard to our main capture
   # Takes the packet imediately following the paste point as an integer(zero based)
@@ -628,6 +658,21 @@ class Capture:
     for ii in xrange(0, len(self.clipboard)):
       self.packets.insert(pkt + ii, self.clipboard.pop(0))
   
+    # Reset pkt IDs
+    for ii in xrange(pkt, len(self.packets)):
+      for lay in self.packets[ii].layers:
+        if(lay.sName == 'pid'):
+          return False
+
+  # Resets pktIDs from first to end
+  # Takes starting packet as integer
+  def resetPIDs(self, first):
+    for ii in xrange(first, len(self.packets)):
+      for lay in self.packets[ii].layers:
+        if(lay.sName == 'pid'):
+          dbg("ii:" + str(ii))
+          lay.setColumn('pid', ii + 1)
+
 
 ###########################
 # BEGIN PROGRAM EXECUTION #
