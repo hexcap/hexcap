@@ -43,7 +43,7 @@ KEY_CTRL_H = 263
 
 # Allowed hexidecimal characters
 hexChars = []
-for x in xrange(0,9):
+for x in xrange(0,10):
   hexChars.append(ord(str(x)))
 hexChars.append(ord('a'))
 hexChars.append(ord('b'))

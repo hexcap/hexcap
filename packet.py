@@ -44,6 +44,12 @@ class Packet:
       if(lay.sName == sid):
         lay.setColumn(col, val)
 
+  # Returns PID of packet
+  def getPID(self):
+    for lay in self.layers:
+      if(lay.sName == 'pid'):
+        return lay.c['pid']
+
   # Returns the pcap formatted packet
   # Does not work with timestamps
   def data(self):

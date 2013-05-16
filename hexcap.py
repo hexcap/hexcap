@@ -251,7 +251,6 @@ class EdScreen:
     self.ppadTopY = self.headerHeight # Topmost ppad position on screen
     self.ppadBottomY = self.maxY - self.miniBufferHeight # Bottommost ppad position on screen
     self.ppadCurY = 0 # Current topmost visible line in ppad
-    self.ppadCY = 0 # Y Position of cursor in ppad
     self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.ppad = curses.newpad(self.ppadRows, self.maxX)
 
@@ -259,9 +258,9 @@ class EdScreen:
     self.refresh()
 
   # Completely redraws our ppad and determines which sections are present
-  # Sets self.displayTableWidth
+  # Sets displayTableWidth
   def drawPpad(self):
-    if(self.ppadRows != len(self.cap.packets)): # Our capture has grown in size
+    if(self.ppadRows != len(self.cap.packets)): # Our capture has changed in size
       self.ppadRows = len(self.cap.packets)
       self.ppad = curses.newpad(self.ppadRows, self.maxX)
 
@@ -288,7 +287,6 @@ class EdScreen:
     self.ppad.clear()
     y = 0
     for p in self.cap.packets:
-      dbg("y:" + str(y))
       self.drawPktLine(y, p.out())
       y += 1
 
@@ -296,8 +294,7 @@ class EdScreen:
     if(curses.is_term_resized(self.maxY, self.maxX)):
       dbg("Caught resize event. Consider using immedok()")
       self.tearDown()
-
-    self.ppadCY = self.ppadCurY + self.cY - self.ppadTopY
+    
     self.drawHeader()
     self.drawFooter()
     self.stdscr.move(self.cY, self.cX)
@@ -306,9 +303,14 @@ class EdScreen:
     self.stdscr.refresh()
     curses.doupdate()
 
+  # Returns the relative Y cursor position in our ppad
+  # This is basically just a Macro
+  def ppadCY(self):
+    return self.ppadCurY + self.cY - self.ppadTopY
+
   # Handle regular refreshing of packet lines
-#    dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
   def refreshBoldPacket(self):
+    dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY()) + " mark:" + str(self.mark))
     if(len(self.cap.packets) == 0):
       return
     elif(len(self.cap.packets) == 1):
@@ -319,46 +321,46 @@ class EdScreen:
       return
 
     if(self.mark):
-      self.drawPktLine(self.ppadCY, self.cap.packets[self.ppadCY].out(), False, True)
+      self.drawPktLine(self.ppadCY(), self.cap.packets[self.ppadCY()].out(), False, True)
 
-      if(self.ppadCY < self.mark - 1): # Cursor is above mark
-        if(self.ppadCY > 0):
-          self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out())
-        for pkt in xrange(self.mark - 1, self.ppadCY + 1, -1):
+      if(self.ppadCY() < self.mark - 1): # Cursor is above mark
+        if(self.ppadCY() > 0):
+          self.drawPktLine(self.ppadCY() - 1, self.cap.packets[self.ppadCY() - 1].out())
+        for pkt in xrange(self.mark - 1, self.ppadCY() + 1, -1):
           self.drawPktLine(pkt, self.cap.packets[pkt].out(), False, True)
         if(self.mark <= len(self.cap.packets) - 1):
           self.drawPktLine(self.mark, self.cap.packets[self.mark].out())
 
-      elif(self.ppadCY == self.mark - 1): # Cursor is on mark
+      elif(self.ppadCY() == self.mark - 1): # Cursor is on mark
         if(self.mark > 1):
-          self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out()) 
+          self.drawPktLine(self.ppadCY() - 1, self.cap.packets[self.ppadCY() - 1].out()) 
         if(self.mark <= len(self.cap.packets) - 1):
-          self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
+          self.drawPktLine(self.ppadCY() + 1, self.cap.packets[self.ppadCY() + 1].out())
 
-      elif(self.ppadCY > self.mark - 1): # Cursor is below mark
+      elif(self.ppadCY() > self.mark - 1): # Cursor is below mark
         if(self.mark > 1):
           self.drawPktLine(self.mark - 2, self.cap.packets[self.mark - 2].out()) 
-        for pkt in xrange(self.mark - 1, self.ppadCY + 1):
+        for pkt in xrange(self.mark - 1, self.ppadCY() + 1):
           self.drawPktLine(pkt, self.cap.packets[pkt].out(), False, True)
-        if(self.ppadCY < len(self.cap.packets) - 1):
-            self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
+        if(self.ppadCY() < len(self.cap.packets) - 1):
+            self.drawPktLine(self.ppadCY() + 1, self.cap.packets[self.ppadCY() + 1].out())
 
     else:
-      self.drawPktLine(self.ppadCY, self.cap.packets[self.ppadCY].out(), True)
+      self.drawPktLine(self.ppadCY(), self.cap.packets[self.ppadCY()].out(), True)
 
-      if(self.ppadCY == 0): # First packet in ppad
+      if(self.ppadCY() == 0): # First packet in ppad
         if(len(self.cap.packets) > 1):
           self.drawPktLine(1, self.cap.packets[1].out())
         
       elif(self.cY == self.ppadTopY - 1): # Top packet on screen
-        self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
+        self.drawPktLine(self.ppadCY() + 1, self.cap.packets[self.ppadCY() + 1].out())
 
-      elif((self.cY == self.ppadBottomY - 1) or (len(self.cap.packets) == self.ppadCY + 1)): # Bottom packet on screen
-        self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out())
+      elif((self.cY == self.ppadBottomY - 1) or (len(self.cap.packets) == self.ppadCY() + 1)): # Bottom packet on screen
+        self.drawPktLine(self.ppadCY() - 1, self.cap.packets[self.ppadCY() - 1].out())
 
       else: # Middle packet on screen
-        self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out())
-        self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
+        self.drawPktLine(self.ppadCY() - 1, self.cap.packets[self.ppadCY() - 1].out())
+        self.drawPktLine(self.ppadCY() + 1, self.cap.packets[self.ppadCY() + 1].out())
 
   # Draws a packet line onto our ppad
   # Takes a y value and list of cells that correlates to our global header list
@@ -574,7 +576,7 @@ class EdScreen:
   # Handles our character insertion
   # Modifies column then increments cursor X position by 1
   def handleInsert(self, c):
-    attr,char = self.inch(self.ppadCY, self.cX)
+    attr,char = self.inch(self.ppadCY(), self.cX)
     if(ord(char) not in cfg.hexChars): # immutable character
       self.move(0, 1)
       return
@@ -591,10 +593,10 @@ class EdScreen:
       if(x == self.cX):
         val += chr(c)
       else:
-        attr,char = self.inch(self.ppadCY, x)
+        attr,char = self.inch(self.ppadCY(), x)
         val += char
 
-    self.cap.packets[self.ppadCY].setColumn(sect.id, col, val)
+    self.cap.packets[self.ppadCY()].setColumn(sect.id, col, val)
     self.move(0, 1)
 
   def toggleMark(self):
@@ -606,7 +608,7 @@ class EdScreen:
       self.drawPpad()
       self.refresh()
     else:
-      self.mark = self.ppadCY + 1
+      self.mark = self.ppadCY() + 1
 
   # Called after an action MAY cause cY or cX to be in illegal position
   # Returns cY and cX to legal position(s)
@@ -618,22 +620,28 @@ class EdScreen:
     # Handle Y
     if(len(self.cap.packets) <= 1):
       self.cY = self.ppadTopY
+
+    elif(self.cY < self.ppadTopY):
+      self.cY = self.ppadTopY
+
     elif(self.cY > self.ppadBottomY):
       self.cY = self.ppadBottomY
+
     elif(self.cY + self.ppadCurY >= len(self.cap.packets)):
       self.cY = self.ppadTopY + len(self.cap.packets) - 1
 
-    self.ppadCY = self.ppadCurY + self.cY - self.ppadTopY
-
-#    dbg("Edscreen_yank ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
+#    dbg("Edscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + " ppadCY:" + str(self.ppadCY()) + \
+#          " mark:" + str(self.mark)))
   def yank(self):
     if(not self.mark):
       return
 
-    if(self.ppadCY <= self.mark - 1):
-      self.cap.yank(self.ppadCY, self.mark - 1)
+    if(self.ppadCY() <= self.mark - 1):
+      self.cap.yank(self.ppadCY(), self.mark - 1)
     else:
-      self.cap.yank(self.mark - 1, self.ppadCY)
+      self.cap.yank(self.mark - 1, self.ppadCY())
+      self.cY -= len(self.cap.clipboard) - 1
+
     self.mark = 0
     self.resetCursor()
     self.drawPpad()
@@ -643,15 +651,11 @@ class EdScreen:
     if(len(self.cap.clipboard) == 0):
       return
 
-    self.cap.paste(self.ppadCY)
+    self.cap.paste(self.ppadCY())
     self.cY += len(self.cap.clipboard)
     self.resetCursor()
     self.drawPpad()
     self.refresh()
-
-  # Not yet implemented
-  def yankPacket(self):
-    return False
 
 class Capture:
   # Takes a filehandle to a pcap file
@@ -689,16 +693,22 @@ class Capture:
   def yank(self, first, last):
     self.clipboard = []
     for ii in xrange(first, last + 1):
-      if(ii >= len(self.packets)):
+      if(first >= len(self.packets)):
         self.clipboard.append(self.packets.pop())
       else:
-        self.clipboard.append(self.packets.pop(ii))
+        self.clipboard.append(self.packets.pop(first))
     self.resetPIDs(first)
+
+    # Clobber PIDs of yanked packets (Defensive programming)
+    for pkt in self.clipboard:
+      for lay in pkt.layers:
+        if(lay.sName == 'pid'):
+          lay.setColumn('pid', -1)
 
   # Pastes packets from our clipboard to our main capture
   # Takes the packet at the paste point as an integer(zero based)
-#    dbg("Capture_paste len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first))
   def paste(self, first):
+#    dbg("Capture_paste len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first))
     for ii in xrange(0, len(self.clipboard)):
       self.packets.insert(first + ii, self.clipboard[ii])  
     self.resetPIDs(first)
