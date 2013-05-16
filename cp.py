@@ -34,7 +34,4 @@ if(len(sys.argv) > 2):
 else:
   pcIn = dpkt.pcap.Reader(open(sys.argv[1]))
   for ts, pkt in pcIn:
-    print repr(dpkt.ethernet.Ethernet(pkt)) + " " + str(ts)
-
-
-
+    print repr(dpkt.ethernet.Ethernet(pkt))

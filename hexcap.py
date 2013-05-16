@@ -222,7 +222,7 @@ class EdScreen:
     self.stdscr.keypad(1)
 
     self.headerHeight = 2 # Section / Column names
-    self.miniBufferHeight = 2 # Includes blank line
+    self.footerHeight = 2 # Includes blank line
 
     # Cursor inits
     self.maxY, self.maxX = self.stdscr.getmaxyx()
@@ -249,7 +249,7 @@ class EdScreen:
   def initPad(self, cap):
     self.cap = cap
     self.ppadTopY = self.headerHeight # Topmost ppad position on screen
-    self.ppadBottomY = self.maxY - self.miniBufferHeight # Bottommost ppad position on screen
+    self.ppadBottomY = self.maxY - self.footerHeight # Bottommost ppad position on screen
     self.ppadCurY = 0 # Current topmost visible line in ppad
     self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.ppad = curses.newpad(self.ppadRows, self.maxX)
@@ -309,8 +309,8 @@ class EdScreen:
     return self.ppadCurY + self.cY - self.ppadTopY
 
   # Handle regular refreshing of packet lines
+  #    dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY()) + " mark:" + str(self.mark))
   def refreshBoldPacket(self):
-    dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY()) + " mark:" + str(self.mark))
     if(len(self.cap.packets) == 0):
       return
     elif(len(self.cap.packets) == 1):
@@ -409,7 +409,7 @@ class EdScreen:
           return
 
   def drawFooter(self):
-    y = self.maxY - self.miniBufferHeight
+    y = self.maxY - self.footerHeight
     fName = "[" + self.cap.fName + "]"
     divider = 3
     posWidth = 6
@@ -458,6 +458,14 @@ class EdScreen:
 
     if(self.displayTableWidth > x):
       self.stdscr.hline(y, x, "-", self.displayTableWidth - x)
+
+  # Prints text to the mini-buffer 
+  def printToMiniBuffer(self, s):
+    self.stdscr.addstr(self.maxY - 1, 0, s.strip()[:self.maxX])
+    
+  # Clears minibuffer
+  def clearMiniBuffer(self):
+    self.stdscr.hline(self.maxY - 1, 0, " ", self.maxX)
 
   # Handles pageUp and pageDown
   def page(self, dY):
@@ -733,7 +741,11 @@ if(not os.path.exists(sys.argv[1])): usage("Bad Filename")
 fName = sys.argv[1]
 
 # Initialize
-f = open(fName, 'rb')
+try:
+  f = open(fName, 'rb')
+except:
+  usage("Unable to open file for reading >> " + fName)
+
 pc = Capture(f, fName)
 f.close()
 
@@ -744,6 +756,7 @@ while True:
   try:
     mainScr.refresh()
     c = mainScr.getch()
+    mainScr.clearMiniBuffer()
 
     if(c != -1):
       dbg("KeyPress:" + str(c))
@@ -771,9 +784,17 @@ while True:
         mainScr.page(-10)
 
       elif(c == cfg.KEY_CTRL_S): # Save file
-        f = open(pc.fName, 'wb')
-        pc.write(f)
-        f.close()
+        writeError = False
+        try:
+          f = open(pc.fName, 'wb')
+        except:
+          writeError = True
+          mainScr.printToMiniBuffer("ERROR: Unable to open file for writing >> " + pc.fName)
+
+        if(not writeError):
+          writeError = False
+          pc.write(f)
+          f.close()
 
       elif(c == ord("<")): # Shift left 1 column
         mainScr.shiftColumn(-1)
@@ -788,11 +809,18 @@ while True:
         mainScr.unhideLastSection()
 
       elif(c == cfg.KEY_CTRL_R): # Reread packet capture from disk
-        fName = pc.fName
-        f = open(fName, 'rb')
-        pc = Capture(f, fName)
-        f.close()
-        mainScr.initPad(pc)
+        readError = False
+        try:
+          f = open(pc.fName, 'rb')
+        except:
+          readError = True
+          mainScr.printToMiniBuffer("ERROR: Unable to open file for reading >> " + pc.fName)
+
+        if(not readError):
+          readError = False
+          pc = Capture(f, pc.fName)
+          f.close()
+          mainScr.initPad(pc)
 
       elif(c == cfg.KEY_CTRL_I): # Toggle insert mode
         mainScr.toggleInsert()
