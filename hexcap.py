@@ -24,6 +24,7 @@ import curses
 import locale
 import time
 import sys
+sys.path.insert(0, '/home/smutt/hacking/python/hexcap/dpkt-read-only/')
 import dpkt
 from collections import OrderedDict
 
@@ -126,11 +127,6 @@ def sectionCenter(sid):
     else:
       rv += s.width
   return False
-
-# Debugging output
-def dbg(str):
-  if(cfg.debug):
-    dbgF.write(str + '\n')
 
 #############################
 # END Global Functions      #  
@@ -292,7 +288,7 @@ class EdScreen:
 
   def refresh(self):
     if(curses.is_term_resized(self.maxY, self.maxX)):
-      dbg("Caught resize event. Consider using immedok()")
+      cfg.dbg("Caught resize event. Consider using immedok()")
       self.tearDown()
     
     self.drawHeader()
@@ -309,7 +305,7 @@ class EdScreen:
     return self.ppadCurY + self.cY - self.ppadTopY
 
   # Handle regular refreshing of packet lines
-  #    dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY()) + " mark:" + str(self.mark))
+  #    cfg.dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY()) + " mark:" + str(self.mark))
   def refreshBoldPacket(self):
     if(len(self.cap.packets) == 0):
       return
@@ -364,7 +360,7 @@ class EdScreen:
 
   # Draws a packet line onto our ppad
   # Takes a y value and list of cells that correlates to our global header list
-#    dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
+#    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
     x = 0
     for s in sections:
@@ -638,7 +634,7 @@ class EdScreen:
     elif(self.cY + self.ppadCurY >= len(self.cap.packets)):
       self.cY = self.ppadTopY + len(self.cap.packets) - 1
 
-#    dbg("Edscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + " ppadCY:" + str(self.ppadCY()) + \
+#    cfg.dbg("Edscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + " ppadCY:" + str(self.ppadCY()) + \
 #          " mark:" + str(self.mark)))
   def yank(self):
     if(not self.mark):
@@ -693,11 +689,11 @@ class Capture:
   def write(self, f):
     out = dpkt.pcap.Writer(f)
     for pkt in self.packets:
-      out.writepkt(pkt.data())
+      out.writepkt(dpkt.ethernet.Ethernet.pack(pkt.data()))
 
   # Yanks packets from main capture and puts them in the clipboard
   # Takes inclusive first and last packets to be yanked as integers(zero based)
-#    dbg("Capture_yank len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first) + " last:" + str(last))
+#    cfg.dbg("Capture_yank len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first) + " last:" + str(last))
   def yank(self, first, last):
     self.clipboard = []
     for ii in xrange(first, last + 1):
@@ -716,7 +712,7 @@ class Capture:
   # Pastes packets from our clipboard to our main capture
   # Takes the packet at the paste point as an integer(zero based)
   def paste(self, first):
-#    dbg("Capture_paste len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first))
+#    cfg.dbg("Capture_paste len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first))
     for ii in xrange(0, len(self.clipboard)):
       self.packets.insert(first + ii, self.clipboard[ii])  
     self.resetPIDs(first)
@@ -732,9 +728,7 @@ class Capture:
 ###########################
 # BEGIN PROGRAM EXECUTION #
 ###########################
-if(cfg.debug):
-  dbgF = open('hexcap.log', 'a', 0)
-  
+ 
 # Check for bad args
 if(len(sys.argv) != 2): usage("Insufficient Arguments")
 if(not os.path.exists(sys.argv[1])): usage("Bad Filename")
@@ -759,7 +753,7 @@ while True:
     mainScr.clearMiniBuffer()
 
     if(c != -1):
-      dbg("KeyPress:" + str(c))
+      cfg.dbg("KeyPress:" + str(c))
 
       if(mainScr.insert):
         if(c in cfg.hexChars):
@@ -839,11 +833,11 @@ while True:
 
       elif(c == cfg.KEY_CTRL_Q or c == ord("q")):
         if(cfg.debug):
-          dbgF.close()
+          cfg.dbgF.close()
         mainScr.tearDown()
 
   except KeyboardInterrupt:
     mainScr.tearDown()
     if(cfg.debug):
-      dbgF.close()
+      cfg.dbgF.close()
   

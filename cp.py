@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 '''
 
 import sys
+sys.path.insert(0, '/home/smutt/hacking/python/hexcap/dpkt-read-only/')
 import dpkt
 from inspect import getmembers
 from pprint import pprint

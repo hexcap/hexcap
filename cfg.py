@@ -20,8 +20,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 # Global definitions #
 ######################
 
-# Toggle debugging output
+# Debugging globals
 debug = True
+
+if(debug):
+  dbgF = open('hexcap.log', 'a', 0)
+
+def dbg(str):
+  if(debug):
+    dbgF.write(str + '\n')
 
 # We can't count past 99,999
 pktIDWidth = 5

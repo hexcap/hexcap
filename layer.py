@@ -19,6 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 '''
 
 import cfg
+import sys
+sys.path.insert(0, '/home/smutt/hacking/python/hexcap/dpkt-read-only/')
 import dpkt
 
 class Layer:
@@ -155,7 +157,6 @@ class TCP(Layer):
     self.c['dport'] = self.intToHexStr(data.dport)
     self.c['sport'] = self.intToHexStr(data.sport)
     self.c['win'] = self.intToHexStr(data.win)
-    self.c['off_x2'] = data.off_x2
     self.c['sum'] = data.sum
     self.c['flags'] = data.flags
     self.c['data'] = data.data
@@ -164,9 +165,14 @@ class TCP(Layer):
     self.c['seq'] = self.intToHexStr(data.seq).strip("L")
     self.c['ack'] = self.intToHexStr(data.ack).strip("L")
 
+    # Problem with setting TCP offset(see dpkt issue 108)
+    self.c['off'] = data.off
+
     # Parse TCP options
-    self.opts = []
-    self.opts = dpkt.tcp.parse_opts(data.opts)
+    self.c['opts'] = data.opts
+#    self.opts = []
+#    self.opts = dpkt.tcp.parse_opts(data.opts)
+#    cfg.dbg(repr(self.opts))
 
   def toPcap(self):
     rv = dpkt.tcp.TCP()
@@ -175,10 +181,13 @@ class TCP(Layer):
     rv.seq = int(self.c['seq'], 16)
     rv.ack = int(self.c['ack'], 16)
     rv.win = int(self.c['win'], 16)
-    rv.off_x2 = self.c['off_x2']
     rv.sum = self.c['sum']
     rv.flags = self.c['flags']
+    rv.opts = self.c['opts']
     rv.data = self.c['data']
+
+    # Problem with setting TCP offset(see dpkt issue 108)
+    rv.off = self.c['off']
     return rv
 
 # Run through some tests for our Layers

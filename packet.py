@@ -19,6 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 '''
 
 import cfg
+import sys
+sys.path.insert(0, '/home/smutt/hacking/python/hexcap/dpkt-read-only/')
 import dpkt
 import layer
 
@@ -44,11 +46,19 @@ class Packet:
       if(lay.sName == sid):
         lay.setColumn(col, val)
 
+  # Convenience method
   # Returns PID of packet
   def getPID(self):
     for lay in self.layers:
       if(lay.sName == 'pid'):
         return lay.c['pid']
+
+  # Convenience method
+  # Returns timestamp of packet
+  def getTS(self):
+    for lay in self.layers:
+      if(isinstance(TStamp, lay)):
+        return lay.c['tstamp']
 
   # Returns the pcap formatted packet
   # Does not work with timestamps
@@ -56,14 +66,14 @@ class Packet:
     for lay in self.layers:
       if(lay.sName == 'pid' or lay.sName == 'tstamp'):
         continue
-      elif(lay.sName == 'ethernet'):
-        p = lay.toPcap()
+      elif(isinstance(lay, layer.Ethernet)):
+        rv = lay.toPcap()
       else:
-        d = p
-        while(len(d.data) != 0):
+        d = rv
+        while(isinstance(d.data, dpkt.Packet)):
           d = d.data
         d.data = lay.toPcap()
-    return p
+    return rv
 
   # Possibly inaccurate debug dump of pcap info
   def dump(self):
