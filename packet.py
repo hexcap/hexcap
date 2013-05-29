@@ -31,11 +31,42 @@ class Packet:
     self.layers = []
     self.layers.append(layer.PktID(pid))
     self.layers.append(layer.TStamp(ts))
+    self.initLayers(dpkt.ethernet.Ethernet(packet))
 
-    dPkt = dpkt.ethernet.Ethernet(packet)
-    self.layers.append(layer.Ethernet(dPkt))
-    self.layEType(dPkt)
+  # Discover the layers in the packet and construct our layers list
+  def initLayers(self, d):
+    #    cfg.dbg("\nPacket_initLayers d:" + repr(d))
+    if(not isinstance(d, dpkt.Packet)):
+      return
 
+    if(isinstance(d, dpkt.ethernet.Ethernet)):
+      self.layers.append(layer.Ethernet(d))
+      self.initLayers(d.data)
+                         
+    elif(isinstance(d, dpkt.ip.IP)):
+      if(d.v == 4):
+        self.layers.append(layer.IPv4(d))
+        self.initLayers(d.data)
+      elif(d.v == 6):
+        self.unsupported = True
+        self.initLayers(d.data)
+
+    elif(isinstance(d, dpkt.icmp.ICMP)):
+      self.layers.append(layer.ICMP(d))
+      return
+
+    elif(isinstance(d, dpkt.arp.ARP)):
+      self.unsupported = True
+      self.initLayers(d.data)
+
+    elif(isinstance(d, dpkt.tcp.TCP)):
+      self.layers.append(layer.TCP(d))
+      self.initLayers(d.data)
+
+    elif(isinstance(d, dpkt.udp.UDP)):
+      self.unsupported = True
+      self.initLayers(d.data)
+      
   # Should never actually get called
   def __getattr__(self, key):
     return None
@@ -78,47 +109,6 @@ class Packet:
   # Possibly inaccurate debug dump of pcap info
   def dump(self):
     return repr(dpkt.ethernet.Ethernet(self.packet))
-
-  def layEType(self, eth):
-    eType = hex(eth.type)
-
-    if(eType == "0x8100"):
-      self.layDot1x(eth.data)
-    elif(eType == "0x800"):
-      self.layIP4(eth.data)
-    elif(eType == "0x806"):
-      self.layIPARP(eth.data)
-    else:
-      self.eType = False
-
-  def layDot1x(self, dot1x):
-    self.layers.append(layer.Dot1x(dot1x))
-    self.unsupported = True
-
-  def layIPARP(self, iparp):
-    self.layers.append(layer.IPARP(iparp))
-    self.unsupported = True
-
-  def layIP4(self, ip4):
-    self.layers.append(layer.IPv4(ip4))
-    if(ip4.p == 1):
-      self.layICMP(ip4.data)
-    elif(ip4.p == 6):
-      self.layTCP(ip4.data)
-    elif(ip4.p == 17):
-      self.layUDP(ip4.data)
-    else:
-      self.ip4Only = True
-
-  def layICMP(self, icmp):
-    self.layers.append(layer.ICMP(icmp))
-
-  def layTCP(self, tcp):
-    self.layers.append(layer.TCP(tcp))
-
-  def layUDP(self, udp):
-    self.layers.append(layer.UDP(udp))
-    self.unsupported = True
 
   def out(self):
     if(self.unsupported):
