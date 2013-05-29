@@ -92,7 +92,7 @@ def cursorColumn(x):
 def sectionLeft(sid):
   rv = 0
   for s in displayedSections():
-    if(s.id == sid):
+    if(s.ID == sid):
       return rv
     else:
       rv += s.width
@@ -103,7 +103,7 @@ def sectionLeft(sid):
 def columnLeft(sid, cid):
   rv = sectionLeft(sid)
   for s in displayedSections():
-    if(s.id == sid):
+    if(s.ID == sid):
       for col, width in s.c.iteritems():
         if(col == cid):
           return rv
@@ -114,7 +114,7 @@ def columnLeft(sid, cid):
 # Returns rightmost absolute X value(before divider) for passed section and column name
 def columnRight(sid, cid):
   for s in displayedSections():
-    if(s.id == sid):
+    if(s.ID == sid):
       return columnLeft(sid, cid) + s.c[cid] - 1
 
 # Returns center absolute X value for passed section name
@@ -122,7 +122,7 @@ def columnRight(sid, cid):
 def sectionCenter(sid):
   rv = 0
   for s in displayedSections():
-    if(s.id == sid):
+    if(s.ID == sid):
       return rv + (int(math.floor(s.width / 2)))
     else:
       rv += s.width
@@ -135,31 +135,13 @@ def sectionCenter(sid):
 
 class Section:
   def __init__(self, sectId):
-    self.id = sectId
+    self.ID = sectId
     self.c = OrderedDict() # OrderedDict of columns
     self.width = 0 # Width of complete section
     self.present = False # Is this section present in our capture?
     self.alwaysPresent = False # Is this section always present on screen? May still be made invisible.
     self.visible = True # Is this section currently visible?
     self.RO = False # Is this section ReadOnly? Can it be modified by the user
-
-  def __len__(self):
-    return len(self.c)
-
-  def __getitem__(self, key):
-    return self.c[key]
-  
-  def __setitem__(self, key, value):
-    self.c[key] = value
-
-  def __contains__(self, item):
-    if item in c:
-      return True
-    else:
-      return False
-
-  def __missing__(self, key):
-    return False
 
   def append(self, name, w):
     self.c[name] = w
@@ -266,7 +248,7 @@ class EdScreen:
         s.present = False
     for p in self.cap.packets:
      for s in sections:
-       if(s.id in p.out()):
+       if(s.ID in p.out()):
          s.present = True
 
     # Set displayTableWidth
@@ -360,21 +342,21 @@ class EdScreen:
 
   # Draws a packet line onto our ppad
   # Takes a y value and list of cells that correlates to our global header list
-#    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
+  #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
     x = 0
     for s in sections:
       if(s.visible and s.present):
         if(self.displayTableWidth >= x + s.width):
           for colName, width in s.c.iteritems():
-            if(s.id in row):
+            if(s.ID in row):
               if(reverse):
-                self.ppad.addstr(y, x, row[s.id][colName].rjust(width) + "|", curses.A_REVERSE)
+                self.ppad.addstr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_REVERSE)
               else:
                 if(bold):
-                  self.ppad.addstr(y, x, row[s.id][colName].rjust(width) + "|", curses.A_BOLD)
+                  self.ppad.addstr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_BOLD)
                 else:
-                  self.ppad.addstr(y, x, row[s.id][colName].rjust(width) + "|")
+                  self.ppad.addstr(y, x, row[s.ID][colName].rjust(width) + "|")
                   
               x += width + 1
             else:
@@ -389,7 +371,7 @@ class EdScreen:
     x0 = 0
     x1 = 0
     for s in sections:
-      sectId = s.id
+      sectId = s.ID
       if(s.visible and s.present):
         if(self.displayTableWidth >= x0 + s.width):
           for column, width in s.c.iteritems():
@@ -446,9 +428,9 @@ class EdScreen:
 
     s,c = cursorColumn(self.cX)
     if(s.RO):
-      txt = "[" + s.id + "/RO]"
+      txt = "[" + s.ID + "/RO]"
     else:
-      txt = "[" + s.id + "/RW]"
+      txt = "[" + s.ID + "/RW]"
     self.stdscr.addstr(y, x, txt)
     x += len(txt)
 
@@ -492,7 +474,7 @@ class EdScreen:
     sect, col = cursorColumn(self.cX)
     if(cols > 0):
       if(self.cX + sect.c[col] < self.displayTableWidth - 1):
-        self.cX = columnLeft(sect.id, col)
+        self.cX = columnLeft(sect.ID, col)
         for cName, cWidth in sect.c.iteritems():
           if(cName == col):
             self.cX += cWidth + 1
@@ -504,7 +486,7 @@ class EdScreen:
         return
     else:
       if(self.cX - sect.c[col] >= 0):
-        self.cX = columnRight(sect.id, col)
+        self.cX = columnRight(sect.ID, col)
         for cName, cWidth in sect.c.iteritems():
           if(cName == col):
             self.cX -= cWidth + 1
@@ -544,7 +526,7 @@ class EdScreen:
     if(len(displayedSections()) > 1):
       s = cursorSection(self.cX)
       s.visible = False
-      self.hiddenSectNames.append(s.id)
+      self.hiddenSectNames.append(s.ID)
       self.drawPpad() # Sets self.displayTableWidth
       self.cX = min(self.cX, self.displayTableWidth - 2)
       self.refresh()
@@ -553,7 +535,7 @@ class EdScreen:
     if(len(self.hiddenSectNames) > 0):
       sectId = self.hiddenSectNames.pop()
       for s in sections:
-        if(s.id == sectId):
+        if(s.ID == sectId):
           s.visible = True
           self.cX = sectionCenter(sectId)
       self.drawPpad()
@@ -589,8 +571,8 @@ class EdScreen:
     if(sect.RO): # ReadOnly section
       return
 
-    leftX = columnLeft(sect.id, col)
-    rightX = columnRight(sect.id, col)
+    leftX = columnLeft(sect.ID, col)
+    rightX = columnRight(sect.ID, col)
 
     val = ""
     for x in xrange(leftX, rightX + 1):
@@ -600,7 +582,7 @@ class EdScreen:
         attr,char = self.inch(self.ppadCY(), x)
         val += char
 
-    self.cap.packets[self.ppadCY()].setColumn(sect.id, col, val)
+    self.cap.packets[self.ppadCY()].setColumn(sect.ID, col, val)
     self.move(0, 1)
 
   def toggleMark(self):
@@ -634,9 +616,10 @@ class EdScreen:
     elif(self.cY + self.ppadCurY >= len(self.cap.packets)):
       self.cY = self.ppadTopY + len(self.cap.packets) - 1
 
-#    cfg.dbg("Edscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + " ppadCY:" + str(self.ppadCY()) + \
-#          " mark:" + str(self.mark)))
   def yank(self):
+    #    cfg.dbg("Edscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + \
+    #    " ppadCY:" + str(self.ppadCY()) + " mark:" + str(self.mark)))
+
     if(not self.mark):
       return
 
@@ -693,8 +676,9 @@ class Capture:
 
   # Yanks packets from main capture and puts them in the clipboard
   # Takes inclusive first and last packets to be yanked as integers(zero based)
-#    cfg.dbg("Capture_yank len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first) + " last:" + str(last))
   def yank(self, first, last):
+    #    cfg.dbg("Capture_yank len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + \
+        #" first:" + str(first) + " last:" + str(last))
     self.clipboard = []
     for ii in xrange(first, last + 1):
       if(first >= len(self.packets)):
@@ -706,13 +690,13 @@ class Capture:
     # Clobber PIDs of yanked packets (Defensive programming)
     for pkt in self.clipboard:
       for lay in pkt.layers:
-        if(lay.sName == 'pid'):
+        if(lay.ID == 'pid'):
           lay.setColumn('pid', -1)
 
   # Pastes packets from our clipboard to our main capture
   # Takes the packet at the paste point as an integer(zero based)
   def paste(self, first):
-#    cfg.dbg("Capture_paste len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first))
+    #    cfg.dbg("Capture_paste len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first))
     for ii in xrange(0, len(self.clipboard)):
       self.packets.insert(first + ii, self.clipboard[ii])  
     self.resetPIDs(first)
@@ -722,7 +706,7 @@ class Capture:
   def resetPIDs(self, first):
     for ii in xrange(first, len(self.packets)):
       for lay in self.packets[ii].layers:
-        if(lay.sName == 'pid'):
+        if(lay.ID == 'pid'):
           lay.setColumn('pid', ii + 1)
 
 ###########################

@@ -74,28 +74,28 @@ class Packet:
   # Sets the value of section,column to val
   def setColumn(self, sid, col, val):
     for lay in self.layers:
-      if(lay.sName == sid):
+      if(lay.ID == sid):
         lay.setColumn(col, val)
 
   # Convenience method
   # Returns PID of packet
   def getPID(self):
     for lay in self.layers:
-      if(lay.sName == 'pid'):
-        return lay.c['pid']
+      if(lay.ID == 'pid'):
+        return lay.vals['pid']
 
   # Convenience method
   # Returns timestamp of packet
   def getTS(self):
     for lay in self.layers:
       if(isinstance(TStamp, lay)):
-        return lay.c['tstamp']
+        return lay.vals['tstamp']
 
   # Returns the pcap formatted packet
   # Does not work with timestamps
   def data(self):
     for lay in self.layers:
-      if(lay.sName == 'pid' or lay.sName == 'tstamp'):
+      if(lay.ID == 'pid' or lay.ID == 'tstamp'):
         continue
       elif(isinstance(lay, layer.Ethernet)):
         rv = lay.toPcap()
@@ -117,5 +117,5 @@ class Packet:
 
     rv = dict()
     for lay in self.layers:
-      rv[lay.sName] = lay.c
+      rv[lay.ID] = lay.vals
     return rv

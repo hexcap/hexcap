@@ -22,8 +22,14 @@ import cfg
 import sys
 sys.path.insert(0, '/home/smutt/hacking/python/hexcap/dpkt-read-only/')
 import dpkt
+from collections import OrderedDict
 
 class Layer:
+  cols = OrderedDict() # OrderedDict of columns
+  width = 0 # Width of complete section(number of columns + width of each column)
+  alwaysPresent = False # Is this section always present on screen? May still be made invisible.
+  RO = False # Is this section ReadOnly? Can it be modified by the user
+
   # Convert int to hex without leading 0x
   def intToHexStr(self, num):
     x,rv = hex(num).split("0x")
@@ -52,142 +58,185 @@ class Layer:
 
   # Sets column to val
   def setColumn(self, col, val):
-    self.c[col] = val
+    self.vals[col] = val
 
 class PktID(Layer):
-  sName = "pid"
+  ID = "pid"
+  alwaysPresent = True
+  RO = True
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['pid'] = cfg.pktIDWidth
+  width = cfg.pktIDWidth + 1
 
   def __init__(self, pid):
-    self.c = dict()
-    self.c['pid'] = str(pid).rjust(cfg.pktIDWidth, "0")
+    self.vals = dict()
+    self.vals['pid'] = str(pid).rjust(cfg.pktIDWidth, "0")
 
   # Overloading virtual since we're picky about pid
   def setColumn(self, col, val):
     # Fill PID with ?'s if we get passed -1
     if(val == -1):
-      self.c[col] = ''
+      self.vals[col] = ''
       for ii in xrange(0, cfg.pktIDWidth):
-        self.c[col] += "?"
+        self.vals[col] += "?"
     else:
-      self.c[col] = str(val).rjust(cfg.pktIDWidth, "0")
+      self.vals[col] = str(val).rjust(cfg.pktIDWidth, "0")
 
   def toPcap(self):
     return False
 
 class TStamp(Layer):
-  sName = "tstamp"
+  ID = "tstamp"
+  alwaysPresent = True
+  RO = True
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['tstamp'] = 13
+  width = 14
     
   def __init__(self, ts):
-    self.c = dict()
-    self.c['tstamp'] = "{:.2f}".format(ts)
+    self.vals = dict()
+    self.vals['tstamp'] = "{:.2f}".format(ts)
 
   def toPcap(self):
-    return float(self.c['tstamp'])
+    return float(self.vals['tstamp'])
 
 class Ethernet(Layer):
-  sName = "ethernet"
+  ID = "ethernet"
+  alwaysPresent = False
+  RO = False
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['eth-dst'] = 17
+  cols['eth-src'] = 17
+  cols['etype'] = 5
+  width = len(cols) + sum(cols.itervalues())
 
   def __init__(self, data):
-    self.c = dict()
-    self.c['eth-dst'] = self.pcapToHexStr(data.dst, 2, ":")
-    self.c['eth-src'] = self.pcapToHexStr(data.src, 2, ":")
-    self.c['etype'] = self.intToHexStr(data.type).rjust(4, "0")
+    self.vals = dict()
+    self.vals['eth-dst'] = self.pcapToHexStr(data.dst, 2, ":")
+    self.vals['eth-src'] = self.pcapToHexStr(data.src, 2, ":")
+    self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
 
   # Returns dpkt Ethernet data structure 
   def toPcap(self):
     rv = dpkt.ethernet.Ethernet()
-    rv.dst = self.hexStrToPcap(self.c['eth-dst'], ":")
-    rv.src = self.hexStrToPcap(self.c['eth-src'], ":")
-    rv.type = int(self.c['etype'], 16)
+    rv.dst = self.hexStrToPcap(self.vals['eth-dst'], ":")
+    rv.src = self.hexStrToPcap(self.vals['eth-src'], ":")
+    rv.type = int(self.vals['etype'], 16)
     return rv
 
 class IPv4(Layer):
-  sName = "ipv4"
+  ID = "ipv4"
+  alwaysPresent = False
+  RO = False
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['ipv4-dst'] = 11
+  cols['ipv4-src'] = 11
+  cols['proto'] = 5
+  width = len(cols) + sum(cols.itervalues())
 
   def __init__(self, data):
-    self.c = dict()
-    self.c['ipv4-dst'] = self.pcapToHexStr(data.dst, 2, ".")
-    self.c['ipv4-src'] = self.pcapToHexStr(data.src, 2, ".")
-    self.c['proto'] = self.intToHexStr(data.p).rjust(2, "0")
-    self.c['off'] = data.off
-    self.c['tos'] = data.tos
-    self.c['sum'] = data.sum
-    self.c['len'] = data.len
-    self.c['id'] = data.id
+    self.vals = dict()
+    self.vals['ipv4-dst'] = self.pcapToHexStr(data.dst, 2, ".")
+    self.vals['ipv4-src'] = self.pcapToHexStr(data.src, 2, ".")
+    self.vals['proto'] = self.intToHexStr(data.p).rjust(2, "0")
+    self.vals['off'] = data.off
+    self.vals['tos'] = data.tos
+    self.vals['sum'] = data.sum
+    self.vals['len'] = data.len
+    self.vals['id'] = data.id
 
   def toPcap(self):
     rv = dpkt.ip.IP()
-    rv.dst = self.hexStrToPcap(self.c['ipv4-dst'], ".")
-    rv.src = self.hexStrToPcap(self.c['ipv4-src'], ".")
-    rv.p = int(self.c['proto'], 16)
-    rv.off = self.c['off']
-    rv.tos = self.c['tos']
-    rv.sum = self.c['sum']
-    rv.len = self.c['len']
-    rv.id = self.c['id']
+    rv.dst = self.hexStrToPcap(self.vals['ipv4-dst'], ".")
+    rv.src = self.hexStrToPcap(self.vals['ipv4-src'], ".")
+    rv.p = int(self.vals['proto'], 16)
+    rv.off = self.vals['off']
+    rv.tos = self.vals['tos']
+    rv.sum = self.vals['sum']
+    rv.len = self.vals['len']
+    rv.id = self.vals['id']
     return rv
 
 # Assumes ICMP type is either 0 or 8(echo or echo_reply)
 class ICMP(Layer):
-  sName = "icmp"
-  
+  ID = "icmp"
+  alwaysPresent = False
+  RO = False
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['type'] = 4
+  cols['sum'] = 4
+  cols['id'] = 4
+  cols['seq'] = 3
+  width = len(cols) + sum(cols.itervalues())
+
   def __init__(self, data):
-    self.c = dict()
-    self.c['type'] = self.intToHexStr(data.type)
-    self.c['sum'] = self.intToHexStr(data.sum)
-    self.c['id'] = self.intToHexStr(data.data.id)
-    self.c['seq'] = self.intToHexStr(data.data.seq)
-    self.c['data'] = data.data.data
+    self.vals = dict()
+    self.vals['type'] = self.intToHexStr(data.type)
+    self.vals['sum'] = self.intToHexStr(data.sum)
+    self.vals['id'] = self.intToHexStr(data.data.id)
+    self.vals['seq'] = self.intToHexStr(data.data.seq)
+    self.vals['data'] = data.data.data
 
   def toPcap(self):
     rv = dpkt.icmp.ICMP()
     rv.data = dpkt.icmp.ICMP.Echo()
-    rv.type = int(self.c['type'], 16)
-    rv.sum = int(self.c['sum'], 16)
-    rv.data.id = int(self.c['id'], 16)
-    rv.data.seq = int(self.c['seq'], 16)
-    rv.data.data = self.c['data']
+    rv.type = int(self.vals['type'], 16)
+    rv.sum = int(self.vals['sum'], 16)
+    rv.data.id = int(self.vals['id'], 16)
+    rv.data.seq = int(self.vals['seq'], 16)
+    rv.data.data = self.vals['data']
     return rv
 
 class TCP(Layer):
-  sName = "tcp"
+  ID = "tcp"
+  alwaysPresent = False
+  RO = False
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['dport'] = 5
+  cols['sport'] = 5
+  cols['seq'] = 8
+  cols['ack'] = 8
+  cols['win'] = 4
+  width = len(cols) + sum(cols.itervalues())
 
   def __init__(self, data):
-    self.c = dict()
-    self.c['dport'] = self.intToHexStr(data.dport)
-    self.c['sport'] = self.intToHexStr(data.sport)
-    self.c['win'] = self.intToHexStr(data.win)
-    self.c['sum'] = data.sum
-    self.c['flags'] = data.flags
-    self.c['data'] = data.data
+    self.vals = dict()
+    self.vals['dport'] = self.intToHexStr(data.dport)
+    self.vals['sport'] = self.intToHexStr(data.sport)
+    self.vals['win'] = self.intToHexStr(data.win)
+    self.vals['sum'] = data.sum
+    self.vals['flags'] = data.flags
+    self.vals['data'] = data.data
 
     # http://www.python.org/dev/peps/pep-0237/
-    self.c['seq'] = self.intToHexStr(data.seq).strip("L")
-    self.c['ack'] = self.intToHexStr(data.ack).strip("L")
-
-    # Problem with setting TCP offset(see dpkt issue 108)
-    self.c['off'] = data.off
+    self.vals['seq'] = self.intToHexStr(data.seq).strip("L")
+    self.vals['ack'] = self.intToHexStr(data.ack).strip("L")
+    self.vals['off'] = data.off
 
     # Parse TCP options
-    self.c['opts'] = data.opts
-#    self.opts = []
-#    self.opts = dpkt.tcp.parse_opts(data.opts)
-#    cfg.dbg(repr(self.opts))
+    self.vals['opts'] = data.opts
+    #    self.opts = []
+    #    self.opts = dpkt.tcp.parse_opts(data.opts)
+    #    cfg.dbg(repr(self.opts))
 
   def toPcap(self):
     rv = dpkt.tcp.TCP()
-    rv.dport = int(self.c['dport'], 16)
-    rv.sport = int(self.c['sport'], 16)
-    rv.seq = int(self.c['seq'], 16)
-    rv.ack = int(self.c['ack'], 16)
-    rv.win = int(self.c['win'], 16)
-    rv.sum = self.c['sum']
-    rv.flags = self.c['flags']
-    rv.opts = self.c['opts']
-    rv.data = self.c['data']
-
-    # Problem with setting TCP offset(see dpkt issue 108)
-    rv.off = self.c['off']
+    rv.dport = int(self.vals['dport'], 16)
+    rv.sport = int(self.vals['sport'], 16)
+    rv.seq = int(self.vals['seq'], 16)
+    rv.ack = int(self.vals['ack'], 16)
+    rv.win = int(self.vals['win'], 16)
+    rv.sum = self.vals['sum']
+    rv.flags = self.vals['flags']
+    rv.opts = self.vals['opts']
+    rv.data = self.vals['data']
+    rv.off = self.vals['off']
     return rv
 
 # Run through some tests for our Layers
@@ -197,7 +246,7 @@ def test(cap):
   # PktID
   d = PktID(1)
   if(not d.toPcap()):
-    print d.c['pid']
+    print d.vals['pid']
   
   # TStamp
   d = TStamp(1986187623.12)
