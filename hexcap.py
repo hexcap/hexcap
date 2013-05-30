@@ -34,158 +34,6 @@ import packet
 import layer
 import section
 
-def usage(s):
-  print "FATAL ERROR: " + s
-  print ""
-  print "USAGE: edpcap.py FILE"
-  print "FILE must be a valid pcap file"
-  sys.exit(1)
-
-'''
-# Returns table width of the entire table
-# Summation of all visible sections widths
-def tableWidth():
-  rv = 0
-  for s in displayedSections():
-    rv += s.width
-  return max(1, rv - 1)
-
-# Returns an ordered list of displayed sections
-# A section is displayed if('present' && 'visible' == True)
-def displayedSections():
-  rv = []
-  for s in sections:
-    if(s.visible and s.present):
-      rv.append(s)
-  return rv
-
-# Returns header section that cursor X value is currently in
-# Takes X value of cursor
-def cursorSection(x):
-  dSections = displayedSections()
-  totX = 0
-  for s in dSections:
-    if(x < totX + s.width):
-      return s
-    else:
-      totX += s.width
-  return dSections.reversed.next()
-
-# Returns header section and column that cursor X value is currently in
-# Takes X value of cursor
-def cursorColumn(x):
-  totX = 0
-  for s in displayedSections():
-    if(x < totX + s.width - 1):
-      for col, cWidth in s.c.iteritems():
-        if(x < totX + cWidth):
-          return list((s, col))
-        else:
-          totX += cWidth + 1
-    else:
-      totX += s.width
-
-# Returns leftmost absolute X value for passed section name
-# Returns False on failure
-def sectionLeft(sid):
-  rv = 0
-  for s in displayedSections():
-    if(s.ID == sid):
-      return rv
-    else:
-      rv += s.width
-  return False
-
-# Returns leftmost absolute X value(after divider) for passed section and column name
-# Returns False on failure
-def columnLeft(sid, cid):
-  rv = sectionLeft(sid)
-  for s in displayedSections():
-    if(s.ID == sid):
-      for col, width in s.c.iteritems():
-        if(col == cid):
-          return rv
-        else:
-          rv += width + 1
-  return False
-
-# Returns rightmost absolute X value(before divider) for passed section and column name
-def columnRight(sid, cid):
-  for s in displayedSections():
-    if(s.ID == sid):
-      return columnLeft(sid, cid) + s.c[cid] - 1
-
-# Returns center absolute X value for passed section name
-# Returns False on failure
-def sectionCenter(sid):
-  rv = 0
-  for s in displayedSections():
-    if(s.ID == sid):
-      return rv + (int(math.floor(s.width / 2)))
-    else:
-      rv += s.width
-  return False
-
-#############################
-# BEGIN Section Definitions #
-#############################
-
-class Section:
-  def __init__(self, sectId):
-    self.ID = sectId
-    self.c = OrderedDict() # OrderedDict of columns
-    self.width = 0 # Width of complete section
-    self.present = False # Is this section present in our capture?
-    self.alwaysPresent = False # Is this section always present on screen? May still be made invisible.
-    self.visible = True # Is this section currently visible?
-    self.RO = False # Is this section ReadOnly? Can it be modified by the user
-
-  def append(self, name, w):
-    self.c[name] = w
-    self.width += w + 1
-
-pid = Section('pid')
-pid.append('pid', cfg.pktIDWidth)
-pid.RO = True
-pid.present = True
-pid.alwaysPresent = True
-
-tstamp = Section('tstamp')
-tstamp.append('tstamp', 13)
-tstamp.RO = True
-tstamp.present = True
-tstamp.alwaysPresent = True
-
-ethernet = Section('ethernet')
-ethernet.append('eth-dst', 17)
-ethernet.append('eth-src', 17)
-ethernet.append('etype', 5)
-
-ipv4 = Section('ipv4')
-ipv4.append('ipv4-dst', 11)
-ipv4.append('ipv4-src', 11)
-ipv4.append('proto', 5)
-
-icmp = Section('icmp')
-icmp.append('type', 4)
-icmp.append('sum', 4)
-icmp.append('id', 4)
-icmp.append('seq', 3)
-
-tcp = Section('tcp')
-tcp.append('dport', 5)
-tcp.append('sport', 5)
-tcp.append('seq', 8)
-tcp.append('ack', 8)
-tcp.append('win', 4)
-
-sections = list((pid, tstamp, ethernet, ipv4, icmp, tcp))
-'''
-
-###########################
-# END Section Definitions #
-###########################
-
 # Our wrapper class for an ncurses screen
 class EdScreen:
 
@@ -229,28 +77,19 @@ class EdScreen:
     self.ppadCurY = 0 # Current topmost visible line in ppad
     self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.ppad = curses.newpad(self.ppadRows, self.maxX)
-
     self.buildSections()
     self.drawPpad()
     self.refresh()
 
-  # Completely redraws our ppad and determines which sections are present
+  # Completely redraws our ppad and rebuilds our section list
   # Sets displayTableWidth
   def drawPpad(self):
     if(self.ppadRows != len(self.cap.packets)): # Our capture has changed in size
       self.ppadRows = len(self.cap.packets)
       self.ppad = curses.newpad(self.ppadRows, self.maxX)
+      self.buildSections()
 
-    # Set section.present
-    #    for s in self.sections:
-    #      if(not s.alwaysPresent):
-    #        s.present = False
-    #    for p in self.cap.packets:
-    #     for s in self.sections:
-    #       if(s.ID in p.out()):
-    #         s.present = True
-
-    # Set displayTableWidth
+    # Set displayTableWidth 
     self.displayTableWidth = 0 # Width of displayed columns
     for s in self.sections:
       if(s.visible):
@@ -280,7 +119,7 @@ class EdScreen:
     self.stdscr.refresh()
     curses.doupdate()
 
-  # Determines the correct order of sections to display
+  # Determines the correct order of sections to display based on capture
   def buildSections(self):
     self.sections = []
     IDs = [] # Holds temp list of sections we've added to self.sections
@@ -291,7 +130,6 @@ class EdScreen:
 
           # Construct our new section
           s = section.Section(lay.ID)
-          s.width = lay.width
           for col,width in lay.cols.iteritems():
             s.append(col, width)
           s.RO = lay.RO # non-default values for layers need to be handled here
@@ -308,17 +146,12 @@ class EdScreen:
                 self.sections.insert(ii + 1, s)
                 break
 
-  #    cfg.dbg(str(len(self.sections)))
-  #    for s in self.sections:
-  #      cfg.dbg(s.dump())
-
   # Relative Y cursor position in our ppad
   def _get_ppadCY(self):
     return self.ppadCurY + self.cY - self.ppadTopY
   ppadCY = property(_get_ppadCY)
 
   # An ordered list of displayed sections
-  # A section is displayed if('present' && 'visible' == True)
   def _get_displayedSections(self):
     rv = []
     for s in self.sections:
@@ -486,7 +319,6 @@ class EdScreen:
     x0 = 0
     x1 = 0
     for s in self.sections:
-      sectId = s.ID
       if(s.visible):
         if(self.displayTableWidth >= x0 + s.width):
           for column, width in s.c.iteritems():
@@ -494,7 +326,7 @@ class EdScreen:
             self.stdscr.addstr(1, x1, col + "|", curses.A_REVERSE)
             x1 += width + 1
 
-          head = "{" + sectId + "}"
+          head = "{" + s.ID + "}"
           head = head.center(s.width - 1, " ") + "|"
           self.stdscr.addstr(0, x0, head)
           x0 += s.width
@@ -761,7 +593,14 @@ class EdScreen:
 ###########################
 # BEGIN PROGRAM EXECUTION #
 ###########################
- 
+
+def usage(s):
+  print "FATAL ERROR: " + s
+  print ""
+  print "USAGE: edpcap.py FILE"
+  print "FILE must be a valid pcap file"
+  sys.exit(1)
+
 # Check for bad args
 if(len(sys.argv) != 2): usage("Insufficient Arguments")
 if(not os.path.exists(sys.argv[1])): usage("Bad Filename")

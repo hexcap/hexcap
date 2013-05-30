@@ -67,7 +67,6 @@ class PktID(Layer):
 
   cols = OrderedDict() # OrderedDict of columns
   cols['pid'] = cfg.pktIDWidth
-  width = cfg.pktIDWidth + 1
 
   def __init__(self, pid):
     self.vals = dict()
@@ -92,7 +91,6 @@ class TStamp(Layer):
 
   cols = OrderedDict() # OrderedDict of columns
   cols['tstamp'] = 13
-  width = 14
     
   def __init__(self, ts):
     self.vals = dict()
@@ -108,7 +106,6 @@ class Ethernet(Layer):
   cols['eth-dst'] = 17
   cols['eth-src'] = 17
   cols['etype'] = 5
-  width = len(cols) + sum(cols.itervalues())
 
   def __init__(self, data):
     self.vals = dict()
@@ -131,7 +128,6 @@ class IPv4(Layer):
   cols['ipv4-dst'] = 11
   cols['ipv4-src'] = 11
   cols['proto'] = 5
-  width = len(cols) + sum(cols.itervalues())
 
   def __init__(self, data):
     self.vals = dict()
@@ -165,7 +161,6 @@ class ICMP(Layer):
   cols['sum'] = 4
   cols['id'] = 4
   cols['seq'] = 3
-  width = len(cols) + sum(cols.itervalues())
 
   def __init__(self, data):
     self.vals = dict()
@@ -194,7 +189,6 @@ class TCP(Layer):
   cols['seq'] = 8
   cols['ack'] = 8
   cols['win'] = 4
-  width = len(cols) + sum(cols.itervalues())
 
   def __init__(self, data):
     self.vals = dict()
