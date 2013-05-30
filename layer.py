@@ -60,6 +60,10 @@ class Layer:
   def setColumn(self, col, val):
     self.vals[col] = val
 
+  # For debugging only
+  def dump(self):
+    return repr(self.vals)
+
 class PktID(Layer):
   ID = "pid"
   alwaysPresent = True

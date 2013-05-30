@@ -26,7 +26,6 @@ import layer
 
 class Packet:
   def __init__(self, ts, packet, pid):
-    self.packet = packet # Should only be used for debugging
     self.unsupported = False
     self.layers = []
     self.layers.append(layer.PktID(pid))
@@ -106,9 +105,12 @@ class Packet:
         d.data = lay.toPcap()
     return rv
 
-  # Possibly inaccurate debug dump of pcap info
+  # For debugging only
   def dump(self):
-    return repr(dpkt.ethernet.Ethernet(self.packet))
+    rv = ''
+    for lay in self.layers:
+      rv += "\n" + lay.dump()
+    return rv
 
   def out(self):
     if(self.unsupported):
