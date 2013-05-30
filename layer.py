@@ -25,10 +25,7 @@ import dpkt
 from collections import OrderedDict
 
 class Layer:
-  cols = OrderedDict() # OrderedDict of columns
-  width = 0 # Width of complete section(number of columns + width of each column)
-  alwaysPresent = False # Is this section always present on screen? May still be made invisible.
-  RO = False # Is this section ReadOnly? Can it be modified by the user
+  RO = False # Is this layer read-only?
 
   # Convert int to hex without leading 0x
   def intToHexStr(self, num):
@@ -66,7 +63,6 @@ class Layer:
 
 class PktID(Layer):
   ID = "pid"
-  alwaysPresent = True
   RO = True
 
   cols = OrderedDict() # OrderedDict of columns
@@ -92,7 +88,6 @@ class PktID(Layer):
 
 class TStamp(Layer):
   ID = "tstamp"
-  alwaysPresent = True
   RO = True
 
   cols = OrderedDict() # OrderedDict of columns
@@ -108,8 +103,6 @@ class TStamp(Layer):
 
 class Ethernet(Layer):
   ID = "ethernet"
-  alwaysPresent = False
-  RO = False
 
   cols = OrderedDict() # OrderedDict of columns
   cols['eth-dst'] = 17
@@ -133,8 +126,6 @@ class Ethernet(Layer):
 
 class IPv4(Layer):
   ID = "ipv4"
-  alwaysPresent = False
-  RO = False
 
   cols = OrderedDict() # OrderedDict of columns
   cols['ipv4-dst'] = 11
@@ -168,8 +159,6 @@ class IPv4(Layer):
 # Assumes ICMP type is either 0 or 8(echo or echo_reply)
 class ICMP(Layer):
   ID = "icmp"
-  alwaysPresent = False
-  RO = False
 
   cols = OrderedDict() # OrderedDict of columns
   cols['type'] = 4
@@ -198,8 +187,6 @@ class ICMP(Layer):
 
 class TCP(Layer):
   ID = "tcp"
-  alwaysPresent = False
-  RO = False
 
   cols = OrderedDict() # OrderedDict of columns
   cols['dport'] = 5

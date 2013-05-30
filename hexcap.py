@@ -22,7 +22,6 @@ import os
 import math
 import curses
 import locale
-import time
 import sys
 sys.path.insert(0, '/home/smutt/hacking/python/hexcap/dpkt-read-only/')
 import dpkt
@@ -33,10 +32,7 @@ import cfg
 import capture
 import packet
 import layer
-
-##########################
-# BEGIN Global Functions #
-##########################
+import section
 
 def usage(s):
   print "FATAL ERROR: " + s
@@ -45,6 +41,7 @@ def usage(s):
   print "FILE must be a valid pcap file"
   sys.exit(1)
 
+'''
 # Returns table width of the entire table
 # Summation of all visible sections widths
 def tableWidth():
@@ -130,7 +127,6 @@ def sectionCenter(sid):
   return False
 
 #############################
-# END Global Functions      #  
 # BEGIN Section Definitions #
 #############################
 
@@ -184,6 +180,7 @@ tcp.append('ack', 8)
 tcp.append('win', 4)
 
 sections = list((pid, tstamp, ethernet, ipv4, icmp, tcp))
+'''
 
 ###########################
 # END Section Definitions #
@@ -209,7 +206,7 @@ class EdScreen:
     self.cX = 0
 
     # Our stack of hidden sections
-    self.hiddenSectNames = []
+    self.hiddenSectIDs = []
 
     # Are we in insert mode?
     self.insert = False
@@ -233,6 +230,7 @@ class EdScreen:
     self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.ppad = curses.newpad(self.ppadRows, self.maxX)
 
+    self.buildSections()
     self.drawPpad()
     self.refresh()
 
@@ -244,18 +242,18 @@ class EdScreen:
       self.ppad = curses.newpad(self.ppadRows, self.maxX)
 
     # Set section.present
-    for s in sections:
-      if(not s.alwaysPresent):
-        s.present = False
-    for p in self.cap.packets:
-     for s in sections:
-       if(s.ID in p.out()):
-         s.present = True
+    #    for s in self.sections:
+    #      if(not s.alwaysPresent):
+    #        s.present = False
+    #    for p in self.cap.packets:
+    #     for s in self.sections:
+    #       if(s.ID in p.out()):
+    #         s.present = True
 
     # Set displayTableWidth
     self.displayTableWidth = 0 # Width of displayed columns
-    for s in sections:
-      if(s.present and s.visible):
+    for s in self.sections:
+      if(s.visible):
         if(self.displayTableWidth + s.width <= self.maxX):
           self.displayTableWidth += s.width
         else:
@@ -278,17 +276,134 @@ class EdScreen:
     self.drawFooter()
     self.stdscr.move(self.cY, self.cX)
     self.refreshBoldPacket()
-    self.ppad.refresh(self.ppadCurY, 0, self.ppadTopY, 0, self.ppadBottomY, tableWidth())
+    self.ppad.refresh(self.ppadCurY, 0, self.ppadTopY, 0, self.ppadBottomY, self.tableWidth)
     self.stdscr.refresh()
     curses.doupdate()
 
-  # Returns the relative Y cursor position in our ppad
-  # This is basically just a Macro
-  def ppadCY(self):
+  # Determines the correct order of sections to display
+  def buildSections(self):
+    self.sections = []
+    IDs = [] # Holds temp list of sections we've added to self.sections
+    for pkt in self.cap.packets:
+      for lay in pkt.layers:
+        if(not(lay.ID in IDs)):
+          IDs.append(lay.ID)
+
+          # Construct our new section
+          s = section.Section(lay.ID)
+          s.width = lay.width
+          for col,width in lay.cols.iteritems():
+            s.append(col, width)
+          s.RO = lay.RO # non-default values for layers need to be handled here
+
+          # append/insert our new section
+          if(len(self.sections) == 0):
+            self.sections.append(s)
+          else:
+            for ii in xrange(len(pkt.layers)):
+              if(ii >= len(self.sections)):
+                self.sections.append(s)
+                break
+              elif(pkt.layers[ii].ID != self.sections[ii].ID):
+                self.sections.insert(ii + 1, s)
+                break
+
+  #    cfg.dbg(str(len(self.sections)))
+  #    for s in self.sections:
+  #      cfg.dbg(s.dump())
+
+  # Relative Y cursor position in our ppad
+  def _get_ppadCY(self):
     return self.ppadCurY + self.cY - self.ppadTopY
+  ppadCY = property(_get_ppadCY)
+
+  # An ordered list of displayed sections
+  # A section is displayed if('present' && 'visible' == True)
+  def _get_displayedSections(self):
+    rv = []
+    for s in self.sections:
+      if(s.visible):
+        rv.append(s)
+    return rv
+  displayedSections = property(_get_displayedSections)
+
+  # Table width of the entire displayed table
+  def _get_tableWidth(self):
+    rv = 0
+    for s in self.displayedSections:
+      rv += s.width
+    return max(1, rv - 1)
+  tableWidth = property(_get_tableWidth)
+
+  # Returns header section that cursor X value is currently in
+  # Takes X value of cursor
+  def cursorSection(self, x):
+    dSections = self.displayedSections
+    totX = 0
+    for s in dSections:
+      if(x < totX + s.width):
+        return s
+      else:
+        totX += s.width
+    return dSections.reversed.next()
+
+  # Returns header section and column that cursor X value is currently in
+  # Takes X value of cursor
+  def cursorColumn(self, x):
+    totX = 0
+    for s in self.displayedSections:
+      if(x < totX + s.width - 1):
+        for col, cWidth in s.c.iteritems():
+          if(x < totX + cWidth):
+            return list((s, col))
+          else:
+            totX += cWidth + 1
+      else:
+        totX += s.width
+
+  # Returns leftmost absolute X value for passed section name
+  # Returns False on failure
+  def sectionLeft(self, sid):
+    rv = 0
+    for s in self.displayedSections:
+      if(s.ID == sid):
+        return rv
+      else:
+        rv += s.width
+    return False
+
+  # Returns leftmost absolute X value(after divider) for passed section and column name
+  # Returns False on failure
+  def columnLeft(self, sid, cid):
+    rv = self.sectionLeft(sid)
+    for s in self.displayedSections:
+      if(s.ID == sid):
+        for col, width in s.c.iteritems():
+          if(col == cid):
+            return rv
+          else:
+            rv += width + 1
+    return False
+
+  # Returns rightmost absolute X value(before divider) for passed section and column name
+  def columnRight(self, sid, cid):
+    for s in self.displayedSections:
+      if(s.ID == sid):
+        return self.columnLeft(sid, cid) + s.c[cid] - 1
+
+  # Returns center absolute X value for passed section name
+  # Returns False on failure
+  def sectionCenter(self, sid):
+    rv = 0
+    for s in self.displayedSections:
+      if(s.ID == sid):
+        return rv + (int(math.floor(s.width / 2)))
+      else:
+        rv += s.width
+    return False
 
   # Handle regular refreshing of packet lines
-  #    cfg.dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY()) + " mark:" + str(self.mark))
+  #    cfg.dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
   def refreshBoldPacket(self):
     if(len(self.cap.packets) == 0):
       return
@@ -300,54 +415,54 @@ class EdScreen:
       return
 
     if(self.mark):
-      self.drawPktLine(self.ppadCY(), self.cap.packets[self.ppadCY()].out(), False, True)
+      self.drawPktLine(self.ppadCY, self.cap.packets[self.ppadCY].out(), False, True)
 
-      if(self.ppadCY() < self.mark - 1): # Cursor is above mark
-        if(self.ppadCY() > 0):
-          self.drawPktLine(self.ppadCY() - 1, self.cap.packets[self.ppadCY() - 1].out())
-        for pkt in xrange(self.mark - 1, self.ppadCY() + 1, -1):
+      if(self.ppadCY < self.mark - 1): # Cursor is above mark
+        if(self.ppadCY > 0):
+          self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out())
+        for pkt in xrange(self.mark - 1, self.ppadCY + 1, -1):
           self.drawPktLine(pkt, self.cap.packets[pkt].out(), False, True)
         if(self.mark <= len(self.cap.packets) - 1):
           self.drawPktLine(self.mark, self.cap.packets[self.mark].out())
 
-      elif(self.ppadCY() == self.mark - 1): # Cursor is on mark
+      elif(self.ppadCY == self.mark - 1): # Cursor is on mark
         if(self.mark > 1):
-          self.drawPktLine(self.ppadCY() - 1, self.cap.packets[self.ppadCY() - 1].out()) 
+          self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out()) 
         if(self.mark <= len(self.cap.packets) - 1):
-          self.drawPktLine(self.ppadCY() + 1, self.cap.packets[self.ppadCY() + 1].out())
+          self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
 
-      elif(self.ppadCY() > self.mark - 1): # Cursor is below mark
+      elif(self.ppadCY > self.mark - 1): # Cursor is below mark
         if(self.mark > 1):
           self.drawPktLine(self.mark - 2, self.cap.packets[self.mark - 2].out()) 
-        for pkt in xrange(self.mark - 1, self.ppadCY() + 1):
+        for pkt in xrange(self.mark - 1, self.ppadCY + 1):
           self.drawPktLine(pkt, self.cap.packets[pkt].out(), False, True)
-        if(self.ppadCY() < len(self.cap.packets) - 1):
-            self.drawPktLine(self.ppadCY() + 1, self.cap.packets[self.ppadCY() + 1].out())
+        if(self.ppadCY < len(self.cap.packets) - 1):
+            self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
 
     else:
-      self.drawPktLine(self.ppadCY(), self.cap.packets[self.ppadCY()].out(), True)
+      self.drawPktLine(self.ppadCY, self.cap.packets[self.ppadCY].out(), True)
 
-      if(self.ppadCY() == 0): # First packet in ppad
+      if(self.ppadCY == 0): # First packet in ppad
         if(len(self.cap.packets) > 1):
           self.drawPktLine(1, self.cap.packets[1].out())
         
       elif(self.cY == self.ppadTopY - 1): # Top packet on screen
-        self.drawPktLine(self.ppadCY() + 1, self.cap.packets[self.ppadCY() + 1].out())
+        self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
 
-      elif((self.cY == self.ppadBottomY - 1) or (len(self.cap.packets) == self.ppadCY() + 1)): # Bottom packet on screen
-        self.drawPktLine(self.ppadCY() - 1, self.cap.packets[self.ppadCY() - 1].out())
+      elif((self.cY == self.ppadBottomY - 1) or (len(self.cap.packets) == self.ppadCY + 1)): # Bottom packet on screen
+        self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out())
 
       else: # Middle packet on screen
-        self.drawPktLine(self.ppadCY() - 1, self.cap.packets[self.ppadCY() - 1].out())
-        self.drawPktLine(self.ppadCY() + 1, self.cap.packets[self.ppadCY() + 1].out())
+        self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out())
+        self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
 
   # Draws a packet line onto our ppad
   # Takes a y value and list of cells that correlates to our global header list
   #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
     x = 0
-    for s in sections:
-      if(s.visible and s.present):
+    for s in self.sections:
+      if(s.visible):
         if(self.displayTableWidth >= x + s.width):
           for colName, width in s.c.iteritems():
             if(s.ID in row):
@@ -361,9 +476,8 @@ class EdScreen:
                   
               x += width + 1
             else:
-              if(s.present):
-                self.ppad.addstr(y, x, " ".rjust(width + 1))
-                x += width + 1
+              self.ppad.addstr(y, x, " ".rjust(width + 1))
+              x += width + 1
         else:
           return
 
@@ -371,9 +485,9 @@ class EdScreen:
   def drawHeader(self):
     x0 = 0
     x1 = 0
-    for s in sections:
+    for s in self.sections:
       sectId = s.ID
-      if(s.visible and s.present):
+      if(s.visible):
         if(self.displayTableWidth >= x0 + s.width):
           for column, width in s.c.iteritems():
             col = column.center(width, " ")
@@ -427,7 +541,7 @@ class EdScreen:
     self.stdscr.hline(y, x, "-", divider)
     x += divider
 
-    s,c = cursorColumn(self.cX)
+    s,c = self.cursorColumn(self.cX)
     if(s.RO):
       txt = "[" + s.ID + "/RO]"
     else:
@@ -472,10 +586,10 @@ class EdScreen:
     if(cols == 0):
       return
 
-    sect, col = cursorColumn(self.cX)
+    sect, col = self.cursorColumn(self.cX)
     if(cols > 0):
       if(self.cX + sect.c[col] < self.displayTableWidth - 1):
-        self.cX = columnLeft(sect.ID, col)
+        self.cX = self.columnLeft(sect.ID, col)
         for cName, cWidth in sect.c.iteritems():
           if(cName == col):
             self.cX += cWidth + 1
@@ -487,7 +601,7 @@ class EdScreen:
         return
     else:
       if(self.cX - sect.c[col] >= 0):
-        self.cX = columnRight(sect.ID, col)
+        self.cX = self.columnRight(sect.ID, col)
         for cName, cWidth in sect.c.iteritems():
           if(cName == col):
             self.cX -= cWidth + 1
@@ -524,21 +638,21 @@ class EdScreen:
           self.cX += dX
 
   def hideSection(self):
-    if(len(displayedSections()) > 1):
-      s = cursorSection(self.cX)
+    if(len(self.displayedSections) > 1):
+      s = self.cursorSection(self.cX)
       s.visible = False
-      self.hiddenSectNames.append(s.ID)
+      self.hiddenSectIDs.append(s.ID)
       self.drawPpad() # Sets self.displayTableWidth
       self.cX = min(self.cX, self.displayTableWidth - 2)
       self.refresh()
 
   def unhideLastSection(self):
-    if(len(self.hiddenSectNames) > 0):
-      sectId = self.hiddenSectNames.pop()
-      for s in sections:
+    if(len(self.hiddenSectIDs) > 0):
+      sectId = self.hiddenSectIDs.pop()
+      for s in self.sections:
         if(s.ID == sectId):
           s.visible = True
-          self.cX = sectionCenter(sectId)
+          self.cX = self.sectionCenter(sectId)
       self.drawPpad()
       self.refresh()
 
@@ -563,27 +677,27 @@ class EdScreen:
   # Handles our character insertion
   # Modifies column then increments cursor X position by 1
   def handleInsert(self, c):
-    attr,char = self.inch(self.ppadCY(), self.cX)
+    attr,char = self.inch(self.ppadCY, self.cX)
     if(ord(char) not in cfg.hexChars): # immutable character
       self.move(0, 1)
       return
 
-    sect,col = cursorColumn(self.cX)
+    sect,col = self.cursorColumn(self.cX)
     if(sect.RO): # ReadOnly section
       return
 
-    leftX = columnLeft(sect.ID, col)
-    rightX = columnRight(sect.ID, col)
+    leftX = self.columnLeft(sect.ID, col)
+    rightX = self.columnRight(sect.ID, col)
 
     val = ""
     for x in xrange(leftX, rightX + 1):
       if(x == self.cX):
         val += chr(c)
       else:
-        attr,char = self.inch(self.ppadCY(), x)
+        attr,char = self.inch(self.ppadCY, x)
         val += char
 
-    self.cap.packets[self.ppadCY()].setColumn(sect.ID, col, val)
+    self.cap.packets[self.ppadCY].setColumn(sect.ID, col, val)
     self.move(0, 1)
 
   def toggleMark(self):
@@ -595,7 +709,7 @@ class EdScreen:
       self.drawPpad()
       self.refresh()
     else:
-      self.mark = self.ppadCY() + 1
+      self.mark = self.ppadCY + 1
 
   # Called after an action MAY cause cY or cX to be in illegal position
   # Returns cY and cX to legal position(s)
@@ -617,17 +731,16 @@ class EdScreen:
     elif(self.cY + self.ppadCurY >= len(self.cap.packets)):
       self.cY = self.ppadTopY + len(self.cap.packets) - 1
 
+  #    cfg.dbg("Edscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + \
+  #    " ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark)))
   def yank(self):
-    #    cfg.dbg("Edscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + \
-    #    " ppadCY:" + str(self.ppadCY()) + " mark:" + str(self.mark)))
-
     if(not self.mark):
       return
 
-    if(self.ppadCY() <= self.mark - 1):
-      self.cap.yank(self.ppadCY(), self.mark - 1)
+    if(self.ppadCY <= self.mark - 1):
+      self.cap.yank(self.ppadCY, self.mark - 1)
     else:
-      self.cap.yank(self.mark - 1, self.ppadCY())
+      self.cap.yank(self.mark - 1, self.ppadCY)
       self.cY -= len(self.cap.clipboard) - 1
 
     self.mark = 0
@@ -639,7 +752,7 @@ class EdScreen:
     if(len(self.cap.clipboard) == 0):
       return
 
-    self.cap.paste(self.ppadCY())
+    self.cap.paste(self.ppadCY)
     self.cY += len(self.cap.clipboard)
     self.resetCursor()
     self.drawPpad()
