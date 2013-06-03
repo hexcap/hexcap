@@ -63,8 +63,13 @@ class Packet:
       self.initLayers(d.data)
 
     elif(isinstance(d, dpkt.udp.UDP)):
-      self.unsupported = True
+      self.layers.append(layer.UDP(d))
       self.initLayers(d.data)
+
+    else:
+      self.unsupported = True
+      return
+      
       
   # Should never actually get called
   def __getattr__(self, key):

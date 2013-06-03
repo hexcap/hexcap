@@ -157,6 +157,7 @@ class IPv4(Layer):
   cols = OrderedDict() # OrderedDict of columns
   cols['ipv4-dst'] = 11
   cols['ipv4-src'] = 11
+  cols['ttl'] = 4
   cols['proto'] = 5
 
   def __init__(self, data):
@@ -164,9 +165,10 @@ class IPv4(Layer):
     self.vals['ipv4-dst'] = self.pcapToHexStr(data.dst, 2, ".")
     self.vals['ipv4-src'] = self.pcapToHexStr(data.src, 2, ".")
     self.vals['proto'] = self.intToHexStr(data.p).rjust(2, "0")
+    self.vals['ttl'] = self.intToHexStr(data.ttl).rjust(2, "0")
     self.vals['off'] = data.off
     self.vals['tos'] = data.tos
-    self.vals['sum'] = data.sum
+#    self.vals['sum'] = data.sum
     self.vals['len'] = data.len
     self.vals['id'] = data.id
 
@@ -175,9 +177,10 @@ class IPv4(Layer):
     rv.dst = self.hexStrToPcap(self.vals['ipv4-dst'], ".")
     rv.src = self.hexStrToPcap(self.vals['ipv4-src'], ".")
     rv.p = int(self.vals['proto'], 16)
+    rv.ttl = int(self.vals['ttl'], 16)
     rv.off = self.vals['off']
     rv.tos = self.vals['tos']
-    rv.sum = self.vals['sum']
+#    rv.sum = self.vals['sum']
     rv.len = self.vals['len']
     rv.id = self.vals['id']
     return rv
@@ -210,10 +213,35 @@ class ICMP(Layer):
     rv.data.data = self.vals['data']
     return rv
 
+class UDP(Layer):
+  ID = "udp"
+  
+  cols = OrderedDict()
+  cols['dport'] = 5
+  cols['sport'] = 5
+  cols['ulen'] = 4
+
+  def __init__(self, data):
+    self.vals = dict()
+    self.vals['dport'] = self.intToHexStr(data.dport)
+    self.vals['sport'] = self.intToHexStr(data.sport)
+    self.vals['ulen'] = self.intToHexStr(data.ulen)
+    self.vals['sum'] = self.intToHexStr(data.sum)
+    self.vals['data'] = data.data
+
+  def toPcap(self):
+    rv = dpkt.udp.UDP()
+    rv.dport = int(self.vals['dport'], 16)
+    rv.sport = int(self.vals['sport'], 16)
+    rv.ulen = int(self.vals['ulen'], 16)
+    rv.sum = int(self.vals['sum'], 16)
+    rv.data = self.vals['data']
+    return rv
+
 class TCP(Layer):
   ID = "tcp"
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict()
   cols['dport'] = 5
   cols['sport'] = 5
   cols['seq'] = 8
