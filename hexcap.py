@@ -62,10 +62,12 @@ class EdScreen:
     # Packet ID of marked packet. One based.
     self.mark = 0
 
-  def tearDown(self):
+  def tearDown(self, dieStr=''):
     self.stdscr.keypad(0)
     curses.echo()
     curses.endwin()
+    if(len(dieStr)):
+      print(dieStr)
     sys.exit(0)
 
   # Initializes our ncurses pad
@@ -293,6 +295,10 @@ class EdScreen:
   # Takes a y value and list of cells that correlates to our global header list
   #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
+    if(not row):
+      cfg.dbg("Aborting:Unsupported or unrecognized packet")
+      self.tearDown("Aborting:Unsupported or unrecognized packet")
+
     x = 0
     for s in self.sections:
       if(s.visible):

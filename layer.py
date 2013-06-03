@@ -18,6 +18,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 '''
 
+# For now we just let dpkt do all the checksum calculations
+# So it's not possible to create packets with invalid checksums
+# AND any packets opened with invalid checksums will have them corrected at save time
+
 import cfg
 import sys
 sys.path.insert(0, '/home/smutt/hacking/python/hexcap/dpkt-read-only/')
@@ -113,12 +117,49 @@ class Ethernet(Layer):
     self.vals['eth-src'] = self.pcapToHexStr(data.src, 2, ":")
     self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
 
-  # Returns dpkt Ethernet data structure 
   def toPcap(self):
     rv = dpkt.ethernet.Ethernet()
     rv.dst = self.hexStrToPcap(self.vals['eth-dst'], ":")
     rv.src = self.hexStrToPcap(self.vals['eth-src'], ":")
     rv.type = int(self.vals['etype'], 16)
+    return rv
+
+class STP(Layer):
+  ID = "stp"
+  
+  cols = OrderedDict() # OrderedDict of columns
+  cols['root-id'] = 23
+  cols['bridge-id'] = 23
+  cols['port-id'] = 7
+  cols['age'] = 4
+  cols['max-age'] = 7
+  cols['hello'] = 5
+  cols['fwd-delay'] = 9
+  cols['cost'] = 4
+
+  def __init__(self, data):
+    self.vals = dict()
+    self.vals['root-id'] = self.pcapToHexStr(data.root_id, 2, ":")
+    self.vals['bridge-id'] = self.pcapToHexStr(data.bridge_id, 2, ":")
+    self.vals['port-id'] = self.intToHexStr(data.port_id).rjust(4, "0")
+    self.vals['age'] = self.intToHexStr(data.age).rjust(2, "0")
+    self.vals['max-age'] = self.intToHexStr(data.max_age).rjust(2, "0")
+    self.vals['hello'] = self.intToHexStr(data.hello).rjust(2, "0")
+    self.vals['fwd-delay'] = self.intToHexStr(data.fd).rjust(2, "0")
+    self.vals['cost'] = self.intToHexStr(data.root_path).rjust(2, "0")
+    self.vals['data'] = data.data
+
+  def toPcap(self):
+    rv = dpkt.stp.STP()
+    rv.root_id = self.hexStrToPcap(self.vals['root-id'], ":")
+    rv.bridge_id = self.hexStrToPcap(self.vals['bridge-id'], ":")
+    rv.port_id = int(self.vals['port-id'], 16)
+    rv.age = int(self.vals['age'], 16)
+    rv.max_age = int(self.vals['max-age'], 16)
+    rv.hello = int(self.vals['hello'], 16)
+    rv.fd = int(self.vals['fwd-delay'], 16)
+    rv.path = int(self.vals['cost'], 16)
+    rv.data = self.vals['data']
     return rv
 
 # Assumptions
@@ -168,7 +209,6 @@ class IPv4(Layer):
     self.vals['ttl'] = self.intToHexStr(data.ttl).rjust(2, "0")
     self.vals['off'] = data.off
     self.vals['tos'] = data.tos
-#    self.vals['sum'] = data.sum
     self.vals['len'] = data.len
     self.vals['id'] = data.id
 
@@ -180,7 +220,6 @@ class IPv4(Layer):
     rv.ttl = int(self.vals['ttl'], 16)
     rv.off = self.vals['off']
     rv.tos = self.vals['tos']
-#    rv.sum = self.vals['sum']
     rv.len = self.vals['len']
     rv.id = self.vals['id']
     return rv
@@ -191,14 +230,12 @@ class ICMP(Layer):
 
   cols = OrderedDict() # OrderedDict of columns
   cols['type'] = 4
-  cols['sum'] = 4
   cols['id'] = 4
   cols['seq'] = 3
 
   def __init__(self, data):
     self.vals = dict()
     self.vals['type'] = self.intToHexStr(data.type)
-    self.vals['sum'] = self.intToHexStr(data.sum)
     self.vals['id'] = self.intToHexStr(data.data.id)
     self.vals['seq'] = self.intToHexStr(data.data.seq)
     self.vals['data'] = data.data.data
@@ -207,7 +244,6 @@ class ICMP(Layer):
     rv = dpkt.icmp.ICMP()
     rv.data = dpkt.icmp.ICMP.Echo()
     rv.type = int(self.vals['type'], 16)
-    rv.sum = int(self.vals['sum'], 16)
     rv.data.id = int(self.vals['id'], 16)
     rv.data.seq = int(self.vals['seq'], 16)
     rv.data.data = self.vals['data']
@@ -226,7 +262,6 @@ class UDP(Layer):
     self.vals['dport'] = self.intToHexStr(data.dport)
     self.vals['sport'] = self.intToHexStr(data.sport)
     self.vals['ulen'] = self.intToHexStr(data.ulen)
-    self.vals['sum'] = self.intToHexStr(data.sum)
     self.vals['data'] = data.data
 
   def toPcap(self):
@@ -234,7 +269,6 @@ class UDP(Layer):
     rv.dport = int(self.vals['dport'], 16)
     rv.sport = int(self.vals['sport'], 16)
     rv.ulen = int(self.vals['ulen'], 16)
-    rv.sum = int(self.vals['sum'], 16)
     rv.data = self.vals['data']
     return rv
 
@@ -253,7 +287,6 @@ class TCP(Layer):
     self.vals['dport'] = self.intToHexStr(data.dport)
     self.vals['sport'] = self.intToHexStr(data.sport)
     self.vals['win'] = self.intToHexStr(data.win)
-    self.vals['sum'] = data.sum
     self.vals['flags'] = data.flags
     self.vals['data'] = data.data
 
@@ -275,7 +308,6 @@ class TCP(Layer):
     rv.seq = int(self.vals['seq'], 16)
     rv.ack = int(self.vals['ack'], 16)
     rv.win = int(self.vals['win'], 16)
-    rv.sum = self.vals['sum']
     rv.flags = self.vals['flags']
     rv.opts = self.vals['opts']
     rv.data = self.vals['data']

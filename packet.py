@@ -34,12 +34,19 @@ class Packet:
 
   # Discover the layers in the packet and construct our layers list
   def initLayers(self, d):
-    #    cfg.dbg("\nPacket_initLayers d:" + repr(d))
     if(not isinstance(d, dpkt.Packet)):
       return
 
     if(isinstance(d, dpkt.ethernet.Ethernet)):
       self.layers.append(layer.Ethernet(d))
+      self.initLayers(d.data)
+
+    elif(isinstance(d, dpkt.stp.STP)):
+      self.layers.append(layer.STP(d))
+      self.initLayers(d.data)
+
+    elif(isinstance(d, dpkt.arp.ARP)):
+      self.layers.append(layer.ARP(d))
       self.initLayers(d.data)
                          
     elif(isinstance(d, dpkt.ip.IP)):
@@ -54,10 +61,6 @@ class Packet:
       self.layers.append(layer.ICMP(d))
       return
 
-    elif(isinstance(d, dpkt.arp.ARP)):
-      self.layers.append(layer.ARP(d))
-      self.initLayers(d.data)
-
     elif(isinstance(d, dpkt.tcp.TCP)):
       self.layers.append(layer.TCP(d))
       self.initLayers(d.data)
@@ -69,7 +72,6 @@ class Packet:
     else:
       self.unsupported = True
       return
-      
       
   # Should never actually get called
   def __getattr__(self, key):
@@ -119,7 +121,6 @@ class Packet:
 
   def out(self):
     if(self.unsupported):
-      dbg("Aborting:Unsupported Packet")
       return False
 
     rv = dict()
