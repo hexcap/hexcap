@@ -55,7 +55,7 @@ class Packet:
       return
 
     elif(isinstance(d, dpkt.arp.ARP)):
-      self.unsupported = True
+      self.layers.append(layer.ARP(d))
       self.initLayers(d.data)
 
     elif(isinstance(d, dpkt.tcp.TCP)):

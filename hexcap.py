@@ -90,7 +90,7 @@ class EdScreen:
       self.buildSections()
 
     # Set displayTableWidth 
-    self.displayTableWidth = 0 # Width of displayed columns
+    self.displayTableWidth = 0 # Width of displayed columns(zero based)
     for s in self.sections:
       if(s.visible):
         if(self.displayTableWidth + s.width <= self.maxX):
@@ -375,9 +375,9 @@ class EdScreen:
 
     s,c = self.cursorColumn(self.cX)
     if(s.RO):
-      txt = "[" + s.ID + "/RO]"
+      txt = "[" + s.ID + "/" + c + "/RO]"
     else:
-      txt = "[" + s.ID + "/RW]"
+      txt = "[" + s.ID + "/" + c + "/RW]"
     self.stdscr.addstr(y, x, txt)
     x += len(txt)
 
@@ -413,7 +413,7 @@ class EdScreen:
       else:
         self.cY = self.ppadTopY
 
-  # Moves cursor right and left by columns
+  # Moves cursor right and left by cols columns
   def shiftColumn(self, cols):
     if(cols == 0):
       return

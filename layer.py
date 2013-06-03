@@ -121,6 +121,36 @@ class Ethernet(Layer):
     rv.type = int(self.vals['etype'], 16)
     return rv
 
+# Assumptions
+# HTYPE == 1(Ethernet)
+# PTYPE == 0x0800(IPv4)
+class ARP(Layer):
+  ID = "iparp"
+
+  cols = OrderedDict()
+  cols['oper'] = 4 # Operation
+  cols['sha'] = 17 # Sender MAC
+  cols['tha'] = 17 # Target MAC
+  cols['spa'] = 11 # Sender IP
+  cols['tpa'] = 11 # Target IP
+  
+  def __init__(self, data):
+    self.vals = dict()
+    self.vals['oper'] = self.intToHexStr(data.op).rjust(4, "0")
+    self.vals['sha'] = self.pcapToHexStr(data.sha, 2, ":")
+    self.vals['tha'] = self.pcapToHexStr(data.tha, 2, ":")
+    self.vals['spa'] = self.pcapToHexStr(data.spa, 2, ".")
+    self.vals['tpa'] = self.pcapToHexStr(data.tpa, 2, ".")
+
+  def toPcap(self):
+    rv = dpkt.arp.ARP()
+    rv.op = int(self.vals['oper'], 16)
+    rv.sha = self.hexStrToPcap(self.vals['sha'], ":")
+    rv.tha = self.hexStrToPcap(self.vals['tha'], ":")
+    rv.spa = self.hexStrToPcap(self.vals['spa'], ".")
+    rv.tpa = self.hexStrToPcap(self.vals['tpa'], ".")
+    return rv
+
 class IPv4(Layer):
   ID = "ipv4"
 
