@@ -35,4 +35,10 @@ if(len(sys.argv) > 2):
 else:
   pcIn = dpkt.pcap.Reader(open(sys.argv[1]))
   for ts, pkt in pcIn:
-    print repr(dpkt.ethernet.Ethernet(pkt))
+    p = dpkt.ethernet.Ethernet(pkt)
+    if(hasattr(p, 'tag')):
+      print "\n"
+      print "dot1q:" + hex(p.tag)
+      print "dot1p:" + hex(p.dot1p)
+      print "etype:" + hex(p.type)
+    print repr(p)
