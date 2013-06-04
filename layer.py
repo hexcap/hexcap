@@ -122,7 +122,26 @@ class Ethernet(Layer):
     rv.dst = self.hexStrToPcap(self.vals['eth-dst'], ":")
     rv.src = self.hexStrToPcap(self.vals['eth-src'], ":")
     rv.type = int(self.vals['etype'], 16)
+
     return rv
+
+# Writing does not yet work(needs work in dpkt ethernet.py)
+class Dot1q(Layer):
+  ID = "802.1q"
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['tag'] = 5
+  cols['dot1p'] = 5
+  cols['etype'] = 5
+
+  def __init__(self, data):
+    self.vals = dict()
+    self.vals['tag'] = self.intToHexStr(data.tag).rjust(4, "0")
+    self.vals['dot1p'] = self.intToHexStr(data.dot1p).rjust(4, "0")
+    self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
+
+  def toPcap(self):
+    return False
 
 class STP(Layer):
   ID = "stp"
@@ -131,11 +150,11 @@ class STP(Layer):
   cols['root-id'] = 23
   cols['bridge-id'] = 23
   cols['port-id'] = 7
-  cols['age'] = 4
+  cols['age'] = 5
   cols['max-age'] = 7
   cols['hello'] = 5
   cols['fwd-delay'] = 9
-  cols['cost'] = 4
+  cols['cost'] = 5
 
   def __init__(self, data):
     self.vals = dict()
@@ -169,7 +188,7 @@ class ARP(Layer):
   ID = "iparp"
 
   cols = OrderedDict()
-  cols['oper'] = 4 # Operation
+  cols['oper'] = 5 # Operation
   cols['sha'] = 17 # Sender MAC
   cols['tha'] = 17 # Target MAC
   cols['spa'] = 11 # Sender IP

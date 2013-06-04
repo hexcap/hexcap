@@ -38,7 +38,13 @@ class Packet:
       return
 
     if(isinstance(d, dpkt.ethernet.Ethernet)):
-      self.layers.append(layer.Ethernet(d))
+      if(hasattr(d, "tag")): # This is a total shit hack
+        eth = layer.Ethernet(d)
+        eth.vals['etype'] = "8100"
+        self.layers.append(eth)
+        self.layers.append(layer.Dot1q(d))
+      else:
+        self.layers.append(layer.Ethernet(d))
       self.initLayers(d.data)
 
     elif(isinstance(d, dpkt.stp.STP)):
