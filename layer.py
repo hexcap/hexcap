@@ -243,6 +243,27 @@ class IPv4(Layer):
     rv.id = self.vals['id']
     return rv
 
+class IGMP(Layer):
+  ID = "igmp"
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['type'] = 5
+  cols['maxresp'] = 7
+  cols['group'] = 11
+
+  def __init__(self, data):
+    self.vals = dict()
+    self.vals['type'] = self.intToHexStr(data.type).rjust(2, "0")
+    self.vals['maxresp'] = self.intToHexStr(data.maxresp).rjust(2, "0")
+    self.vals['group'] = self.pcapToHexStr(data.group, 2, ".")
+
+  def toPcap(self):
+    rv = dpkt.igmp.IGMP()
+    rv.type = int(self.vals['type'])
+    rv.maxresp = int(self.vals['maxresp'])
+    rv.group = self.hexStrToPcap(self.vals['group'], ".")
+    return rv
+
 # Assumes ICMP type is either 0 or 8(echo or echo_reply)
 class ICMP(Layer):
   ID = "icmp"

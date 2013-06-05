@@ -63,6 +63,10 @@ class Packet:
         self.unsupported = True
         self.initLayers(d.data)
 
+    elif(isinstance(d, dpkt.igmp.IGMP)):
+      self.layers.append(layer.IGMP(d))
+      self.initLayers(d.data)
+
     elif(isinstance(d, dpkt.icmp.ICMP)):
       self.layers.append(layer.ICMP(d))
       return

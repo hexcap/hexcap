@@ -603,7 +603,7 @@ class EdScreen:
 def usage(s):
   print "FATAL ERROR: " + s
   print ""
-  print "USAGE: edpcap.py FILE"
+  print "USAGE: " + sys.argv[0] + " FILE"
   print "FILE must be a valid pcap file"
   sys.exit(1)
 
