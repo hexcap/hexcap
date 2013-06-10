@@ -657,10 +657,13 @@ while True:
         mainScr.page(-10)
 
       elif(c == cfg.KEY_CTRL_S): # Save file
-        cfg.dbg(str(pc.RW))
+        pc.write(open('garbage.pcap', 'wb'))
+
+        '''
         if(pc.RW):
           writeError = False
           try:
+            pass
             f = open(pc.fName, 'wb')
           except:
             writeError = True
@@ -672,7 +675,7 @@ while True:
             f.close()
         else:
           mainScr.printToMiniBuffer("ERROR: Not all packets supported for read/write")
-
+        '''
       elif(c == ord("<")): # Shift left 1 column
         mainScr.shiftColumn(-1)
 

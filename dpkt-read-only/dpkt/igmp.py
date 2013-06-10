@@ -11,6 +11,7 @@ class IGMP(dpkt.Packet):
         ('sum', 'H', 0),
         ('group', '4s', '\x00' * 4)
         )
+
     def __str__(self):
         if not self.sum:
             self.sum = dpkt.in_cksum(dpkt.Packet.__str__(self))

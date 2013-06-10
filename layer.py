@@ -146,14 +146,15 @@ class Dot1q(Layer):
     self.vals['tag'] = self.intToHexStr(data.tag).rjust(4, "0")
     self.vals['dot1p'] = self.intToHexStr(data.pcp).rjust(4, "0")
     self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
+    self.vals['dei'] = data.dei
 
   def toPcap(self):
-    return False
-#    rv = dpkt.dot1q.DOT1Q()
-#    rv.tag = int(self.vals['tag'], 16)
-#    rv.pcp = int(self.vals['dot1p'], 16)
-#    rv.type = int(self.vals['etype'], 16)
-#    return rv
+    rv = dpkt.dot1q.DOT1Q()
+    rv.tag = int(self.vals['tag'], 16)
+    rv.pcp = int(self.vals['dot1p'], 16)
+    rv.type = int(self.vals['etype'], 16)
+    rv.dei = self.vals['dei']
+    return rv
 
 class STP(Layer):
   ID = "stp"
@@ -241,10 +242,13 @@ class IPv4(Layer):
     self.vals['ipv4-src'] = self.pcapToHexStr(data.src, 2, ".")
     self.vals['proto'] = self.intToHexStr(data.p).rjust(2, "0")
     self.vals['ttl'] = self.intToHexStr(data.ttl).rjust(2, "0")
+    self.vals['hl'] = data.hl
+    self.vals['v'] = data.v
     self.vals['off'] = data.off
     self.vals['tos'] = data.tos
     self.vals['len'] = data.len
     self.vals['id'] = data.id
+    self.vals['sum'] = data.sum
 
   def toPcap(self):
     rv = dpkt.ip.IP()
@@ -252,10 +256,13 @@ class IPv4(Layer):
     rv.src = self.hexStrToPcap(self.vals['ipv4-src'], ".")
     rv.p = int(self.vals['proto'], 16)
     rv.ttl = int(self.vals['ttl'], 16)
+    rv.hl =  self.vals['hl']
+    rv.v =  self.vals['v']
     rv.off = self.vals['off']
     rv.tos = self.vals['tos']
     rv.len = self.vals['len']
     rv.id = self.vals['id']
+    rv.sum = self.vals['sum']
     return rv
 
 class IGMP(Layer):
@@ -272,12 +279,14 @@ class IGMP(Layer):
     self.vals['type'] = self.intToHexStr(data.type).rjust(2, "0")
     self.vals['maxresp'] = self.intToHexStr(data.maxresp).rjust(2, "0")
     self.vals['group'] = self.pcapToHexStr(data.group, 2, ".")
+#    self.vals['sum'] = data.sum
 
   def toPcap(self):
     rv = dpkt.igmp.IGMP()
     rv.type = int(self.vals['type'])
     rv.maxresp = int(self.vals['maxresp'])
     rv.group = self.hexStrToPcap(self.vals['group'], ".")
+#    rv.sum =  self.vals['sum']
     return rv
 
 # Assumes ICMP type is either 0 or 8(echo or echo_reply)

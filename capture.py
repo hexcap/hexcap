@@ -69,8 +69,6 @@ class Capture:
   # Yanks packets from main capture and puts them in the clipboard
   # Takes inclusive first and last packets to be yanked as integers(zero based)
   def yank(self, first, last):
-    #    cfg.dbg("Capture_yank len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + \
-        #" first:" + str(first) + " last:" + str(last))
     self.clipboard = []
     for ii in xrange(first, last + 1):
       if(first >= len(self.packets)):
@@ -88,7 +86,6 @@ class Capture:
   # Pastes packets from our clipboard to our main capture
   # Takes the packet at the paste point as an integer(zero based)
   def paste(self, first):
-    #    cfg.dbg("Capture_paste len_packets:" + str(len(self.packets)) + " len_clipboard:" + str(len(self.clipboard)) + " first:" + str(first))
     for ii in xrange(0, len(self.clipboard)):
       self.packets.insert(first + ii, self.clipboard[ii])  
     self.resetPIDs(first)

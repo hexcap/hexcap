@@ -4,6 +4,10 @@
 
 import struct
 import dpkt
+import sys
+sys.path.insert(0, '/home/smutt/hacking/python/hexcap/')
+import cfg
+
 
 # Ethernet payload types - http://standards.ieee.org/regauth/ethertype
 ETH_TYPE_PUP	= 0x0200		# PUP protocol
@@ -29,18 +33,26 @@ class DOT1Q(dpkt.Packet):
     _typesw = {}
 
     # pcp == Priority Code Point(802.1p)
-    def _get_pcp(self): return self.x2 >> 13
-    def _set_pcp(self, pcp): self.x2 &= 8191 | (pcp << 13)
+    def _get_pcp(self):
+#      cfg.dbg("get x2:" + str(self.x2))
+      return self.x2 >> 13
+    def _set_pcp(self, pcp): 
+#      cfg.dbg("set_pcp x2:" + str(self.x2) + " pcp:" + str(pcp))
+      self.x2 = (self.x2 & 0x1fff) | (pcp << 13)
+#      cfg.dbg("sat_pcp x2:" + str(self.x2))
     pcp = property(_get_pcp, _set_pcp)
 
     # dei == Drop Eligible Indicator(almost never actually used)
     def _get_dei(self): return (self.x2 >> 12) & 1 
-    def _set_dei(self, dei): self.x2 &= 61439 | (de1 << 12)
+    def _set_dei(self, dei): self.x2 = (self.x2 & 61439) | (dei << 12)
     dei = property(_get_dei, _set_dei)
 
     # tag == vlan tag
     def _get_tag(self): return self.x2 & (65535 >> 4)
-    def _set_tag(self, tag): self.x2 &= 4095 | tag
+    def _set_tag(self, tag):
+#      cfg.dbg("set_tag x2:" + str(self.x2) + " tag:" + str(tag))
+      self.x2 = (self.x2 & 0xfff) | tag
+#      cfg.dbg("sat_tag x2:" + str(self.x2))      
     tag = property(_get_tag, _set_tag)
 
     def set_type(cls, t, pktclass):
