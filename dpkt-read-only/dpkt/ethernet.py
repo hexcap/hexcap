@@ -22,7 +22,8 @@ ETH_TYPE_ARP	= 0x0806		# address resolution protocol
 ETH_TYPE_CDP	= 0x2000		# Cisco Discovery Protocol
 ETH_TYPE_DTP	= 0x2004		# Cisco Dynamic Trunking Protocol
 ETH_TYPE_REVARP	= 0x8035		# reverse addr resolution protocol
-ETH_TYPE_8021Q	= 0x8100		# IEEE 802.1Q VLAN tagging
+#ETH_TYPE_8021Q	= 0x8100		# IEEE 802.1Q VLAN tagging
+ETH_TYPE_DOT1Q	= 0x8100		# IEEE 802.1Q VLAN tagging
 ETH_TYPE_IPX	= 0x8137		# Internetwork Packet Exchange
 ETH_TYPE_IP6	= 0x86DD		# IPv6 protocol
 ETH_TYPE_PPP	= 0x880B		# PPP
@@ -49,13 +50,14 @@ class Ethernet(dpkt.Packet):
     _typesw = {}
     
     def _unpack_data(self, buf):
-        if self.type == ETH_TYPE_8021Q:
-            self.tag, self.type = struct.unpack('>HH', buf[:4])
-            self.dot1p = self.tag >> 13
-            self.tag = self.tag & (65535 >> 4)
-            buf = buf[4:]
-        elif self.type == ETH_TYPE_MPLS or \
-             self.type == ETH_TYPE_MPLS_MCAST:
+#        if self.type == ETH_TYPE_8021Q:
+#            self.tag, self.type = struct.unpack('>HH', buf[:4])
+#            self.dot1p = self.tag >> 13
+#            self.tag = self.tag & (65535 >> 4)
+#            buf = buf[4:]
+#        elif self.type == ETH_TYPE_MPLS or \
+        if self.type == ETH_TYPE_MPLS or \
+          self.type == ETH_TYPE_MPLS_MCAST:
             # XXX - skip labels (max # of labels is undefined, just use 24)
             self.labels = []
             for i in range(24):

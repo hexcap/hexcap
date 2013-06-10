@@ -142,7 +142,7 @@ class Dot1q(Layer):
   def __init__(self, data):
     self.vals = dict()
     self.vals['tag'] = self.intToHexStr(data.tag).rjust(4, "0")
-    self.vals['dot1p'] = self.intToHexStr(data.dot1p).rjust(4, "0")
+    self.vals['dot1p'] = self.intToHexStr(data.pcp).rjust(4, "0")
     self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
 
   def toPcap(self):
