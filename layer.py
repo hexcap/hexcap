@@ -61,6 +61,10 @@ class Layer:
   def setColumn(self, col, val):
     self.vals[col] = val
 
+  # A layer must override this once it becomes RWable
+  def toPcap(self):
+    return False
+
   # For debugging only
   def dump(self):
     return repr(self.vals)
@@ -88,7 +92,7 @@ class PktID(Layer):
       self.vals[col] = str(val).rjust(cfg.pktIDWidth, "0")
 
   def toPcap(self):
-    return False
+    return True
 
 class TStamp(Layer):
   ID = "tstamp"
@@ -109,7 +113,6 @@ class Ethernet(Layer):
   ID = "ethernet"
   position = 10
 
-
   cols = OrderedDict() # OrderedDict of columns
   cols['eth-dst'] = 17
   cols['eth-src'] = 17
@@ -126,7 +129,6 @@ class Ethernet(Layer):
     rv.dst = self.hexStrToPcap(self.vals['eth-dst'], ":")
     rv.src = self.hexStrToPcap(self.vals['eth-src'], ":")
     rv.type = int(self.vals['etype'], 16)
-
     return rv
 
 # Writing does not yet work(needs work in dpkt ethernet.py)
@@ -147,6 +149,11 @@ class Dot1q(Layer):
 
   def toPcap(self):
     return False
+#    rv = dpkt.dot1q.DOT1Q()
+#    rv.tag = int(self.vals['tag'], 16)
+#    rv.pcp = int(self.vals['dot1p'], 16)
+#    rv.type = int(self.vals['etype'], 16)
+#    return rv
 
 class STP(Layer):
   ID = "stp"

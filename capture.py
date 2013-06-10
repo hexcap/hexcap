@@ -45,6 +45,14 @@ class Capture:
       self.packets.append(p)
       pid += 1
 
+  # Is our capture RWable?
+  def _RW(self):
+    for pkt in self.packets:
+      if(not pkt.RW):
+        return False
+    return True
+  RW = property(_RW)
+
   # For debugging only
   def dump(self):
     rv = ""
@@ -57,7 +65,7 @@ class Capture:
     out = dpkt.pcap.Writer(f)
     for pkt in self.packets:
       out.writepkt(dpkt.ethernet.Ethernet.pack(pkt.data()))
-
+        
   # Yanks packets from main capture and puts them in the clipboard
   # Takes inclusive first and last packets to be yanked as integers(zero based)
   def yank(self, first, last):

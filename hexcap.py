@@ -296,8 +296,9 @@ class EdScreen:
   #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
     if(not row):
-      cfg.dbg("Aborting:Unsupported or unrecognized packet")
-      self.tearDown("Aborting:Unsupported or unrecognized packet")
+      msg = "Packet Unsupported"
+      self.ppad.addstr(y, int(self.maxX /2) - int(len(msg) /2), msg)
+      return
 
     x = 0
     for s in self.sections:
@@ -656,17 +657,21 @@ while True:
         mainScr.page(-10)
 
       elif(c == cfg.KEY_CTRL_S): # Save file
-        writeError = False
-        try:
-          f = open(pc.fName, 'wb')
-        except:
-          writeError = True
-          mainScr.printToMiniBuffer("ERROR: Unable to open file for writing >> " + pc.fName)
-
-        if(not writeError):
+        cfg.dbg(str(pc.RW))
+        if(pc.RW):
           writeError = False
-          pc.write(f)
-          f.close()
+          try:
+            f = open(pc.fName, 'wb')
+          except:
+            writeError = True
+            mainScr.printToMiniBuffer("ERROR: Unable to open file for writing >> " + pc.fName)
+
+          if(not writeError):
+            writeError = False
+            pc.write(f)
+            f.close()
+        else:
+          mainScr.printToMiniBuffer("ERROR: Not all packets supported for read/write")
 
       elif(c == ord("<")): # Shift left 1 column
         mainScr.shiftColumn(-1)

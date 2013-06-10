@@ -32,6 +32,15 @@ class Packet:
     self.layers.append(layer.TStamp(ts))
     self.initLayers(dpkt.ethernet.Ethernet(packet))
 
+  def _RW(self):
+    for lay in self.layers:
+      if(lay.ID == 'pid' or lay.ID == 'tstamp'):
+        continue
+      elif(not lay.toPcap()):
+        return False
+    return True
+  RW = property(_RW)
+
   # Discover the layers in the packet and construct our layers list
   def initLayers(self, d):
     if(not isinstance(d, dpkt.Packet)):
@@ -80,10 +89,6 @@ class Packet:
     else:
       self.unsupported = True
       return
-      
-  # Should never actually get called
-  def __getattr__(self, key):
-    return None
 
   # Sets the value of section,column to val
   def setColumn(self, sid, col, val):
@@ -107,6 +112,7 @@ class Packet:
 
   # Returns the pcap formatted packet
   # Does not work with timestamps
+  # Returns False if pcap data cannot be constructed
   def data(self):
     for lay in self.layers:
       if(lay.ID == 'pid' or lay.ID == 'tstamp'):
