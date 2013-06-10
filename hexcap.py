@@ -131,21 +131,21 @@ class EdScreen:
           IDs.append(lay.ID)
 
           # Construct our new section
-          s = section.Section(lay.ID)
+          s = section.Section(lay.ID, lay.position)
           for col,width in lay.cols.iteritems():
             s.append(col, width)
           s.RO = lay.RO # non-default values for layers need to be handled here
 
           # append/insert our new section
-          if(len(self.sections) == 0):
+          if(len(self.sections) <= 1):
             self.sections.append(s)
           else:
-            for ii in xrange(len(pkt.layers)):
-              if(ii >= len(self.sections)):
+            for ii in xrange(len(self.sections)):
+              if(ii == len(self.sections) - 1):
                 self.sections.append(s)
                 break
-              elif(pkt.layers[ii].ID != self.sections[ii].ID):
-                self.sections.insert(ii + 1, s)
+              elif(s.position <= self.sections[ii].position):
+                self.sections.insert(ii, s)
                 break
 
   # Relative Y cursor position in our ppad

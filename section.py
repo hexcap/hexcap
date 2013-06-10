@@ -22,12 +22,15 @@ import cfg
 from collections import OrderedDict
 
 class Section:
-  def __init__(self, sectId):
-    self.ID = sectId
+  def __init__(self, sectId, pos):
+    self.ID = sectId # Our layer ID
+    self.position = pos # Our relative position in the ordering of columns
+
     self.c = OrderedDict() # OrderedDict of columns
     self.width = 0 # Width of complete section
     self.visible = True # Is this section currently visible?
     self.RO = False # Is this section ReadOnly? Can it be modified by the user
+
 
   def append(self, name, w):
     self.c[name] = w

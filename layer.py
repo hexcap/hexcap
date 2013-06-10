@@ -68,6 +68,7 @@ class Layer:
 class PktID(Layer):
   ID = "pid"
   RO = True
+  position = 0
 
   cols = OrderedDict() # OrderedDict of columns
   cols['pid'] = cfg.pktIDWidth
@@ -92,6 +93,7 @@ class PktID(Layer):
 class TStamp(Layer):
   ID = "tstamp"
   RO = True
+  position = 1
 
   cols = OrderedDict() # OrderedDict of columns
   cols['tstamp'] = 13
@@ -105,6 +107,8 @@ class TStamp(Layer):
 
 class Ethernet(Layer):
   ID = "ethernet"
+  position = 10
+
 
   cols = OrderedDict() # OrderedDict of columns
   cols['eth-dst'] = 17
@@ -128,6 +132,7 @@ class Ethernet(Layer):
 # Writing does not yet work(needs work in dpkt ethernet.py)
 class Dot1q(Layer):
   ID = "802.1q"
+  position = 20
 
   cols = OrderedDict() # OrderedDict of columns
   cols['tag'] = 5
@@ -145,7 +150,8 @@ class Dot1q(Layer):
 
 class STP(Layer):
   ID = "stp"
-  
+  position = 30
+
   cols = OrderedDict() # OrderedDict of columns
   cols['root-id'] = 23
   cols['bridge-id'] = 23
@@ -186,6 +192,7 @@ class STP(Layer):
 # PTYPE == 0x0800(IPv4)
 class ARP(Layer):
   ID = "iparp"
+  position = 35
 
   cols = OrderedDict()
   cols['oper'] = 5 # Operation
@@ -213,6 +220,7 @@ class ARP(Layer):
 
 class IPv4(Layer):
   ID = "ipv4"
+  position = 40
 
   cols = OrderedDict() # OrderedDict of columns
   cols['ipv4-dst'] = 11
@@ -245,6 +253,7 @@ class IPv4(Layer):
 
 class IGMP(Layer):
   ID = "igmp"
+  position = 50
 
   cols = OrderedDict() # OrderedDict of columns
   cols['type'] = 5
@@ -267,6 +276,7 @@ class IGMP(Layer):
 # Assumes ICMP type is either 0 or 8(echo or echo_reply)
 class ICMP(Layer):
   ID = "icmp"
+  position = 50
 
   cols = OrderedDict() # OrderedDict of columns
   cols['type'] = 4
@@ -291,7 +301,8 @@ class ICMP(Layer):
 
 class UDP(Layer):
   ID = "udp"
-  
+  position = 50  
+
   cols = OrderedDict()
   cols['dport'] = 5
   cols['sport'] = 5
@@ -314,6 +325,7 @@ class UDP(Layer):
 
 class TCP(Layer):
   ID = "tcp"
+  position = 50
 
   cols = OrderedDict()
   cols['dport'] = 5
