@@ -158,37 +158,45 @@ class STP(Layer):
   position = 30
 
   cols = OrderedDict() # OrderedDict of columns
-  cols['root-id'] = 23
-  cols['bridge-id'] = 23
-  cols['port-id'] = 7
-  cols['age'] = 5
-  cols['max-age'] = 7
+  cols['root'] = 23
+  cols['bridge'] = 23
+  cols['port'] = 4
+  cols['cost'] = 4
+  cols['age'] = 3
+  cols['max'] = 3
   cols['hello'] = 5
-  cols['fwd-delay'] = 9
-  cols['cost'] = 5
+  cols['delay'] = 5
 
   def __init__(self, data):
     self.vals = dict()
-    self.vals['root-id'] = self.pcapToHexStr(data.root_id, 2, ":")
-    self.vals['bridge-id'] = self.pcapToHexStr(data.bridge_id, 2, ":")
-    self.vals['port-id'] = self.intToHexStr(data.port_id).rjust(4, "0")
+    self.vals['root'] = self.pcapToHexStr(data.root_id, 2, ":")
+    self.vals['bridge'] = self.pcapToHexStr(data.bridge_id, 2, ":")
+    self.vals['port'] = self.intToHexStr(data.port_id).rjust(4, "0")
     self.vals['age'] = self.intToHexStr(data.age).rjust(2, "0")
-    self.vals['max-age'] = self.intToHexStr(data.max_age).rjust(2, "0")
+    self.vals['max'] = self.intToHexStr(data.max_age).rjust(2, "0")
     self.vals['hello'] = self.intToHexStr(data.hello).rjust(2, "0")
-    self.vals['fwd-delay'] = self.intToHexStr(data.fd).rjust(2, "0")
-    self.vals['cost'] = self.intToHexStr(data.root_path).rjust(2, "0")
+    self.vals['delay'] = self.intToHexStr(data.fd).rjust(2, "0")
+    self.vals['cost'] = self.intToHexStr(data.root_path).rjust(4, "0")
+    self.vals['proto-id'] = data.proto_id
+    self.vals['ver'] = data.v
+    self.vals['type'] = data.type
+    self.vals['flags'] = data.flags
     self.vals['data'] = data.data
 
   def toPcap(self):
     rv = dpkt.stp.STP()
-    rv.root_id = self.hexStrToPcap(self.vals['root-id'], ":")
-    rv.bridge_id = self.hexStrToPcap(self.vals['bridge-id'], ":")
-    rv.port_id = int(self.vals['port-id'], 16)
+    rv.root_id = self.hexStrToPcap(self.vals['root'], ":")
+    rv.bridge_id = self.hexStrToPcap(self.vals['bridge'], ":")
+    rv.port_id = int(self.vals['port'], 16)
     rv.age = int(self.vals['age'], 16)
-    rv.max_age = int(self.vals['max-age'], 16)
+    rv.max_age = int(self.vals['max'], 16)
     rv.hello = int(self.vals['hello'], 16)
-    rv.fd = int(self.vals['fwd-delay'], 16)
-    rv.path = int(self.vals['cost'], 16)
+    rv.fd = int(self.vals['delay'], 16)
+    rv.root_path = int(self.vals['cost'], 16)
+    rv.proto_id = self.vals['proto-id']
+    rv.v = self.vals['ver']
+    rv.type = self.vals['type']
+    rv.flags = self.vals['flags']
     rv.data = self.vals['data']
     return rv
 

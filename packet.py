@@ -48,7 +48,7 @@ class Packet:
       return
 
     if(isinstance(d, dpkt.ethernet.Ethernet)):
-      if(d.type == 0x0800 or d.type == 0x8100):
+      if(d.type == 0x0800 or d.type == 0x8100 or hasattr(d, 'stp')):
         self.layers.append(layer.Ethernet(d))
         self.initLayers(d.data)
       else:
