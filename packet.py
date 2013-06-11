@@ -33,6 +33,7 @@ class Packet:
     self.initLayers(dpkt.ethernet.Ethernet(packet))
 
   def _RW(self):
+    if(self.unsupported): return False
     for lay in self.layers:
       if(lay.ID == 'pid' or lay.ID == 'tstamp'):
         continue
@@ -47,9 +48,13 @@ class Packet:
       return
 
     if(isinstance(d, dpkt.ethernet.Ethernet)):
-      self.layers.append(layer.Ethernet(d))
-      self.initLayers(d.data)
-
+      if(d.type == 0x0800 or d.type == 0x8100):
+        self.layers.append(layer.Ethernet(d))
+        self.initLayers(d.data)
+      else:
+        self.unsupported = True
+        return
+        
     elif(isinstance(d, dpkt.dot1q.DOT1Q)):
       self.layers.append(layer.Dot1q(d))
       self.initLayers(d.data)
@@ -68,11 +73,15 @@ class Packet:
         self.initLayers(d.data)
       elif(d.v == 6):
         self.unsupported = True
-        self.initLayers(d.data)
+        return
 
     elif(isinstance(d, dpkt.igmp.IGMP)):
-      self.layers.append(layer.IGMP(d))
-      self.initLayers(d.data)
+      if(d.type == 0x22): # IGMPv3
+        self.unsupported = True
+        return
+      else:
+        self.layers.append(layer.IGMP(d))
+        self.initLayers(d.data)
 
     elif(isinstance(d, dpkt.icmp.ICMP)):
       self.layers.append(layer.ICMP(d))
@@ -114,6 +123,7 @@ class Packet:
   # Does not work with timestamps
   # Returns False if pcap data cannot be constructed
   def data(self):
+    if(not self.RW): return False
     for lay in self.layers:
       if(lay.ID == 'pid' or lay.ID == 'tstamp'):
         continue

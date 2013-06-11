@@ -91,9 +91,6 @@ class PktID(Layer):
     else:
       self.vals[col] = str(val).rjust(cfg.pktIDWidth, "0")
 
-  def toPcap(self):
-    return True
-
 class TStamp(Layer):
   ID = "tstamp"
   RO = True
@@ -248,7 +245,7 @@ class IPv4(Layer):
     self.vals['tos'] = data.tos
     self.vals['len'] = data.len
     self.vals['id'] = data.id
-    self.vals['sum'] = data.sum
+    self.vals['opts'] = data.opts
 
   def toPcap(self):
     rv = dpkt.ip.IP()
@@ -262,7 +259,7 @@ class IPv4(Layer):
     rv.tos = self.vals['tos']
     rv.len = self.vals['len']
     rv.id = self.vals['id']
-    rv.sum = self.vals['sum']
+    rv.opts = self.vals['opts']
     return rv
 
 class IGMP(Layer):
@@ -279,14 +276,12 @@ class IGMP(Layer):
     self.vals['type'] = self.intToHexStr(data.type).rjust(2, "0")
     self.vals['maxresp'] = self.intToHexStr(data.maxresp).rjust(2, "0")
     self.vals['group'] = self.pcapToHexStr(data.group, 2, ".")
-#    self.vals['sum'] = data.sum
 
   def toPcap(self):
     rv = dpkt.igmp.IGMP()
-    rv.type = int(self.vals['type'])
-    rv.maxresp = int(self.vals['maxresp'])
+    rv.type = int(self.vals['type'], 16)
+    rv.maxresp = int(self.vals['maxresp'], 16)
     rv.group = self.hexStrToPcap(self.vals['group'], ".")
-#    rv.sum =  self.vals['sum']
     return rv
 
 # Assumes ICMP type is either 0 or 8(echo or echo_reply)

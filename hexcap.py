@@ -296,8 +296,8 @@ class EdScreen:
   #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
     if(not row):
-      msg = "Packet Unsupported"
-      self.ppad.addstr(y, int(self.maxX /2) - int(len(msg) /2), msg)
+      msg = "<<Packet Unsupported>>"
+      self.ppad.addstr(y, 1, msg)
       return
 
     x = 0
