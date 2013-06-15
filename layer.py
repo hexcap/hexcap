@@ -154,7 +154,7 @@ class EthernetDot2(Ethernet):
   cols['len'] = 4
   cols['dsap'] = 4
   cols['ssap'] = 4
-  cols['ctl'] = 3
+#  cols['ctl'] = 3
 
   def __init__(self, data):
     Ethernet.__init__(self, data)
@@ -170,6 +170,40 @@ class EthernetDot2(Ethernet):
     rv.ssap = int(self.vals['ssap'], 16)
     rv.ctl = int(self.vals['ctl'], 16)
     return rv
+
+# IEEE 802.3 SNAP 
+class EthernetSNAP(Ethernet):
+  ID = "ethernet SNAP"
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['eth-dst'] = 17
+  cols['eth-src'] = 17
+  cols['dsap'] = 4
+  cols['ssap'] = 4
+#  cols['ctl'] = 3
+#  cols['org'] = 6
+#  cols['pid'] = 4
+
+  def __init__(self, data):
+    Ethernet.__init__(self, data)
+    self.vals['type'] = self.intToHexStr(data.type).rjust(2, "0")
+    self.vals['dsap'] = self.intToHexStr(data.dsap).rjust(2, "0")
+    self.vals['ssap'] = self.intToHexStr(data.ssap).rjust(2, "0")
+    self.vals['ctl'] = self.intToHexStr(data.ctl).rjust(2, "0")
+    self.vals['org'] = self.intToHexStr(data.org).rjust(6, "0")
+    self.vals['pid'] = self.intToHexStr(data.pid).rjust(4, "0")
+    cfg.dbg(repr(self.vals))
+
+  def toPcap(self):
+    rv = Ethernet.toPcap(self)
+    rv.type = int(self.vals['type'], 16)
+    rv.dsap = int(self.vals['dsap'], 16)
+    rv.ssap = int(self.vals['ssap'], 16)
+    rv.ctl = int(self.vals['ctl'], 16)
+    rv.org = int(self.vals['org'], 16)
+    rv.pid = int(self.vals['pid'], 16)
+    return rv
+
 
 # Writing does not yet work(needs work in dpkt ethernet.py)
 class Dot1q(Layer):

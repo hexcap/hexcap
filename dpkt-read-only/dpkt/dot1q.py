@@ -1,13 +1,7 @@
-# $Id: 8021q.py 23 2013-06-05 14:59:33Z smutt $
-
 """IEEE 802.1q"""
 
 import struct
 import dpkt
-import sys
-sys.path.insert(0, '/home/smutt/hacking/python/hexcap/')
-import cfg
-
 
 # Ethernet payload types - http://standards.ieee.org/regauth/ethertype
 ETH_TYPE_PUP	= 0x0200		# PUP protocol

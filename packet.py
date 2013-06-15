@@ -52,11 +52,15 @@ class Packet:
 
     if(isinstance(d, dpkt.ethernet.Ethernet)):
       if(d.type == 0x0800 or d.type == 0x8100):
-        self.layers.append(layer.EthernetII(d))
+        self.layers.append(layer.EthernetII(d)) # Ethernet II
         self.initLayers(d.data)
       elif(hasattr(d, 'dsap')):
-        self.layers.append(layer.EthernetDot2(d))
-        self.initLayers(d.data)
+        if((d.dsap == 170 or d.dsap == 171) and (d.ssap == 170 or d.ssap == 171)):
+          self.layers.append(layer.EthernetSNAP(d)) # SNAP
+          self.initLayers(d.data)
+        else:
+          self.layers.append(layer.EthernetDot2(d)) # 802.2
+          self.initLayers(d.data)
       else:
         self.unsupported = True
         return
@@ -140,7 +144,6 @@ class Packet:
         while(isinstance(d.data, dpkt.Packet)):
           d = d.data
         d.data = lay.toPcap()
-    cfg.dbg("len:" + str(len(rv)))
     return self.sizePkt(rv)
 
   # Pads our pcap packet and returns False on packets greater than MTU
@@ -155,7 +158,6 @@ class Packet:
         d = d.data
       for ii in xrange(len(pkt), self.minSize):
         d.data += '\x00'
-    cfg.dbg("dLen:" + str(len(pkt)))
     return pkt
 
   # For debugging only

@@ -5,6 +5,9 @@ with automatic 802.1q, MPLS, PPPoE, and Cisco ISL decapsulation."""
 
 import struct
 import dpkt, stp
+import sys
+sys.path.insert(0, '/home/smutt/hacking/python/hexcap/')
+import cfg
 
 ETH_CRC_LEN	= 4
 ETH_HDR_LEN	= 14
@@ -88,7 +91,8 @@ class Ethernet(dpkt.Packet):
             self.dsap, self.ssap, self.ctl = struct.unpack('BBB', self.data[:3])
             if self.data.startswith('\xaa\xaa'):
                 # SNAP
-                self.type = struct.unpack('>H', self.data[6:8])[0]
+                self.org = struct.unpack('>I', self.data[2:6])[0] & 0xffffff
+                self.pid = struct.unpack('>H', self.data[6:8])[0]
                 self._unpack_data(self.data[8:])
             else:
                 # non-SNAP
@@ -103,7 +107,11 @@ class Ethernet(dpkt.Packet):
     def pack_hdr(self):
         try:
             if hasattr(self, 'dsap'):
-                return dpkt.Packet.pack_hdr(self) + struct.pack('BBB', self.dsap, self.ssap, self.ctl)
+                if hasattr(self, 'org'):
+                    return dpkt.Packet.pack_hdr(self) + struct.pack('BB', self.dsap, self.ssap) + \
+                           struct.pack('>I',  (self.ctl << 24) | self.org ) + struct.pack('>H', self.pid)
+                else:
+                    return dpkt.Packet.pack_hdr(self) + struct.pack('BBB', self.dsap, self.ssap, self.ctl)
             return dpkt.Packet.pack_hdr(self)
         except struct.error, e:
             raise dpkt.PackError(str(e))
