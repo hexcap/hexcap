@@ -25,6 +25,9 @@ import dpkt
 import layer
 
 class Packet:
+  minSize = 60 # Minimum packet size in bytes
+  maxSize = 1500 # MTU
+
   def __init__(self, ts, packet, pid):
     self.unsupported = False
     self.layers = []
@@ -137,7 +140,23 @@ class Packet:
         while(isinstance(d.data, dpkt.Packet)):
           d = d.data
         d.data = lay.toPcap()
-    return rv
+    cfg.dbg("len:" + str(len(rv)))
+    return self.sizePkt(rv)
+
+  # Pads our pcap packet and returns False on packets greater than MTU
+  def sizePkt(self, pkt):
+    if((len(pkt) > self.minSize) & (len(pkt) < self.maxSize)):
+      return pkt
+    elif(len(pkt) > self.maxSize):
+      return False
+    else:
+      d = pkt
+      while(isinstance(d.data, dpkt.Packet)):
+        d = d.data
+      for ii in xrange(len(pkt), self.minSize):
+        d.data += '\x00'
+    cfg.dbg("dLen:" + str(len(pkt)))
+    return pkt
 
   # For debugging only
   def dump(self):
