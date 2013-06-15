@@ -48,8 +48,11 @@ class Packet:
       return
 
     if(isinstance(d, dpkt.ethernet.Ethernet)):
-      if(d.type == 0x0800 or d.type == 0x8100 or hasattr(d, 'stp')):
-        self.layers.append(layer.Ethernet(d))
+      if(d.type == 0x0800 or d.type == 0x8100):
+        self.layers.append(layer.EthernetII(d))
+        self.initLayers(d.data)
+      elif(hasattr(d, 'dsap')):
+        self.layers.append(layer.EthernetDot2(d))
         self.initLayers(d.data)
       else:
         self.unsupported = True

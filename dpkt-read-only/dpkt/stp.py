@@ -11,7 +11,7 @@ class STP(dpkt.Packet):
         ('type', 'B', 0),
         ('flags', 'B', 0),
         ('root_id', '8s', ''),
-        ('root_path', 'H', 0),
+        ('root_path', 'I', 0),
         ('bridge_id', '8s', ''),
         ('port_id', 'H', 0),
         ('age_x2', 'H', 0),

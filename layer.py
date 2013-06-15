@@ -106,9 +106,28 @@ class TStamp(Layer):
   def toPcap(self):
     return float(self.vals['tstamp'])
 
+# Our generic ethernet class
 class Ethernet(Layer):
-  ID = "ethernet"
   position = 10
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['eth-dst'] = 17
+  cols['eth-src'] = 17
+
+  def __init__(self, data):
+    self.vals = dict()
+    self.vals['eth-dst'] = self.pcapToHexStr(data.dst, 2, ":")
+    self.vals['eth-src'] = self.pcapToHexStr(data.src, 2, ":")
+
+  def toPcap(self):
+    rv = dpkt.ethernet.Ethernet()
+    rv.dst = self.hexStrToPcap(self.vals['eth-dst'], ":")
+    rv.src = self.hexStrToPcap(self.vals['eth-src'], ":")
+    return rv
+
+# IEEE 802.3 Ethernet II
+class EthernetII(Ethernet):
+  ID = "ethernet II"
 
   cols = OrderedDict() # OrderedDict of columns
   cols['eth-dst'] = 17
@@ -116,16 +135,40 @@ class Ethernet(Layer):
   cols['etype'] = 5
 
   def __init__(self, data):
-    self.vals = dict()
-    self.vals['eth-dst'] = self.pcapToHexStr(data.dst, 2, ":")
-    self.vals['eth-src'] = self.pcapToHexStr(data.src, 2, ":")
+    Ethernet.__init__(self, data)
     self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
 
   def toPcap(self):
-    rv = dpkt.ethernet.Ethernet()
-    rv.dst = self.hexStrToPcap(self.vals['eth-dst'], ":")
-    rv.src = self.hexStrToPcap(self.vals['eth-src'], ":")
+    rv = Ethernet.toPcap(self)
     rv.type = int(self.vals['etype'], 16)
+    return rv
+
+# IEEE 802.3 ethernet frame with IEEE 802.2 LLC header
+# We do not support IPX yet
+class EthernetDot2(Ethernet):
+  ID = "ethernet 802.3"
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['eth-dst'] = 17
+  cols['eth-src'] = 17
+  cols['len'] = 4
+  cols['dsap'] = 4
+  cols['ssap'] = 4
+  cols['ctl'] = 3
+
+  def __init__(self, data):
+    Ethernet.__init__(self, data)
+    self.vals['len'] = self.intToHexStr(data.type).rjust(4, "0")
+    self.vals['dsap'] = self.intToHexStr(data.dsap).rjust(2, "0")
+    self.vals['ssap'] = self.intToHexStr(data.ssap).rjust(2, "0")
+    self.vals['ctl'] = self.intToHexStr(data.ctl).rjust(2, "0")
+
+  def toPcap(self):
+    rv = Ethernet.toPcap(self)
+    rv.type = int(self.vals['len'], 16)
+    rv.dsap = int(self.vals['dsap'], 16)
+    rv.ssap = int(self.vals['ssap'], 16)
+    rv.ctl = int(self.vals['ctl'], 16)
     return rv
 
 # Writing does not yet work(needs work in dpkt ethernet.py)
@@ -182,6 +225,7 @@ class STP(Layer):
     self.vals['type'] = data.type
     self.vals['flags'] = data.flags
     self.vals['data'] = data.data
+    cfg.dbg(repr(self.vals))
 
   def toPcap(self):
     rv = dpkt.stp.STP()

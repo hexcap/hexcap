@@ -100,6 +100,14 @@ class Ethernet(dpkt.Packet):
                 elif dsap == 0x42: # SAP_STP
                     self.data = self.stp = stp.STP(self.data[3:])
 
+    def pack_hdr(self):
+        try:
+            if hasattr(self, 'dsap'):
+                return dpkt.Packet.pack_hdr(self) + struct.pack('BBB', self.dsap, self.ssap, self.ctl)
+            return dpkt.Packet.pack_hdr(self)
+        except struct.error, e:
+            raise dpkt.PackError(str(e))
+
     def set_type(cls, t, pktclass):
         cls._typesw[t] = pktclass
     set_type = classmethod(set_type)
