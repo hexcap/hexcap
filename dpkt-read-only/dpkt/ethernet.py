@@ -4,7 +4,7 @@
 with automatic 802.1q, MPLS, PPPoE, and Cisco ISL decapsulation."""
 
 import struct
-import dpkt, stp
+import dpkt, stp, edp
 import sys
 sys.path.insert(0, '/home/smutt/hacking/python/hexcap/')
 import cfg
@@ -93,7 +93,10 @@ class Ethernet(dpkt.Packet):
                 # SNAP
                 self.org = struct.unpack('>I', self.data[2:6])[0] & 0xffffff
                 self.pid = struct.unpack('>H', self.data[6:8])[0]
-                self._unpack_data(self.data[8:])
+                if self.org == 0x00e02b and self.pid == 0x00bb: # EDP
+                    self.data = self.edp = edp.EDP(self.data)
+                else:
+                    self._unpack_data(self.data[8:])
             else:
                 # non-SNAP
                 dsap = ord(self.data[0])

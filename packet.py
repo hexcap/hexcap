@@ -64,7 +64,11 @@ class Packet:
       else:
         self.unsupported = True
         return
-        
+
+    elif(isinstance(d, dpkt.edp.EDP)):
+      self.layers.append(layer.EDP(d))
+      return
+
     elif(isinstance(d, dpkt.dot1q.DOT1Q)):
       self.layers.append(layer.Dot1q(d))
       self.initLayers(d.data)

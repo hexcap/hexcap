@@ -192,7 +192,6 @@ class EthernetSNAP(Ethernet):
     self.vals['ctl'] = self.intToHexStr(data.ctl).rjust(2, "0")
     self.vals['org'] = self.intToHexStr(data.org).rjust(6, "0")
     self.vals['pid'] = self.intToHexStr(data.pid).rjust(4, "0")
-    cfg.dbg(repr(self.vals))
 
   def toPcap(self):
     rv = Ethernet.toPcap(self)
@@ -204,8 +203,6 @@ class EthernetSNAP(Ethernet):
     rv.pid = int(self.vals['pid'], 16)
     return rv
 
-
-# Writing does not yet work(needs work in dpkt ethernet.py)
 class Dot1q(Layer):
   ID = "802.1q"
   position = 20
@@ -228,6 +225,33 @@ class Dot1q(Layer):
     rv.pcp = int(self.vals['dot1p'], 16)
     rv.type = int(self.vals['etype'], 16)
     rv.dei = self.vals['dei']
+    return rv
+
+class EDP(Layer):
+  ID = "edp"
+  position = 20
+
+  cols = OrderedDict() # OrderedDict of columns
+  cols['ver'] = 3
+  cols['len'] = 3
+  cols['seq'] = 3
+  cols['mac'] = 17
+
+  def __init__(self, data):
+    self.vals = dict()
+    self.vals['ver'] = self.intToHexStr(data.v).rjust(2, "0")
+    self.vals['len'] = self.intToHexStr(data.len).rjust(2, "0")
+    self.vals['seq'] = self.intToHexStr(data.seq).rjust(2, "0")
+    self.vals['mac'] = self.pcapToHexStr(data.mac, 2, ":")
+    self.vals['data'] = data.data
+
+  def toPcap(self):
+    rv = dpkt.edp.EDP()
+    rv.v = int(self.vals['ver'], 16)
+    rv.len = int(self.vals['len'], 16)
+    rv.seq = int(self.vals['seq'], 16)
+    rv.mac = self.hexStrToPcap(self.vals['mac'], ":")
+    rv.data = self.vals['data']
     return rv
 
 class STP(Layer):
