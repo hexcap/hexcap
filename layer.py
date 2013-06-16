@@ -233,15 +233,15 @@ class EDP(Layer):
 
   cols = OrderedDict() # OrderedDict of columns
   cols['ver'] = 3
-  cols['len'] = 3
-  cols['seq'] = 3
+  cols['len'] = 4
+  cols['seq'] = 4
   cols['mac'] = 17
 
   def __init__(self, data):
     self.vals = dict()
     self.vals['ver'] = self.intToHexStr(data.v).rjust(2, "0")
-    self.vals['len'] = self.intToHexStr(data.len).rjust(2, "0")
-    self.vals['seq'] = self.intToHexStr(data.seq).rjust(2, "0")
+    self.vals['len'] = self.intToHexStr(data.len).rjust(4, "0")
+    self.vals['seq'] = self.intToHexStr(data.seq).rjust(4, "0")
     self.vals['mac'] = self.pcapToHexStr(data.mac, 2, ":")
     self.vals['data'] = data.data
 

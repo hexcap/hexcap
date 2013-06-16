@@ -94,7 +94,7 @@ class Ethernet(dpkt.Packet):
                 self.org = struct.unpack('>I', self.data[2:6])[0] & 0xffffff
                 self.pid = struct.unpack('>H', self.data[6:8])[0]
                 if self.org == 0x00e02b and self.pid == 0x00bb: # EDP
-                    self.data = self.edp = edp.EDP(self.data)
+                    self.data = self.edp = edp.EDP(self.data[8:])
                 else:
                     self._unpack_data(self.data[8:])
             else:

@@ -11,10 +11,12 @@ class EDP(dpkt.Packet):
         ('res', 'B', 0),
         ('len', 'H', 0),
         ('sum', 'H', 0),
-        ('seq', 'H', ''),
+        ('seq', 'H', 0),
         ('mid', 'H', 0),
         ('mac', '6s', '')
         )
-
-
     
+    def __str__(self):
+        if not self.sum:
+            self.sum = dpkt.in_cksum(dpkt.Packet.__str__(self))
+        return dpkt.Packet.__str__(self)
