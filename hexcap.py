@@ -134,7 +134,9 @@ class EdScreen:
           s = section.Section(lay.ID, lay.position)
           for col,width in lay.cols.iteritems():
             s.append(col, width)
-          s.RO = lay.RO # non-default values for layers need to be handled here
+          # non-default values for layers need to be handled here
+          s.RO = lay.RO
+          s.exposed = lay.exposed
 
           # append/insert our new section
           if(len(self.sections) <= 1):
@@ -293,7 +295,7 @@ class EdScreen:
 
   # Draws a packet line onto our ppad
   # Takes a y value and list of cells that correlates to our global header list
-  #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
+  #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid'])+ " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
     if(not row):
       msg = "<<Unsupported Packet>>".center(self.tableWidth)
@@ -317,12 +319,15 @@ class EdScreen:
                   
                 x += width + 1
               else:
+                cfg.dbg("exp==True dtw:" + str(self.displayTableWidth) + " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(width))
                 self.ppad.addstr(y, x, " ".rjust(width + 1))
                 x += width + 1
         else:
-          self.ppad.hline(y, x, "-", x + s.width - 1)
-          self.ppad.addstr(y, x + s.width - 1, "|")
-          x += s.width
+          cfg.dbg("exp==False dtw:" + str(self.displayTableWidth) + " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(s.width))
+          if(self.displayTableWidth > x + s.width):
+            self.ppad.hline(y, x, "-", x + s.width - 1)
+            self.ppad.addstr(y, x + s.width - 1, "|")
+            x += s.width
       else:
         continue
 
@@ -369,10 +374,7 @@ class EdScreen:
     self.stdscr.hline(y, x, "-", divider)
     x += divider
 
-    self.stdscr.addstr(y, x, "[y:" + str(self.cY).rjust(3))
-    x += posWidth
-
-    self.stdscr.addstr(y, x, " x:" + str(self.cX).rjust(3))
+    self.stdscr.addstr(y, x, "[x:" + str(self.cX).rjust(3))
     x += posWidth
 
     txt = " p:" + str(self.ppadCurY + self.cY - self.ppadTopY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
@@ -497,6 +499,7 @@ class EdScreen:
     if(len(self.displayedSections) > 1):
       s = self.cursorSection(self.cX)
       s.visible = False
+      s.exposed = False
       self.hiddenSectIDs.append(s.ID)
       self.drawPpad() # Sets self.displayTableWidth
       self.cX = min(self.cX, self.displayTableWidth - 2)
@@ -514,7 +517,12 @@ class EdScreen:
 
   def toggleExpose(self):
     s = self.cursorSection(self.cX)
-    s.exposed = not s.exposed
+#    cfg.dbg("dtw:" + str(self.displayTableWidth) + " exp:" + str(s.exposed) + " s._width:" + str(s._width) + " maxX:" + str(self.maxX))
+    if(s.exposed):
+      s.exposed = False
+    else:
+      if(s._width + self.displayTableWidth < self.maxX):
+        s.exposed = True
     self.drawPpad()
     self.cX = self.sectionCenter(s.ID)
     self.refresh()

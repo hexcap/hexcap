@@ -30,6 +30,7 @@ from collections import OrderedDict
 
 class Layer:
   RO = False # Is this layer read-only?
+  exposed = False
 
   # Convert int to hex without leading 0x
   def intToHexStr(self, num):
@@ -72,7 +73,9 @@ class Layer:
 class PktID(Layer):
   ID = "pid"
   RO = True
+  exposed = True
   position = 0
+  
 
   cols = OrderedDict() # OrderedDict of columns
   cols['pid'] = cfg.pktIDWidth

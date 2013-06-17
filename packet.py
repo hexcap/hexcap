@@ -48,11 +48,12 @@ class Packet:
 
   # Takes a layer ID
   # Returns True if packet has layer, otherwise False
-  def hasLayer(self, ID):
-    for lay in self.layers:
-      if(lay.ID == ID):
-        return True
-    return False
+  # Not used
+#  def hasLayer(self, ID):
+#    for lay in self.layers:
+#      if(lay.ID == ID):
+#        return True
+#    return False
 
   # Discover the layers in the packet and construct our layers list
   def initLayers(self, d):
