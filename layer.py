@@ -212,23 +212,30 @@ class Dot1q(Layer):
 
   cols = OrderedDict() # OrderedDict of columns
   cols['tag'] = 5
-  cols['dot1p'] = 5
+  cols['1p'] = 5
   cols['etype'] = 5
 
   def __init__(self, data):
     self.vals = dict()
     self.vals['tag'] = self.intToHexStr(data.tag).rjust(4, "0")
-    self.vals['dot1p'] = self.intToHexStr(data.pcp).rjust(4, "0")
+    self.vals['1p'] = self.intToHexStr(data.pcp).rjust(1, "0")
     self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
     self.vals['dei'] = data.dei
 
   def toPcap(self):
     rv = dpkt.dot1q.DOT1Q()
     rv.tag = int(self.vals['tag'], 16)
-    rv.pcp = int(self.vals['dot1p'], 16)
+    rv.pcp = int(self.vals['1p'], 16)
     rv.type = int(self.vals['etype'], 16)
     rv.dei = self.vals['dei']
     return rv
+
+  def setColumn(self, col, val):
+    if(col == '1p'):
+      if(0 <= int(val, 16) <= 7):
+        self.vals[col] = val
+    else:
+      self.vals[col] = val
 
 class EDP(Layer):
   ID = "edp"

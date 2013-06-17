@@ -33,6 +33,8 @@ class Packet:
     self.layers = []
     self.layers.append(layer.PktID(pid))
     self.layers.append(layer.TStamp(ts))
+
+    self.minSize = max(self.minSize, len(packet))
     self.initLayers(dpkt.ethernet.Ethernet(packet))
 
   # Is every layer of this packet writable
