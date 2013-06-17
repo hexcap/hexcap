@@ -37,6 +37,7 @@ pktIDWidth = 5
 # Consider using curses.keyname(k)
 KEY_CTRL_SPACE = 0
 KEY_CTRL_B = 2
+KEY_CTRL_E = 5
 KEY_CTRL_F = 6
 KEY_CTRL_I = 9
 KEY_CTRL_K = 11

@@ -182,8 +182,8 @@ class EdScreen:
         totX += s.width
     return dSections.reversed.next()
 
-  # Returns header section and column that cursor X value is currently in
-  # Takes X value of cursor
+  # Returns header section and column that X value is currently in
+  # Takes X screen value
   def cursorColumn(self, x):
     totX = 0
     for s in self.displayedSections:
@@ -296,30 +296,35 @@ class EdScreen:
   #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
     if(not row):
-      msg = "<<Packet Unsupported>>"
+      msg = "<<Unsupported Packet>>".center(self.tableWidth)
       self.ppad.addstr(y, 1, msg)
       return
 
     x = 0
     for s in self.sections:
       if(s.visible):
-        if(self.displayTableWidth >= x + s.width):
-          for colName, width in s.c.iteritems():
-            if(s.ID in row):
-              if(reverse):
-                self.ppad.addstr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_REVERSE)
-              else:
-                if(bold):
-                  self.ppad.addstr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_BOLD)
+        if(s.exposed):
+          if(self.displayTableWidth >= x + s.width):
+            for colName, width in s.c.iteritems():
+              if(s.ID in row):
+                if(reverse):
+                  self.ppad.addstr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_REVERSE)
                 else:
-                  self.ppad.addstr(y, x, row[s.ID][colName].rjust(width) + "|")
+                  if(bold):
+                    self.ppad.addstr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_BOLD)
+                  else:
+                    self.ppad.addstr(y, x, row[s.ID][colName].rjust(width) + "|")
                   
-              x += width + 1
-            else:
-              self.ppad.addstr(y, x, " ".rjust(width + 1))
-              x += width + 1
+                x += width + 1
+              else:
+                self.ppad.addstr(y, x, " ".rjust(width + 1))
+                x += width + 1
         else:
-          return
+          self.ppad.hline(y, x, "-", x + s.width - 1)
+          self.ppad.addstr(y, x + s.width - 1, "|")
+          x += s.width
+      else:
+        continue
 
   # Draws our top 2 header rows
   def drawHeader(self):
@@ -327,18 +332,27 @@ class EdScreen:
     x1 = 0
     for s in self.sections:
       if(s.visible):
-        if(self.displayTableWidth >= x0 + s.width):
-          for column, width in s.c.iteritems():
-            col = column.center(width, " ")
-            self.stdscr.addstr(1, x1, col + "|", curses.A_REVERSE)
-            x1 += width + 1
+        if(s.exposed):
+          if(self.displayTableWidth >= x0 + s.width):
+            for column, width in s.c.iteritems():
+              col = column.center(width, " ")
+              self.stdscr.addstr(1, x1, col + "|", curses.A_REVERSE)
+              x1 += width + 1
 
-          head = "{" + s.ID + "}"
-          head = head.center(s.width - 1, " ") + "|"
-          self.stdscr.addstr(0, x0, head)
-          x0 += s.width
+            head = "{" + s.ID + "}"
+            head = head.center(s.width - 1, " ") + "|"
+            self.stdscr.addstr(0, x0, head)
+            x0 += s.width
         else:
-          return
+          if(self.displayTableWidth >= x0 + s.width):
+            head = "{" + s.ID + "}|"
+            self.stdscr.addstr(0, x0, head)
+            self.stdscr.hline(1, x1, "-", s.width - 1, curses.A_REVERSE)
+            self.stdscr.addstr(1, x1 + s.width - 1, "|", curses.A_REVERSE)
+            x0 += s.width
+            x1 += s.width
+      else:
+        continue
 
   def drawFooter(self):
     y = self.maxY - self.footerHeight
@@ -381,10 +395,13 @@ class EdScreen:
     x += divider
 
     s,c = self.cursorColumn(self.cX)
-    if(s.RO):
-      txt = "[" + s.ID + "/" + c + "/RO]"
+    if(s.exposed):
+      if(s.RO):
+        txt = "[" + s.ID + "/" + c + "/RO]"
+      else:
+        txt = "[" + s.ID + "/" + c + "/RW]"
     else:
-      txt = "[" + s.ID + "/" + c + "/RW]"
+      txt = "[" + s.ID + "/-/-]"
     self.stdscr.addstr(y, x, txt)
     x += len(txt)
 
@@ -494,6 +511,13 @@ class EdScreen:
           self.cX = self.sectionCenter(sectId)
       self.drawPpad()
       self.refresh()
+
+  def toggleExpose(self):
+    s = self.cursorSection(self.cX)
+    s.exposed = not s.exposed
+    self.drawPpad()
+    self.cX = self.sectionCenter(s.ID)
+    self.refresh()
 
   def toggleInsert(self):
     if(self.mark): # Cannot enter insert mode with mark set
@@ -649,6 +673,9 @@ while True:
 
       elif(c == curses.KEY_DOWN):
         mainScr.move(1, 0)
+
+      elif(c == cfg.KEY_CTRL_E): # Toggle Expose
+        mainScr.toggleExpose()
 
       elif(c == cfg.KEY_CTRL_F): # Page Down
         mainScr.page(10)

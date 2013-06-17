@@ -35,6 +35,7 @@ class Packet:
     self.layers.append(layer.TStamp(ts))
     self.initLayers(dpkt.ethernet.Ethernet(packet))
 
+  # Is every layer of this packet writable
   def _RW(self):
     if(self.unsupported): return False
     for lay in self.layers:
@@ -44,6 +45,14 @@ class Packet:
         return False
     return True
   RW = property(_RW)
+
+  # Takes a layer ID
+  # Returns True if packet has layer, otherwise False
+  def hasLayer(self, ID):
+    for lay in self.layers:
+      if(lay.ID == ID):
+        return True
+    return False
 
   # Discover the layers in the packet and construct our layers list
   def initLayers(self, d):
