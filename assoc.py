@@ -25,7 +25,7 @@ class Assoc():
     self._vals = []
 
   def append(self, x):
-    self._vals.append(((''),(x)))
+    self._vals.append(((''), (x)))
 
   def pop(self):
     return self._vals.pop()[1]
@@ -33,10 +33,16 @@ class Assoc():
   def __setitem__(self, key, val):
     if(isinstance(key, int)):
       try:
-#        self._vals[key][0] = ''
-        self._vals[key][1] = val
+        if(key < len(self._vals)):
+          ii = -1
+          for k,v in self._vals:
+            ii += 1
+            if(ii == key):
+              self._vals[ii] = list(((k), (val)))
+        else:
+          raise IndexError, "list assignment index out of range" 
       except:
-        raise IndexError
+        raise
     elif(isinstance(key, str)):
       for k,v in self._vals:
         if(key == k):
@@ -44,21 +50,21 @@ class Assoc():
           return
       self._vals.append(((key), (val)))
     else:
-      raise TypeError
+      raise TypeError, "unknown type passed as index"
 
   def __getitem__(self, key):
     if(isinstance(key, int)):
       try:
         return self._vals[key][1]
       except:
-        raise IndexError
+        raise IndexError, "index out of range"
     elif(isinstance(key, str)):
       for k,v in self._vals:
         if(key == k):
           return v
-      raise IndexError
+      raise IndexError, "nonexistent string index"
     else:
-      raise TypeError
+      raise TypeError, "unknown type passed as index"
 
   def __delitem__(self, key):
     if(isinstance(key, int)):
@@ -97,9 +103,6 @@ class Assoc():
   def __len__(self):
     return len(self._vals)
 
-  def remove(self, key):
-    self.__delitem__(key)
-
   def __repr__(self):
     rv = ''
     ii = -1
@@ -111,7 +114,25 @@ class Assoc():
         rv += "[" + str(ii) + "]:=" + str(v) + " "
     return rv
 
+
+
+# TODO
+#  def remove(self, key):
+#    self.__delitem__(key)
+
+#  def extend(self, L):
+
 #  def __iter__(self):
+
+#  def insert(self, key, val):
+
+# def index(self, val):
+
+# def count(self, val):
+
+# def next(self):
+
+# def sort(self):
 
 
 '''Test'''
@@ -121,7 +142,12 @@ ass['rex'] = 'dog'
 ass['1'] = 'string'
 print ass[0]
 print ass[1]
+print ass[2]
 print repr(ass)
-ass[1] = 'fido'
+ass[2] = 'fido'
 print repr(ass)
-#print ass['dog']
+print ass.pop()
+print repr(ass)
+
+for k,v in ass:
+  print val
