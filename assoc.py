@@ -24,85 +24,6 @@ class Assoc():
   def __init__(self):
     self._vals = []
 
-  def append(self, x):
-    self._vals.append(((''), (x)))
-
-  def pop(self):
-    return self._vals.pop()[1]
-
-  def __setitem__(self, key, val):
-    if(isinstance(key, int)):
-      try:
-        if(key < len(self._vals)):
-          ii = -1
-          for k,v in self._vals:
-            ii += 1
-            if(ii == key):
-              self._vals[ii] = list(((k), (val)))
-        else:
-          raise IndexError, "list assignment index out of range" 
-      except:
-        raise
-    elif(isinstance(key, str)):
-      for k,v in self._vals:
-        if(key == k):
-          v = val
-          return
-      self._vals.append(((key), (val)))
-    else:
-      raise TypeError, "unknown type passed as index"
-
-  def __getitem__(self, key):
-    if(isinstance(key, int)):
-      try:
-        return self._vals[key][1]
-      except:
-        raise IndexError, "index out of range"
-    elif(isinstance(key, str)):
-      for k,v in self._vals:
-        if(key == k):
-          return v
-      raise IndexError, "nonexistent string index"
-    else:
-      raise TypeError, "unknown type passed as index"
-
-  def __delitem__(self, key):
-    if(isinstance(key, int)):
-      try:
-        del self._vals[key]
-      except:
-        raise IndexError
-    elif(isinstance(key, str)):
-      ii = -1
-      for k,v in self._vals:
-        ii += 1
-        if(key == k):
-          del self._vals[ii]
-      raise IndexError
-    else:
-      raise TypeError
-    
-  def __contains__(self, key):
-    if(isinstance(key, int)):
-      if(key == abs(key)):
-        if(key < len(self._vals)):
-          return True
-        else:
-          return False
-    elif(isinstance(key, str)):
-      for k,v in self._vals:
-        if(key == k):
-          return True
-      return False
-    else:
-      raise TypeError
-      
-  def reverse(self):
-    return self._vals.reverse()
-
-  def __len__(self):
-    return len(self._vals)
-
   def __repr__(self):
     rv = ''
     ii = -1
@@ -114,17 +35,77 @@ class Assoc():
         rv += "[" + str(ii) + "]:=" + str(v) + " "
     return rv
 
+  # Returns index of self._vals list for passed key
+  def __getIndex__(self, key):
+    if(isinstance(key, int)):
+      if((key < len(self._vals)) and (key > -1)):
+        return key
+      else:
+        raise IndexError, "index out of range"        
+    elif(isinstance(key, str)):
+      ii = -1
+      for k,v in self._vals:
+        ii += 1
+        if(key == k):
+          return ii
+      raise IndexError, "nonexistent string index"
+    else:
+      raise TypeError, "unknown index type"
 
+  def append(self, x):
+    self._vals.append(((''), (x)))
+
+  def pop(self):
+    return self._vals.pop()[1]
+
+  def __setitem__(self, key, val):
+    if(isinstance(key, int)):
+      index = self.__getIndex__(key)
+      self._vals[index] = list(((''), (val)))
+    elif(isinstance(key, str)):
+      self._vals.append(((key), (val)))
+    else:
+      raise TypeError, "unknown index type"
+
+  def __getitem__(self, key):
+    return self._vals[self.__getIndex__(key)][1]
+
+  def __delitem__(self, key):
+    del self._vals[self.getIndex(key)]
+
+  def remove(self, key):
+    self.__delitem__(key)
+    
+  def __contains__(self, val):
+    for k,v in self._vals:
+      if(v == val):
+        return True
+    return False
+      
+  def reverse(self):
+    return self._vals.reverse()
+
+  def __len__(self):
+    return len(self._vals)
+
+  def extend(self, L):
+    if(len(L) < 1):
+      raise IndexError, "cannot be NULL"
+
+    if(isinstance(L, Assoc) or isinstance(L, list)):
+      for v in L:
+        self._vals.append(list(((''), (v))))
+    else:
+      raise TypeError, "unknown index type"
+
+  def insert(self, key, val):
+    self._vals.insert(self.getIndex(key), list(((''), (val))))
+
+    
 
 # TODO
-#  def remove(self, key):
-#    self.__delitem__(key)
-
-#  def extend(self, L):
 
 #  def __iter__(self):
-
-#  def insert(self, key, val):
 
 # def index(self, val):
 
@@ -149,5 +130,13 @@ print repr(ass)
 print ass.pop()
 print repr(ass)
 
-for k,v in ass:
+print "**FOR**"
+for val in ass:
   print val
+
+stup = []
+stup.append("foo")
+stup.append("bar")
+print repr(stup)
+ass.extend(stup)
+print repr(ass)
