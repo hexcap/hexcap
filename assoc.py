@@ -52,12 +52,6 @@ class Assoc():
     else:
       raise TypeError, "unknown index type"
 
-  def append(self, x):
-    self._vals.append(((''), (x)))
-
-  def pop(self):
-    return self._vals.pop()[1]
-
   def __setitem__(self, key, val):
     if(isinstance(key, int)):
       index = self.__getIndex__(key)
@@ -68,53 +62,75 @@ class Assoc():
       raise TypeError, "unknown index type"
 
   def __getitem__(self, key):
-    return self._vals[self.__getIndex__(key)][1]
+    index = self.__getIndex__(key)
+    if(len(self._vals[index][0]) > 0):
+      return self._vals[index][0], self._vals[index][1]
+    else:
+      return key, self._vals[self.__getIndex__(key)][1]
 
   def __delitem__(self, key):
     del self._vals[self.getIndex(key)]
 
-  def remove(self, key):
-    self.__delitem__(key)
-    
+  def __len__(self):
+    return len(self._vals)
+
   def __contains__(self, val):
     for k,v in self._vals:
       if(v == val):
         return True
     return False
       
-  def reverse(self):
-    return self._vals.reverse()
+  def remove(self, key):
+    self.__delitem__(key)
 
-  def __len__(self):
-    return len(self._vals)
+  def reverse(self):
+    self._vals.reverse()
+
+  def append(self, x):
+    self._vals.append(((''), (x)))
+
+  def pop(self):
+    return self._vals.pop()[1]
 
   def extend(self, L):
     if(len(L) < 1):
-      raise IndexError, "cannot be NULL"
+      return
 
-    if(isinstance(L, Assoc) or isinstance(L, list)):
+    if(isinstance(L, Assoc)):
+      for k,v in L:
+        self._vals.append(list(((k), (v))))
+    elif(isinstance(L, list)):
       for v in L:
         self._vals.append(list(((''), (v))))
     else:
-      raise TypeError, "unknown index type"
+      raise TypeError, "unknown type"
 
   def insert(self, key, val):
     self._vals.insert(self.getIndex(key), list(((''), (val))))
 
-    
+  def index(self, val):
+    ii = -1
+    for k,v in self._vals:
+      ii += 1
+      if(v == val):
+        if(len(k) > 0):
+          return k
+        else:
+          return ii
+    raise ValueError, "value not found"
+
+  def count(self, val):
+    cnt = 0
+    for k,v in self._vals:
+      if(val == v):
+        cnt += 1
+    return cnt
+
 
 # TODO
-
 #  def __iter__(self):
-
-# def index(self, val):
-
-# def count(self, val):
-
 # def next(self):
-
 # def sort(self):
-
 
 '''Test'''
 ass = Assoc()
@@ -129,10 +145,16 @@ ass[2] = 'fido'
 print repr(ass)
 print ass.pop()
 print repr(ass)
+ass.append("kitty")
 
 print "**FOR**"
-for val in ass:
-  print val
+for k,v in ass:
+  print "k:" + str(k) + " v:" + str(v)
+
+for v in ass:
+  print " v:" + str(v)
+
+print "*END FOR*"
 
 stup = []
 stup.append("foo")
