@@ -30,9 +30,9 @@ class Assoc():
     for k,v in self._vals:
       ii += 1
       if(len(k) > 0):
-        rv += "['" + k + "']:=" + str(v) + " "
+        rv += "['" + k + "']:=\'" + str(v) + "\' "
       else:
-        rv += "[" + str(ii) + "]:=" + str(v) + " "
+        rv += "[" + str(ii) + "]:=\'" + str(v) + "\' "
     return rv
 
   # Returns index of self._vals list for passed key
@@ -62,11 +62,15 @@ class Assoc():
       raise TypeError, "unknown index type"
 
   def __getitem__(self, key):
-    index = self.__getIndex__(key)
-    if(len(self._vals[index][0]) > 0):
-      return self._vals[index][0], self._vals[index][1]
-    else:
-      return key, self._vals[self.__getIndex__(key)][1]
+    return self._vals[self.__getIndex__(key)][1]
+
+#  def __getitem__(self, key, val):
+#    index = self.__getIndex__(key)
+#    if(len(self._vals[index][0]) > 0):
+#      return self._vals[index][0], self._vals[index][1]
+#    else:
+#      return key, self._vals[self.__getIndex__(key)][1]
+
 
   def __delitem__(self, key):
     del self._vals[self.getIndex(key)]
@@ -108,6 +112,7 @@ class Assoc():
   def insert(self, key, val):
     self._vals.insert(self.getIndex(key), list(((''), (val))))
 
+  # Can return either a string or integer
   def index(self, val):
     ii = -1
     for k,v in self._vals:
@@ -133,6 +138,8 @@ class Assoc():
 # def sort(self):
 
 '''Test'''
+
+print "\nTest basics"
 ass = Assoc()
 ass.append("cat")
 ass['rex'] = 'dog'
@@ -145,20 +152,38 @@ ass[2] = 'fido'
 print repr(ass)
 print ass.pop()
 print repr(ass)
-ass.append("kitty")
 
-print "**FOR**"
-for k,v in ass:
-  print "k:" + str(k) + " v:" + str(v)
-
+print "\nTest loops"
 for v in ass:
-  print " v:" + str(v)
+  print "v:" + str(v)
 
-print "*END FOR*"
+for ii in xrange(len(ass)):
+  print "ii:" + str(ii) + " v:" + ass[ii]
 
+#for k,v in ass:
+#  print "k:" + str(k) + " v:" + str(v)
+
+print "\nTest append() and extend()"
+ass.append("kitty")
 stup = []
 stup.append("foo")
 stup.append("bar")
+stup.append("foo")
 print repr(stup)
 ass.extend(stup)
 print repr(ass)
+
+print "\nTest index() and count()"
+print str(stup.index('foo')) + " "
+print str(ass.index('foo')) + " "
+print ass.index('dog') + " "
+#print ass.index('NA')
+print ass.count('dog')
+print ass.count('foo')
+
+print "\nTest reverse()"
+ass.reverse()
+print repr(ass)
+
+print "\nTest pop()"
+print ass.pop()
