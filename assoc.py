@@ -171,7 +171,7 @@ class AssocIter():
 # def sort(self):
 
 '''Test'''
-
+'''
 print "\nTest basic assignment"
 ass = Assoc()
 ass[0] = 'bob'
@@ -221,4 +221,4 @@ print repr(ass)
 
 print "\nTest pop()"
 print ass.pop()
-
+'''

@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 '''
 
 import cfg
-import assoc
+from assoc import Assoc
 from collections import OrderedDict
 
 class Section:
@@ -27,8 +27,8 @@ class Section:
     self.ID = sectId # Our layer ID
     self.position = pos # Our relative position in the ordering of columns
 
-    self.c = OrderedDict() # OrderedDict of columns
-#    self.c = Assoc() # Assoc of columns
+#    self.c = OrderedDict() # OrderedDict of columns
+    self.c = Assoc() # Assoc of columns
     self.exposed = False # Is this section showing?
     self._width = 0 # Width of complete section
     self.visible = True # Is this section currently visible?

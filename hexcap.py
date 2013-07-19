@@ -23,9 +23,6 @@ import math
 import curses
 import locale
 import sys
-sys.path.insert(0, '/home/smutt/hacking/python/hexcap/dpkt-read-only/')
-import dpkt
-from collections import OrderedDict
 
 # hexcap specific imports
 import cfg
