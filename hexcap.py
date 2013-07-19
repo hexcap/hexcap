@@ -223,11 +223,14 @@ class EdScreen:
     rv = self.sectionLeft(sid)
     for s in self.displayedSections:
       if(s.ID == sid):
-        for col, width in s.c.iteritems():
-          if(col == cid):
-            return rv
-          else:
-            rv += width + 1
+        if(s.exposed):
+          for col, width in s.c.iteritems():
+            if(col == cid):
+              return rv
+            else:
+              rv += width + 1
+        else:
+          return rv
     return False
 
   # Returns rightmost absolute X value(before divider) for passed section and column name
@@ -457,9 +460,7 @@ class EdScreen:
       return
 
     sect, col = self.cursorColumn(self.cX)
-
     if(col == None):
-      cfg.dbg("sect:" + sect.ID + " col:None")
       ii = -1
       for s in displayedSections:
         ii += 1
@@ -469,7 +470,7 @@ class EdScreen:
               return
             else:
               ns = displayedSections[ii + 1]
-              nc = s.c[0]
+              nc = ns.c.getStrKey(0)
               self.cX = self.columnLeft(ns.ID, nc)
               self.shiftColumn(delta - 1)
           else:
@@ -477,12 +478,11 @@ class EdScreen:
               return
             else:
               ns = displayedSections[ii - 1]
-              nc = s.c[len(s.c) - 1]
+              nc = ns.c.getStrKey(len(ns.c) - 1)
               self.cX = self.columnLeft(ns.ID, nc)
               self.shiftColumn(delta + 1)
 
     else:
-      cfg.dbg("sect:" + sect.ID + " col:" + col)
       sii = -1
       for s in displayedSections:
         sii += 1
@@ -497,11 +497,11 @@ class EdScreen:
                     return
                   else:
                     ns = displayedSections[sii + 1]
-                    nc = s.c[0]
+                    nc = ns.c.getStrKey(0)
                     self.cX = self.columnLeft(ns.ID, nc)
                     self.shiftColumn(delta - 1)
                 else:
-                  self.cX = self.columnLeft(s.ID, s.c[cii + 1])                
+                  self.cX = self.columnLeft(s.ID, s.c.getStrKey(cii + 1))
                   self.shiftColumn(delta - 1)
               else:
                 if(cii == 0):
@@ -509,11 +509,11 @@ class EdScreen:
                     return
                   else:
                     ns = displayedSections[sii - 1]
-                    nc = s.c[len(s.c) - 1]
+                    nc = ns.c.getStrKey(len(ns.c) - 1)
                     self.cX = self.columnLeft(ns.ID, nc)
                     self.shiftColumn(delta + 1)
                 else:
-                  self.cX = self.columnLeft(s.ID, s.c[cii -1])
+                  self.cX = self.columnLeft(s.ID, s.c.getStrKey(cii -1))
                   self.shiftColumn(delta + 1)
 
   # Moves our cursor, takes deltaY and deltaX, one delta value MUST be 0 and the other MUST NOT be 0
