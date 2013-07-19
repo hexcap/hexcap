@@ -335,7 +335,7 @@ class EdScreen:
                 x += width + 1
         else:
 #          cfg.dbg("exp==False dtw:" + str(self.displayTableWidth) + " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(s.width))
-          if(self.displayTableWidth > x + s.width):
+          if(self.displayTableWidth >= x + s.width):
             self.ppad.hline(y, x, "-", x + s.width - 1)
             self.ppad.addstr(y, x + s.width - 1, "|")
             x += s.width
