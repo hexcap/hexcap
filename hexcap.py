@@ -161,6 +161,14 @@ class EdScreen:
     return rv
   displayedSections = property(_get_displayedSections)
 
+  # An ordered list of displayed ((section), (column.name)) lists
+#  def _get_displayedColumns(self):
+#    rv = []
+#    for s in self.displayedSections:
+#      for c in s.c:
+#        rv.append(list(((s), (c)
+#  displayedColumns = property(_get_displayedColumns)
+
   # Table width of the entire displayed table
   def _get_tableWidth(self):
     rv = 0
@@ -181,17 +189,20 @@ class EdScreen:
         totX += s.width
     return dSections.reversed.next()
 
-  # Returns header section and column that X value is currently in
-  # Takes X screen value
+  # Returns header section and column that passed X value is currently in
+  # Takes X screen position
   def cursorColumn(self, x):
     totX = 0
     for s in self.displayedSections:
       if(x < totX + s.width - 1):
-        for col, cWidth in s.c.iteritems():
-          if(x < totX + cWidth):
-            return list((s, col))
-          else:
-            totX += cWidth + 1
+        if(s.exposed):
+          for col, cWidth in s.c.iteritems():
+            if(x < totX + cWidth):
+              return list((s, col))
+            else:
+              totX += cWidth + 1
+        else:
+          return list((s, None))
       else:
         totX += s.width
 
@@ -437,35 +448,73 @@ class EdScreen:
         self.cY = self.ppadTopY
 
   # Moves cursor right and left by cols columns
-  def shiftColumn(self, cols):
-    if(cols == 0):
+  def shiftColumn(self, delta):
+    if(delta == 0):
+      return
+
+    displayedSections = self.displayedSections
+    if(displayedSections < 2):
       return
 
     sect, col = self.cursorColumn(self.cX)
-    if(cols > 0):
-      if(self.cX + sect.c[col] < self.displayTableWidth - 1):
-        self.cX = self.columnLeft(sect.ID, col)
-        for cName, cWidth in sect.c.iteritems():
-          if(cName == col):
-            self.cX += cWidth + 1
 
-        self.shiftColumn(cols - 1)
-      else:
-        curses.flash()
-        curses.napms(10)
-        return
+    if(col == None):
+      cfg.dbg("sect:" + sect.ID + " col:None")
+      ii = -1
+      for s in displayedSections:
+        ii += 1
+        if(s.ID == sect.ID): # Found sect
+          if(delta > 0):
+            if(ii == len(displayedSections) - 1):
+              return
+            else:
+              ns = displayedSections[ii + 1]
+              nc = s.c[0]
+              self.cX = self.columnLeft(ns.ID, nc)
+              self.shiftColumn(delta - 1)
+          else:
+            if(ii == 0):
+              return
+            else:
+              ns = displayedSections[ii - 1]
+              nc = s.c[len(s.c) - 1]
+              self.cX = self.columnLeft(ns.ID, nc)
+              self.shiftColumn(delta + 1)
+
     else:
-      if(self.cX - sect.c[col] >= 0):
-        self.cX = self.columnRight(sect.ID, col)
-        for cName, cWidth in sect.c.iteritems():
-          if(cName == col):
-            self.cX -= cWidth + 1
-
-        self.shiftColumn(cols + 1)
-      else:
-        curses.flash()
-        curses.napms(10)
-        return
+      cfg.dbg("sect:" + sect.ID + " col:" + col)
+      sii = -1
+      for s in displayedSections:
+        sii += 1
+        if(sect.ID == s.ID):
+          cii = -1
+          for c,w in s.c.iteritems():
+            cii += 1
+            if(c == col): # Found sect and col
+              if(delta > 0):
+                if(cii == len(s.c) - 1): # Last column
+                  if(sii == len(displayedSections) - 1): # Last section and column
+                    return
+                  else:
+                    ns = displayedSections[sii + 1]
+                    nc = s.c[0]
+                    self.cX = self.columnLeft(ns.ID, nc)
+                    self.shiftColumn(delta - 1)
+                else:
+                  self.cX = self.columnLeft(s.ID, s.c[cii + 1])                
+                  self.shiftColumn(delta - 1)
+              else:
+                if(cii == 0):
+                  if(sii == 0):
+                    return
+                  else:
+                    ns = displayedSections[sii - 1]
+                    nc = s.c[len(s.c) - 1]
+                    self.cX = self.columnLeft(ns.ID, nc)
+                    self.shiftColumn(delta + 1)
+                else:
+                  self.cX = self.columnLeft(s.ID, s.c[cii -1])
+                  self.shiftColumn(delta + 1)
 
   # Moves our cursor, takes deltaY and deltaX, one delta value MUST be 0 and the other MUST NOT be 0
   def move(self, dY, dX):

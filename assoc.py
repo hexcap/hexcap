@@ -82,7 +82,20 @@ class Assoc():
       if(v == val):
         return True
     return False
-      
+
+  # Called to translate a string key to integer
+  def getIntKey(self, index):
+    return self.__getIndex__(index)
+     
+  # Called to translate an integer key to string
+  # MUST return string even if key has only integer value
+  def getStrKey(self, index):
+    ii = self.__getIndex__(index)
+    if(self._vals[ii][0] == None):
+      return str(ii)
+    else:
+      return self._vals[ii][0]
+
   def iteritems(self):
     return AssocIter(self._vals, True)
 
