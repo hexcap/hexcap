@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 '''
 
 import cfg
+import assoc
 from collections import OrderedDict
 
 class Section:
@@ -27,6 +28,7 @@ class Section:
     self.position = pos # Our relative position in the ordering of columns
 
     self.c = OrderedDict() # OrderedDict of columns
+#    self.c = Assoc() # Assoc of columns
     self.exposed = False # Is this section showing?
     self._width = 0 # Width of complete section
     self.visible = True # Is this section currently visible?
@@ -51,6 +53,8 @@ class Section:
     rv += " width:" + str(self.width)
     rv += " visible:" + str(self.visible)
     rv += " RO:" + str(self.RO) + "\n"
+#    for ii in xrange(len(self.c)):
+#      rv += "col:" + k + " w:" + str(v) + " "
     for k,v in self.c.iteritems():
       rv += "col:" + k + " w:" + str(v) + " "
     return rv

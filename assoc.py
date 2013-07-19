@@ -29,13 +29,14 @@ class Assoc():
     ii = -1
     for k,v in self._vals:
       ii += 1
-      if(len(k) > 0):
-        rv += "['" + k + "']:=\'" + str(v) + "\' "
-      else:
+      if(k is None):
         rv += "[" + str(ii) + "]:=\'" + str(v) + "\' "
+      else:
+        rv += "['" + k + "']:=\'" + str(v) + "\' "
     return rv
 
   # Returns index of self._vals list for passed key
+  # SHOULD never be called outside of class
   def __getIndex__(self, key):
     if(isinstance(key, int)):
       if((key < len(self._vals)) and (key > -1)):
@@ -54,8 +55,11 @@ class Assoc():
 
   def __setitem__(self, key, val):
     if(isinstance(key, int)):
-      index = self.__getIndex__(key)
-      self._vals[index] = list(((''), (val)))
+      try:
+        ii = self.__getIndex__(key)
+        self._vals[ii] = list(((self._vals[ii][0]), (val)))
+      except IndexError:
+        self._vals.append(list(((None), (val))))
     elif(isinstance(key, str)):
       self._vals.append(((key), (val)))
     else:
@@ -64,13 +68,8 @@ class Assoc():
   def __getitem__(self, key):
     return self._vals[self.__getIndex__(key)][1]
 
-#  def __getitem__(self, key, val):
-#    index = self.__getIndex__(key)
-#    if(len(self._vals[index][0]) > 0):
-#      return self._vals[index][0], self._vals[index][1]
-#    else:
-#      return key, self._vals[self.__getIndex__(key)][1]
-
+  def __iter__(self):
+    return AssocIter(self._vals, False)
 
   def __delitem__(self, key):
     del self._vals[self.getIndex(key)]
@@ -84,6 +83,19 @@ class Assoc():
         return True
     return False
       
+  def iteritems(self):
+    return AssocIter(self._vals, True)
+
+  def items(self):
+    rv = []
+    ii = -1
+    for ii in xrange(len(self._vals)):
+      if(self._vals[ii][0] == None): 
+        rv.append(list(((str(ii)), (self._vals[ii][1]))))
+      else:
+        rv.append(list(((self._vals[ii][0]), (self._vals[ii][1]))))
+    return rv
+
   def remove(self, key):
     self.__delitem__(key)
 
@@ -91,7 +103,7 @@ class Assoc():
     self._vals.reverse()
 
   def append(self, x):
-    self._vals.append(((''), (x)))
+    self._vals.append(((None), (x)))
 
   def pop(self):
     return self._vals.pop()[1]
@@ -105,12 +117,12 @@ class Assoc():
         self._vals.append(list(((k), (v))))
     elif(isinstance(L, list)):
       for v in L:
-        self._vals.append(list(((''), (v))))
+        self._vals.append(list(((None), (v))))
     else:
       raise TypeError, "unknown type"
 
   def insert(self, key, val):
-    self._vals.insert(self.getIndex(key), list(((''), (val))))
+    self._vals.insert(self.getIndex(key), list(((None), (val))))
 
   # Can return either a string or integer
   def index(self, val):
@@ -118,10 +130,10 @@ class Assoc():
     for k,v in self._vals:
       ii += 1
       if(v == val):
-        if(len(k) > 0):
-          return k
-        else:
+        if(k is None):
           return ii
+        else:
+          return k
     raise ValueError, "value not found"
 
   def count(self, val):
@@ -131,6 +143,27 @@ class Assoc():
         cnt += 1
     return cnt
 
+class AssocIter():
+  def __init__(self, vals, keys):
+    self._vals = vals
+    self.keys = keys
+    self.ii = -1
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+    self.ii += 1
+    if(self.ii < len(self._vals)):
+      if(self.keys):
+        if(self._vals[self.ii][0] is None):
+          return str(self.ii), self._vals[self.ii][1]
+        else:
+          return self._vals[self.ii][0], self._vals[self.ii][1]
+      else:
+        return self._vals[self.ii][1]
+    else:
+      raise StopIteration
 
 # TODO
 #  def __iter__(self):
@@ -139,18 +172,17 @@ class Assoc():
 
 '''Test'''
 
-print "\nTest basics"
+print "\nTest basic assignment"
 ass = Assoc()
-ass.append("cat")
-ass['rex'] = 'dog'
+ass[0] = 'bob'
+ass.append("mike")
+ass['dog'] = 'rex'
 ass['1'] = 'string'
 print ass[0]
 print ass[1]
 print ass[2]
 print repr(ass)
 ass[2] = 'fido'
-print repr(ass)
-print ass.pop()
 print repr(ass)
 
 print "\nTest loops"
@@ -160,11 +192,14 @@ for v in ass:
 for ii in xrange(len(ass)):
   print "ii:" + str(ii) + " v:" + ass[ii]
 
-#for k,v in ass:
-#  print "k:" + str(k) + " v:" + str(v)
+for k,v in ass.items():
+  print "k:" + str(k) + " v:" + str(v)
+
+for k,v in ass.iteritems():
+  print "k:" + str(k) + " v:" + str(v)
 
 print "\nTest append() and extend()"
-ass.append("kitty")
+ass.append("steve")
 stup = []
 stup.append("foo")
 stup.append("bar")
@@ -176,9 +211,8 @@ print repr(ass)
 print "\nTest index() and count()"
 print str(stup.index('foo')) + " "
 print str(ass.index('foo')) + " "
-print ass.index('dog') + " "
+print ass.index('fido') + " "
 #print ass.index('NA')
-print ass.count('dog')
 print ass.count('foo')
 
 print "\nTest reverse()"
@@ -187,3 +221,4 @@ print repr(ass)
 
 print "\nTest pop()"
 print ass.pop()
+
