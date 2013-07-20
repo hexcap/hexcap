@@ -30,7 +30,8 @@ from collections import OrderedDict
 
 class Layer:
   RO = False # Is this layer read-only?
-  exposed = False
+  exposed = False # Is this layer exposed
+  exposable = True # Can the exposed boolean be toggled?
 
   # Convert int to hex without leading 0x
   def intToHexStr(self, num):
@@ -70,10 +71,12 @@ class Layer:
   def dump(self):
     return repr(self.vals)
 
+# Holds the packet ID ano nothing more
 class PktID(Layer):
   ID = "pid"
   RO = True
   exposed = True
+  exposable = False
   position = 0
   
 

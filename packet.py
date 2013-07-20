@@ -48,15 +48,6 @@ class Packet:
     return True
   RW = property(_RW)
 
-  # Takes a layer ID
-  # Returns True if packet has layer, otherwise False
-  # Not used
-#  def hasLayer(self, ID):
-#    for lay in self.layers:
-#      if(lay.ID == ID):
-#        return True
-#    return False
-
   # Discover the layers in the packet and construct our layers list
   def initLayers(self, d):
     if(not isinstance(d, dpkt.Packet)):
@@ -74,7 +65,7 @@ class Packet:
           self.layers.append(layer.EthernetDot2(d)) # 802.2
           self.initLayers(d.data)
       else:
-        self.unsupported = True
+        self.unsupport()
         return
 
     elif(isinstance(d, dpkt.edp.EDP)):
@@ -98,12 +89,12 @@ class Packet:
         self.layers.append(layer.IPv4(d))
         self.initLayers(d.data)
       elif(d.v == 6):
-        self.unsupported = True
+        self.unsupport()
         return
 
     elif(isinstance(d, dpkt.igmp.IGMP)):
       if(d.type == 0x22): # IGMPv3
-        self.unsupported = True
+        self.unsupport()
         return
       else:
         self.layers.append(layer.IGMP(d))
@@ -122,8 +113,12 @@ class Packet:
       self.initLayers(d.data)
 
     else:
-      self.unsupported = True
+      self.unsupport()
       return
+
+  # Mark a packet as unsupported
+  def unsupport(self):
+    self.unsupported = True
 
   # Sets the value of section,column to val
   def setColumn(self, sid, col, val):
@@ -184,10 +179,13 @@ class Packet:
     return rv
 
   def out(self):
-    if(self.unsupported):
-      return False
-
     rv = dict()
+    if(self.unsupported):
+      rv['pid'] = self.layers[0].vals
+      rv['tstamp'] = self.layers[1].vals
+      rv['unsupported'] = True
+      return rv
+
     for lay in self.layers:
       rv[lay.ID] = lay.vals
     return rv

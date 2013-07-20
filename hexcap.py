@@ -134,6 +134,7 @@ class EdScreen:
           # non-default values for layers need to be handled here
           s.RO = lay.RO
           s.exposed = lay.exposed
+          s.exposable = lay.exposable
 
           # append/insert our new section
           if(len(self.sections) <= 1):
@@ -308,9 +309,13 @@ class EdScreen:
   # Takes a y value and list of cells that correlates to our global header list
   #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid'])+ " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
-    if(not row):
-      msg = "<<Unsupported Packet>>".center(self.tableWidth)
-      self.ppad.addstr(y, 1, msg)
+    if("unsupported" in row): # If packet is unsupported we only print the pid and tstamp
+      msg = ''
+      if(self.sections[0].exposed):
+        msg += row['pid']['pid'] + "|"
+      if(self.sections[1].exposed):
+        msg += row['tstamp']['tstamp'] + "|" 
+      self.ppad.addstr(y, 0, msg + " <<Unsupported Packet>>")
       return
 
     x = 0
@@ -563,7 +568,9 @@ class EdScreen:
 
   def toggleExpose(self):
     s = self.cursorSection(self.cX)
-#    cfg.dbg("dtw:" + str(self.displayTableWidth) + " exp:" + str(s.exposed) + " s._width:" + str(s._width) + " maxX:" + str(self.maxX))
+    if(not s.exposable):
+      return
+
     if(s.exposed):
       s.exposed = False
     else:
