@@ -2,8 +2,6 @@
 
 import dpkt
 import sys
-sys.path.insert(0, '/home/smutt/hacking/python/hexcap/')
-import cfg
 
 class EDP(dpkt.Packet):
     __hdr__ = (

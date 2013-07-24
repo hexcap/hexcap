@@ -6,8 +6,6 @@ with automatic 802.1q, MPLS, PPPoE, and Cisco ISL decapsulation."""
 import struct
 import dpkt, stp, edp
 import sys
-sys.path.insert(0, '/home/smutt/hacking/python/hexcap/')
-import cfg
 
 ETH_CRC_LEN	= 4
 ETH_HDR_LEN	= 14
