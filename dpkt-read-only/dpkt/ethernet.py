@@ -23,6 +23,7 @@ ETH_TYPE_PUP	= 0x0200		# PUP protocol
 ETH_TYPE_IP	= 0x0800		# IP protocol
 ETH_TYPE_ARP	= 0x0806		# address resolution protocol
 ETH_TYPE_CDP	= 0x2000		# Cisco Discovery Protocol
+ETH_TYPE_EDP    = 0x00bb                # Extreme Networks Discovery Protocol
 ETH_TYPE_DTP	= 0x2004		# Cisco Dynamic Trunking Protocol
 ETH_TYPE_REVARP	= 0x8035		# reverse addr resolution protocol
 ETH_TYPE_DOT1Q	= 0x8100		# IEEE 802.1Q VLAN tagging
@@ -91,12 +92,9 @@ class Ethernet(dpkt.Packet):
             self.dsap, self.ssap, self.ctl = struct.unpack('BBB', self.data[:3])
             if self.data.startswith('\xaa\xaa'):
                 # SNAP
+                self.type = struct.unpack('>H', self.data[6:8])[0] 
                 self.org = struct.unpack('>I', self.data[2:6])[0] & 0xffffff
-                self.pid = struct.unpack('>H', self.data[6:8])[0]
-                if self.org == 0x00e02b and self.pid == 0x00bb: # EDP
-                    self.data = self.edp = edp.EDP(self.data[8:])
-                else:
-                    self._unpack_data(self.data[8:])
+                self._unpack_data(self.data[8:])
             else:
                 # non-SNAP
                 dsap = ord(self.data[0])
@@ -112,9 +110,7 @@ class Ethernet(dpkt.Packet):
             if hasattr(self, 'dsap'):
                 if hasattr(self, 'org'):
                     return dpkt.Packet.pack_hdr(self) + struct.pack('BB', self.dsap, self.ssap) + \
-                           struct.pack('>I',  (self.ctl << 24) | self.org ) + struct.pack('>H', self.pid)
-                else:
-                    return dpkt.Packet.pack_hdr(self) + struct.pack('BBB', self.dsap, self.ssap, self.ctl)
+                           struct.pack('>I',  (self.ctl << 24) | self.org ) + struct.pack('>H', self.type)
             return dpkt.Packet.pack_hdr(self)
         except struct.error, e:
             raise dpkt.PackError(str(e))

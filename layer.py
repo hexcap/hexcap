@@ -186,27 +186,26 @@ class EthernetSNAP(Ethernet):
   cols['eth-src'] = 17
   cols['dsap'] = 4
   cols['ssap'] = 4
+  cols['pid'] = 4
 #  cols['ctl'] = 3
 #  cols['org'] = 6
-#  cols['pid'] = 4
 
+  # Because of a hack in dpkt 'type' actually refers to the 802.3 SNAP header 'PID'
   def __init__(self, data):
     Ethernet.__init__(self, data)
-    self.vals['type'] = self.intToHexStr(data.type).rjust(2, "0")
     self.vals['dsap'] = self.intToHexStr(data.dsap).rjust(2, "0")
     self.vals['ssap'] = self.intToHexStr(data.ssap).rjust(2, "0")
     self.vals['ctl'] = self.intToHexStr(data.ctl).rjust(2, "0")
     self.vals['org'] = self.intToHexStr(data.org).rjust(6, "0")
-    self.vals['pid'] = self.intToHexStr(data.pid).rjust(4, "0")
+    self.vals['pid'] = self.intToHexStr(data.type).rjust(4, "0")
 
   def toPcap(self):
     rv = Ethernet.toPcap(self)
-    rv.type = int(self.vals['type'], 16)
     rv.dsap = int(self.vals['dsap'], 16)
     rv.ssap = int(self.vals['ssap'], 16)
     rv.ctl = int(self.vals['ctl'], 16)
     rv.org = int(self.vals['org'], 16)
-    rv.pid = int(self.vals['pid'], 16)
+    rv.type = int(self.vals['pid'], 16)
     return rv
 
 class Dot1q(Layer):
