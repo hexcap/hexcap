@@ -79,8 +79,7 @@ class PktID(Layer):
   exposable = False
   position = 0
   
-
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['pid'] = cfg.pktIDWidth
 
   def __init__(self, pid):
@@ -102,7 +101,7 @@ class TStamp(Layer):
   RO = True
   position = 1
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['tstamp'] = 13
     
   def __init__(self, ts):
@@ -116,7 +115,7 @@ class TStamp(Layer):
 class Ethernet(Layer):
   position = 10
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['eth-dst'] = 17
   cols['eth-src'] = 17
 
@@ -135,7 +134,7 @@ class Ethernet(Layer):
 class EthernetII(Ethernet):
   ID = "ethernet II"
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['eth-dst'] = 17
   cols['eth-src'] = 17
   cols['etype'] = 5
@@ -154,7 +153,7 @@ class EthernetII(Ethernet):
 class EthernetDot2(Ethernet):
   ID = "ethernet 802.3"
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['eth-dst'] = 17
   cols['eth-src'] = 17
   cols['len'] = 4
@@ -181,7 +180,7 @@ class EthernetDot2(Ethernet):
 class EthernetSNAP(Ethernet):
   ID = "ethernet SNAP"
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['eth-dst'] = 17
   cols['eth-src'] = 17
   cols['dsap'] = 4
@@ -212,7 +211,7 @@ class Dot1q(Layer):
   ID = "802.1q"
   position = 20
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['tag'] = 5
   cols['1p'] = 5
   cols['etype'] = 5
@@ -239,11 +238,32 @@ class Dot1q(Layer):
     else:
       self.vals[col] = val
 
+class CDP(Layer):
+  ID = "cdp"
+  position = 20
+
+  cols = OrderedDict()
+  cols['ver'] = 3
+  cols['ttl'] = 3
+
+  def __init__(self, data):
+    self.vals = dict()
+    self.vals['ver'] = self.intToHexStr(data.version).rjust(2, "0")
+    self.vals['ttl'] = self.intToHexStr(data.ttl).rjust(2, "0")
+    self.vals['data'] = data.data
+
+  def toPcap(self):
+    rv = dpkt.cdp.CDP()
+    rv.version = int(self.vals['ver'], 16)
+    rv.ttl = int(self.vals['ttl'], 16)
+    rv.data = self.vals['data']
+    return rv
+
 class EDP(Layer):
   ID = "edp"
   position = 20
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict()
   cols['ver'] = 3
   cols['len'] = 4
   cols['seq'] = 4
@@ -270,7 +290,7 @@ class STP(Layer):
   ID = "stp"
   position = 30
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['root'] = 23
   cols['bridge'] = 23
   cols['port'] = 4
@@ -349,7 +369,7 @@ class IPv4(Layer):
   ID = "ipv4"
   position = 40
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['ipv4-dst'] = 11
   cols['ipv4-src'] = 11
   cols['ttl'] = 4
@@ -388,7 +408,7 @@ class IGMP(Layer):
   ID = "igmp"
   position = 50
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['type'] = 5
   cols['maxresp'] = 7
   cols['group'] = 11
@@ -411,7 +431,7 @@ class ICMP(Layer):
   ID = "icmp"
   position = 50
 
-  cols = OrderedDict() # OrderedDict of columns
+  cols = OrderedDict() 
   cols['type'] = 4
   cols['id'] = 4
   cols['seq'] = 3

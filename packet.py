@@ -68,6 +68,10 @@ class Packet:
         self.unsupport()
         return
 
+    elif(isinstance(d, dpkt.cdp.CDP)):
+      self.layers.append(layer.CDP(d))
+      return
+
     elif(isinstance(d, dpkt.edp.EDP)):
       self.layers.append(layer.EDP(d))
       return
