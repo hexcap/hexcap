@@ -54,7 +54,7 @@ class Packet:
       return
 
     if(isinstance(d, dpkt.ethernet.Ethernet)):
-      if(d.type == 0x0800 or d.type == 0x8100):
+      if(d.type == 0x0800 or d.type == 0x8100 or d.type == 0x86dd):
         self.layers.append(layer.EthernetII(d)) # Ethernet II
         self.initLayers(d.data)
       elif(hasattr(d, 'dsap')):
@@ -89,12 +89,12 @@ class Packet:
       self.initLayers(d.data)
                          
     elif(isinstance(d, dpkt.ip.IP)):
-      if(d.v == 4):
-        self.layers.append(layer.IPv4(d))
-        self.initLayers(d.data)
-      elif(d.v == 6):
-        self.unsupport()
-        return
+      self.layers.append(layer.IPv4(d))
+      self.initLayers(d.data)
+
+    elif(isinstance(d, dpkt.ip6.IP6)):
+      self.layers.append(layer.IPv6(d))
+      self.initLayers(d.data)
 
     elif(isinstance(d, dpkt.igmp.IGMP)):
       if(d.type == 0x22): # IGMPv3

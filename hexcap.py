@@ -162,14 +162,6 @@ class EdScreen:
     return rv
   displayedSections = property(_get_displayedSections)
 
-  # An ordered list of displayed ((section), (column.name)) lists
-#  def _get_displayedColumns(self):
-#    rv = []
-#    for s in self.displayedSections:
-#      for c in s.c:
-#        rv.append(list(((s), (c)
-#  displayedColumns = property(_get_displayedColumns)
-
   # Table width of the entire displayed table
   def _get_tableWidth(self):
     rv = 0

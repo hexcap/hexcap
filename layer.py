@@ -39,16 +39,19 @@ class Layer:
     return rv
 
   # Change pcap character data to padded hex string without leading 0x
-  def binToHexStr(self, val, ln):
-    x,rv = hex(ord(val)).split("0x")
-    return rv.rjust(ln, "0")
+  def binToHexStr(self, val):
+    return hex(ord(val)).split("0x")[1].rjust(2, "0")
 
   # Change dpkt character bytes to string hex values of length ln with a delimiter of delim
   # ln corresponds to how many nibbles you want between each delim
   def pcapToHexStr(self, bytes, ln, delim):
     rv = ""
+    trv = ""
     for b in bytes:
-      rv += self.binToHexStr(b, ln) + delim
+      trv += self.binToHexStr(b)
+      if(len(trv) >= ln):
+        rv += trv + delim
+        trv = ""
     return rv.rstrip(delim)
 
   # Change string hex values to dpkt character bytes ignoring delimiter of delim
@@ -370,15 +373,15 @@ class IPv4(Layer):
   position = 40
 
   cols = OrderedDict() 
-  cols['ipv4-dst'] = 11
-  cols['ipv4-src'] = 11
+  cols['dst'] = 11
+  cols['src'] = 11
   cols['ttl'] = 4
   cols['proto'] = 5
 
   def __init__(self, data):
     self.vals = dict()
-    self.vals['ipv4-dst'] = self.pcapToHexStr(data.dst, 2, ".")
-    self.vals['ipv4-src'] = self.pcapToHexStr(data.src, 2, ".")
+    self.vals['dst'] = self.pcapToHexStr(data.dst, 2, ".")
+    self.vals['src'] = self.pcapToHexStr(data.src, 2, ".")
     self.vals['proto'] = self.intToHexStr(data.p).rjust(2, "0")
     self.vals['ttl'] = self.intToHexStr(data.ttl).rjust(2, "0")
     self.vals['hl'] = data.hl
@@ -391,8 +394,8 @@ class IPv4(Layer):
 
   def toPcap(self):
     rv = dpkt.ip.IP()
-    rv.dst = self.hexStrToPcap(self.vals['ipv4-dst'], ".")
-    rv.src = self.hexStrToPcap(self.vals['ipv4-src'], ".")
+    rv.dst = self.hexStrToPcap(self.vals['dst'], ".")
+    rv.src = self.hexStrToPcap(self.vals['src'], ".")
     rv.p = int(self.vals['proto'], 16)
     rv.ttl = int(self.vals['ttl'], 16)
     rv.hl =  self.vals['hl']
@@ -402,6 +405,40 @@ class IPv4(Layer):
     rv.len = self.vals['len']
     rv.id = self.vals['id']
     rv.opts = self.vals['opts']
+    return rv
+
+class IPv6(Layer):
+  ID = "ipv6"
+  position = 40
+  
+  cols = OrderedDict() 
+  cols['dst'] = 39
+  cols['src'] = 39
+  cols['ttl'] = 4
+  cols['proto'] = 5
+
+  def __init__(self, data):
+    self.vals = dict()
+    self.vals['dst'] = self.pcapToHexStr(data.dst, 4, ":")
+    self.vals['src'] = self.pcapToHexStr(data.src, 4, ":")
+    cfg.dbg("dst:" + self.vals['dst'])
+    self.vals['proto'] = self.intToHexStr(data.nxt).rjust(2, "0")
+    self.vals['ttl'] = self.intToHexStr(data.hlim).rjust(2, "0")
+    self.vals['v'] = data.v
+    self.vals['fc'] = data.fc
+    self.vals['flow'] = data.flow
+    self.vals['len'] = data.plen
+
+  def toPcap(self):
+    rv = dpkt.ip6.IP6()
+    rv.dst = self.hexStrToPcap(self.vals['dst'], ":")
+    rv.src = self.hexStrToPcap(self.vals['src'], ":")
+    rv.nxt = int(self.vals['proto'], 16)
+    rv.hlim = int(self.vals['ttl'], 16)
+    rv.v =  self.vals['v']
+    rv.fc = self.vals['fc']
+    rv.flow = self.vals['flow']
+    rv.plen = self.vals['len']
     return rv
 
 class IGMP(Layer):
