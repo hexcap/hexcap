@@ -55,9 +55,19 @@ class Layer:
     return rv.rstrip(delim)
 
   # Change string hex values to dpkt character bytes ignoring delimiter of delim
-  def hexStrToPcap(self, s, delim):
+  def hexStrToPcap(self, s, delim, ln=2):
     rv = ""
     bytes = s.split(delim)
+    if(ln != 2):
+      if((ln % 2 != 0) or (ln < 2)):
+        return False
+      else:
+        newbytes = []
+        for b in bytes:
+          for ii in xrange(0, ln, 2):
+            newbytes.append(b[ii:ii+2])
+        bytes = newbytes
+
     for b in bytes:
       rv += chr(int(b, 16))
     return rv
@@ -318,7 +328,6 @@ class STP(Layer):
     self.vals['type'] = data.type
     self.vals['flags'] = data.flags
     self.vals['data'] = data.data
-    cfg.dbg(repr(self.vals))
 
   def toPcap(self):
     rv = dpkt.stp.STP()
@@ -421,7 +430,6 @@ class IPv6(Layer):
     self.vals = dict()
     self.vals['dst'] = self.pcapToHexStr(data.dst, 4, ":")
     self.vals['src'] = self.pcapToHexStr(data.src, 4, ":")
-    cfg.dbg("dst:" + self.vals['dst'])
     self.vals['proto'] = self.intToHexStr(data.nxt).rjust(2, "0")
     self.vals['ttl'] = self.intToHexStr(data.hlim).rjust(2, "0")
     self.vals['v'] = data.v
@@ -431,14 +439,20 @@ class IPv6(Layer):
 
   def toPcap(self):
     rv = dpkt.ip6.IP6()
-    rv.dst = self.hexStrToPcap(self.vals['dst'], ":")
-    rv.src = self.hexStrToPcap(self.vals['src'], ":")
+    rv.dst = self.hexStrToPcap(self.vals['dst'], ":", 4)
+    rv.src = self.hexStrToPcap(self.vals['src'], ":", 4)
     rv.nxt = int(self.vals['proto'], 16)
     rv.hlim = int(self.vals['ttl'], 16)
     rv.v =  self.vals['v']
     rv.fc = self.vals['fc']
     rv.flow = self.vals['flow']
     rv.plen = self.vals['len']
+
+    # See dpkt ip6.py for explanation
+    rv.extension_hdrs = dict()
+    for hdr in dpkt.ip6.ext_hdrs:
+      rv.extension_hdrs[hdr] = None
+
     return rv
 
 class IGMP(Layer):
