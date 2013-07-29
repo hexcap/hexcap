@@ -200,7 +200,7 @@ class EthernetSNAP(Ethernet):
   cols['ssap'] = 4
   cols['pid'] = 4
 
-  # Because of a hack in dpkt 'type' actually refers to the 802.3 SNAP header 'PID'
+  # Because of a hack in dpkt 'type' actually refers to the 802.2 SNAP header 'PID'
   def __init__(self, data):
     Ethernet.__init__(self, data)
     self.vals['dsap'] = self.intToHexStr(data.dsap).rjust(2, "0")
