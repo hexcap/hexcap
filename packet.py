@@ -25,17 +25,14 @@ import dpkt
 import layer
 
 class Packet:
-  minSize = 60 # Default min packet size in bytes
-  maxSize = 1500 # Default MTU
-
   def __init__(self, ts, packet, pid):
     self.unsupported = False
     self.layers = []
     self.layers.append(layer.PktID(pid))
     self.layers.append(layer.TStamp(ts))
 
-    self.minSize = min(self.minSize, len(packet))
-    self.maxSize = max(self.maxSize, len(packet))
+    self.minSize = len(packet)
+    self.maxSize = max(dpkt.ethernet.ETH_MTU, len(packet))
     self.initLayers(dpkt.ethernet.Ethernet(packet))
 
   # Is every layer of this packet writable
@@ -164,7 +161,7 @@ class Packet:
 
   # Pads our pcap packet and returns False on packets greater than MTU
   def sizePkt(self, pkt):
-    if((len(pkt) > self.minSize) & (len(pkt) < self.maxSize)):
+    if((len(pkt) >= self.minSize) & (len(pkt) <= self.maxSize)):
       return pkt
     elif(len(pkt) > self.maxSize):
       raise PacketError, "Packet to write larger than MTU"
@@ -180,7 +177,7 @@ class Packet:
   def dump(self):
     rv = ''
     for lay in self.layers:
-      rv += "\n" + lay.dump()
+      rv += "\n" + lay.ID + lay.dump()
     return rv
 
   def out(self):

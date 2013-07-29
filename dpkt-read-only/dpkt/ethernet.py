@@ -4,7 +4,7 @@
 with automatic 802.1q, MPLS, PPPoE, and Cisco ISL decapsulation."""
 
 import struct
-import dpkt, stp, edp
+import dpkt, stp
 import sys
 
 ETH_CRC_LEN	= 4
@@ -90,7 +90,8 @@ class Ethernet(dpkt.Packet):
             self.dsap, self.ssap, self.ctl = struct.unpack('BBB', self.data[:3])
             if self.data.startswith('\xaa\xaa'):
                 # SNAP
-                self.type = struct.unpack('>H', self.data[6:8])[0] 
+                self.plen = self.type
+                self.type = struct.unpack('>H', self.data[6:8])[0]
                 self.org = struct.unpack('>I', self.data[2:6])[0] & 0xffffff
                 self._unpack_data(self.data[8:])
             else:
@@ -105,13 +106,28 @@ class Ethernet(dpkt.Packet):
 
     def pack_hdr(self):
         try:
-            if hasattr(self, 'dsap'):
-                if hasattr(self, 'org'):
-                    return dpkt.Packet.pack_hdr(self) + struct.pack('BB', self.dsap, self.ssap) + \
-                           struct.pack('>I',  (self.ctl << 24) | self.org ) + struct.pack('>H', self.type)
+            if hasattr(self, 'org'):
+                PID = self.type
+                self.type = self.plen
+                return dpkt.Packet.pack_hdr(self) + struct.pack('BB', self.dsap, self.ssap) + \
+                    struct.pack('>I',  (self.ctl << 24) | self.org ) + struct.pack('>H', PID)
             return dpkt.Packet.pack_hdr(self)
         except struct.error, e:
             raise dpkt.PackError(str(e))
+
+    def __len__(self):
+        '''
+        dsap = 1
+        ssap = 1
+        ctl = 1
+        plen = type = 2
+        org = 3
+        '''
+        if hasattr(self, 'dsap'):
+            if hasattr(self, 'org'):
+                return dpkt.Packet.__len__(self) + 8
+            return dpkt.Packet.__len__(self) + 5
+        return dpkt.Packet.__len__(self)
 
     def set_type(cls, t, pktclass):
         cls._typesw[t] = pktclass

@@ -7,7 +7,7 @@ class EDP(dpkt.Packet):
     __hdr__ = (
         ('v', 'B', 1),
         ('res', 'B', 0),
-        ('len', 'H', 0),
+        ('hlen', 'H', 0),
         ('sum', 'H', 0),
         ('seq', 'H', 0),
         ('mid', 'H', 0),

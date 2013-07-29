@@ -199,8 +199,6 @@ class EthernetSNAP(Ethernet):
   cols['dsap'] = 4
   cols['ssap'] = 4
   cols['pid'] = 4
-#  cols['ctl'] = 3
-#  cols['org'] = 6
 
   # Because of a hack in dpkt 'type' actually refers to the 802.3 SNAP header 'PID'
   def __init__(self, data):
@@ -210,6 +208,7 @@ class EthernetSNAP(Ethernet):
     self.vals['ctl'] = self.intToHexStr(data.ctl).rjust(2, "0")
     self.vals['org'] = self.intToHexStr(data.org).rjust(6, "0")
     self.vals['pid'] = self.intToHexStr(data.type).rjust(4, "0")
+    self.vals['plen'] = data.plen
 
   def toPcap(self):
     rv = Ethernet.toPcap(self)
@@ -218,6 +217,7 @@ class EthernetSNAP(Ethernet):
     rv.ctl = int(self.vals['ctl'], 16)
     rv.org = int(self.vals['org'], 16)
     rv.type = int(self.vals['pid'], 16)
+    rv.plen = self.vals['plen']
     return rv
 
 class Dot1q(Layer):
@@ -285,17 +285,21 @@ class EDP(Layer):
   def __init__(self, data):
     self.vals = dict()
     self.vals['ver'] = self.intToHexStr(data.v).rjust(2, "0")
-    self.vals['len'] = self.intToHexStr(data.len).rjust(4, "0")
+    self.vals['len'] = self.intToHexStr(data.hlen).rjust(4, "0")
     self.vals['seq'] = self.intToHexStr(data.seq).rjust(4, "0")
     self.vals['mac'] = self.pcapToHexStr(data.mac, ":")
+    self.vals['res'] = data.res
+    self.vals['mid'] = data.mid    
     self.vals['data'] = data.data
 
   def toPcap(self):
     rv = dpkt.edp.EDP()
     rv.v = int(self.vals['ver'], 16)
-    rv.len = int(self.vals['len'], 16)
+    rv.hlen = int(self.vals['len'], 16)
     rv.seq = int(self.vals['seq'], 16)
     rv.mac = self.hexStrToPcap(self.vals['mac'], ":")
+    rv.res = self.vals['res']
+    rv.mid = self.vals['mid']
     rv.data = self.vals['data']
     return rv
 
