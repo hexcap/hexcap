@@ -44,7 +44,7 @@ class Layer:
 
   # Change dpkt character bytes to string hex values of length ln with a delimiter of delim
   # ln corresponds to how many nibbles you want between each delim
-  def pcapToHexStr(self, bytes, ln, delim):
+  def pcapToHexStr(self, bytes, delim, ln=2):
     rv = ""
     trv = ""
     for b in bytes:
@@ -134,8 +134,8 @@ class Ethernet(Layer):
 
   def __init__(self, data):
     self.vals = dict()
-    self.vals['eth-dst'] = self.pcapToHexStr(data.dst, 2, ":")
-    self.vals['eth-src'] = self.pcapToHexStr(data.src, 2, ":")
+    self.vals['eth-dst'] = self.pcapToHexStr(data.dst, ":")
+    self.vals['eth-src'] = self.pcapToHexStr(data.src, ":")
 
   def toPcap(self):
     rv = dpkt.ethernet.Ethernet()
@@ -287,7 +287,7 @@ class EDP(Layer):
     self.vals['ver'] = self.intToHexStr(data.v).rjust(2, "0")
     self.vals['len'] = self.intToHexStr(data.len).rjust(4, "0")
     self.vals['seq'] = self.intToHexStr(data.seq).rjust(4, "0")
-    self.vals['mac'] = self.pcapToHexStr(data.mac, 2, ":")
+    self.vals['mac'] = self.pcapToHexStr(data.mac, ":")
     self.vals['data'] = data.data
 
   def toPcap(self):
@@ -315,8 +315,8 @@ class STP(Layer):
 
   def __init__(self, data):
     self.vals = dict()
-    self.vals['root'] = self.pcapToHexStr(data.root_id, 2, ":")
-    self.vals['bridge'] = self.pcapToHexStr(data.bridge_id, 2, ":")
+    self.vals['root'] = self.pcapToHexStr(data.root_id, ":")
+    self.vals['bridge'] = self.pcapToHexStr(data.bridge_id, ":")
     self.vals['port'] = self.intToHexStr(data.port_id).rjust(4, "0")
     self.vals['age'] = self.intToHexStr(data.age).rjust(2, "0")
     self.vals['max'] = self.intToHexStr(data.max_age).rjust(2, "0")
@@ -363,10 +363,10 @@ class ARP(Layer):
   def __init__(self, data):
     self.vals = dict()
     self.vals['oper'] = self.intToHexStr(data.op).rjust(4, "0")
-    self.vals['sha'] = self.pcapToHexStr(data.sha, 2, ":")
-    self.vals['tha'] = self.pcapToHexStr(data.tha, 2, ":")
-    self.vals['spa'] = self.pcapToHexStr(data.spa, 2, ".")
-    self.vals['tpa'] = self.pcapToHexStr(data.tpa, 2, ".")
+    self.vals['sha'] = self.pcapToHexStr(data.sha, ":")
+    self.vals['tha'] = self.pcapToHexStr(data.tha, ":")
+    self.vals['spa'] = self.pcapToHexStr(data.spa, ".")
+    self.vals['tpa'] = self.pcapToHexStr(data.tpa, ".")
 
   def toPcap(self):
     rv = dpkt.arp.ARP()
@@ -389,8 +389,8 @@ class IPv4(Layer):
 
   def __init__(self, data):
     self.vals = dict()
-    self.vals['dst'] = self.pcapToHexStr(data.dst, 2, ".")
-    self.vals['src'] = self.pcapToHexStr(data.src, 2, ".")
+    self.vals['dst'] = self.pcapToHexStr(data.dst, ".")
+    self.vals['src'] = self.pcapToHexStr(data.src, ".")
     self.vals['proto'] = self.intToHexStr(data.p).rjust(2, "0")
     self.vals['ttl'] = self.intToHexStr(data.ttl).rjust(2, "0")
     self.vals['hl'] = data.hl
@@ -428,8 +428,8 @@ class IPv6(Layer):
 
   def __init__(self, data):
     self.vals = dict()
-    self.vals['dst'] = self.pcapToHexStr(data.dst, 4, ":")
-    self.vals['src'] = self.pcapToHexStr(data.src, 4, ":")
+    self.vals['dst'] = self.pcapToHexStr(data.dst, ":", 4)
+    self.vals['src'] = self.pcapToHexStr(data.src, ":", 4)
     self.vals['proto'] = self.intToHexStr(data.nxt).rjust(2, "0")
     self.vals['ttl'] = self.intToHexStr(data.hlim).rjust(2, "0")
     self.vals['v'] = data.v
@@ -468,7 +468,7 @@ class IGMP(Layer):
     self.vals = dict()
     self.vals['type'] = self.intToHexStr(data.type).rjust(2, "0")
     self.vals['maxresp'] = self.intToHexStr(data.maxresp).rjust(2, "0")
-    self.vals['group'] = self.pcapToHexStr(data.group, 2, ".")
+    self.vals['group'] = self.pcapToHexStr(data.group, ".")
 
   def toPcap(self):
     rv = dpkt.igmp.IGMP()
