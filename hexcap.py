@@ -47,7 +47,7 @@ class EdScreen:
 
     # Cursor inits
     self.maxY, self.maxX = self.stdscr.getmaxyx()
-    self.cY = 2
+    self.cY = self.headerHeight
     self.cX = 0
 
     # Our stack of hidden sections
@@ -57,7 +57,7 @@ class EdScreen:
     self.insert = False
 
     # Packet ID of marked packet. One based.
-    self.mark = 0
+    self.mark = 0 # Zero means no marked packet
 
   def tearDown(self, dieStr=''):
     self.stdscr.keypad(0)
@@ -73,7 +73,8 @@ class EdScreen:
     self.cap = cap
     self.ppadTopY = self.headerHeight # Topmost ppad position on screen
     self.ppadBottomY = self.maxY - self.footerHeight # Bottommost ppad position on screen
-    self.ppadCurY = 0 # Current topmost visible line in ppad
+    self.ppadCurY = 0 # Current topmost visible Y in ppad
+    self.ppadCurX = 0 # Current leftmost visible X in ppad
     self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.ppad = curses.newpad(self.ppadRows, self.maxX)
     self.buildSections()
@@ -81,23 +82,15 @@ class EdScreen:
     self.refresh()
 
   # Completely redraws our ppad and rebuilds our section list
-  # Sets displayTableWidth
+  # Sets ppadWidth
   def drawPpad(self):
     if(self.ppadRows != len(self.cap.packets)): # Our capture has changed in size
-      self.ppadRows = len(self.cap.packets)
-      self.ppad = curses.newpad(self.ppadRows, self.maxX)
       self.buildSections()
 
-    # Set displayTableWidth 
-    self.displayTableWidth = 0 # Width of displayed columns(zero based)
-    for s in self.sections:
-      if(s.visible):
-        if(self.displayTableWidth + s.width <= self.maxX):
-          self.displayTableWidth += s.width
-        else:
-          break
-
     # Draw our ppad
+    self.ppadRows = len(self.cap.packets)
+    self.ppadWidth = min(self.maxX, self.tableWidth)
+    self.ppad = curses.newpad(self.ppadRows, self.ppadWidth)
     self.stdscr.clear()
     self.ppad.clear()
     y = 0
@@ -114,7 +107,7 @@ class EdScreen:
     self.drawFooter()
     self.stdscr.move(self.cY, self.cX)
     self.refreshBoldPacket()
-    self.ppad.refresh(self.ppadCurY, 0, self.ppadTopY, 0, self.ppadBottomY, self.tableWidth)
+    self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.ppadWidth)
     self.stdscr.refresh()
     curses.doupdate()
 
@@ -174,7 +167,7 @@ class EdScreen:
   # Takes X value of cursor
   def cursorSection(self, x):
     dSections = self.displayedSections
-    totX = 0
+    totX = self.ppadCurX * -1
     for s in dSections:
       if(x < totX + s.width):
         return s
@@ -185,7 +178,7 @@ class EdScreen:
   # Returns header section and column that passed X value is currently in
   # Takes X screen position
   def cursorColumn(self, x):
-    totX = 0
+    totX = self.ppadCurX * -1
     for s in self.displayedSections:
       if(x < totX + s.width - 1):
         if(s.exposed):
@@ -199,19 +192,20 @@ class EdScreen:
       else:
         totX += s.width
 
-  # Returns leftmost absolute X value for passed section name
-  # Returns False on failure
+  # Returns leftmost screen X value for passed section name
   def sectionLeft(self, sid):
-    rv = 0
+    rv = self.ppadCurX * -1
     for s in self.displayedSections:
       if(s.ID == sid):
-        return rv
+        if(rv > 0):
+          return rv
+        else:
+          raise ScreenError, "sectionLeft:Section on left side of horizontal scroll boundary"
       else:
         rv += s.width
-    return False
+    raise ScreenError, "sectionLeft:Section not found"
 
-  # Returns leftmost absolute X value(after divider) for passed section and column name
-  # Returns False on failure
+  # Returns leftmost screen X value(after "|") for passed section and column name
   def columnLeft(self, sid, cid):
     rv = self.sectionLeft(sid)
     for s in self.displayedSections:
@@ -219,29 +213,35 @@ class EdScreen:
         if(s.exposed):
           for col, width in s.c.iteritems():
             if(col == cid):
-              return rv
+              if(rv > 0):
+                return rv
+              else:
+                raise ScreenError, "columnLeft:Column on left side of horizontal scroll boundary"
             else:
               rv += width + 1
         else:
           return rv
-    return False
+    raise ScreenError, "columnLeft:Column not found"
 
-  # Returns rightmost absolute X value(before divider) for passed section and column name
+  # Returns rightmost screen X value(before "|") for passed section and column name
   def columnRight(self, sid, cid):
     for s in self.displayedSections:
       if(s.ID == sid):
         return self.columnLeft(sid, cid) + s.c[cid] - 1
 
-  # Returns center absolute X value for passed section name
-  # Returns False on failure
+  # Returns center screen X value for passed section name
   def sectionCenter(self, sid):
-    rv = 0
+    rv = self.ppadCurX * -1
     for s in self.displayedSections:
       if(s.ID == sid):
-        return rv + (int(math.floor(s.width / 2)))
+        c = rv + (int(math.floor(s.width / 2)))
+        if(c > 0):
+          return c
+        else:
+          raise ScreenError, "sectionCenter:Section center on left side of horizontal scroll boundary"
       else:
         rv += s.width
-    return False
+    raise ScreenError, "sectionCenter:Section not found"
 
   # Handle regular refreshing of packet lines
   #    cfg.dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
@@ -307,14 +307,14 @@ class EdScreen:
         msg += row['pid']['pid'] + "|"
       if(self.sections[1].exposed):
         msg += row['tstamp']['tstamp'] + "|" 
-      self.ppad.addstr(y, 0, msg + " <<Unsupported Packet>>")
+      self.ppad.addstr(y, 0, msg + " <<Unsp>>")
       return
 
     x = 0
     for s in self.sections:
       if(s.visible):
         if(s.exposed):
-          if(self.displayTableWidth >= x + s.width):
+          if(self.tableWidth >= x + s.width):
             for colName, width in s.c.iteritems():
               if(s.ID in row):
                 if(reverse):
@@ -327,12 +327,12 @@ class EdScreen:
                   
                 x += width + 1
               else:
-#                cfg.dbg("exp==True dtw:" + str(self.displayTableWidth) + " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(width))
+#                cfg.dbg("exp==True dtw:" + str(self.tableWidth) + " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(width))
                 self.ppad.addstr(y, x, " ".rjust(width + 1))
                 x += width + 1
         else:
-#          cfg.dbg("exp==False dtw:" + str(self.displayTableWidth) + " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(s.width))
-          if(self.displayTableWidth >= x + s.width):
+#          cfg.dbg("exp==False dtw:" + str(self.tableWidth) + " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(s.width))
+          if(self.tableWidth >= x + s.width):
             self.ppad.hline(y, x, "-", x + s.width - 1)
             self.ppad.addstr(y, x + s.width - 1, "|")
             x += s.width
@@ -346,7 +346,7 @@ class EdScreen:
     for s in self.sections:
       if(s.visible):
         if(s.exposed):
-          if(self.displayTableWidth >= x0 + s.width):
+          if(self.tableWidth >= x0 + s.width):
             for column, width in s.c.iteritems():
               col = column.center(width, " ")
               self.stdscr.addstr(1, x1, col + "|", curses.A_REVERSE)
@@ -357,7 +357,7 @@ class EdScreen:
             self.stdscr.addstr(0, x0, head)
             x0 += s.width
         else:
-          if(self.displayTableWidth >= x0 + s.width):
+          if(self.tableWidth >= x0 + s.width):
             head = "{" + s.ID + "}|"
             self.stdscr.addstr(0, x0, head)
             self.stdscr.hline(1, x1, "-", s.width - 1, curses.A_REVERSE)
@@ -415,8 +415,8 @@ class EdScreen:
     self.stdscr.addstr(y, x, txt)
     x += len(txt)
 
-    if(self.displayTableWidth > x):
-      self.stdscr.hline(y, x, "-", self.displayTableWidth - x)
+    if(self.tableWidth > x):
+      self.stdscr.hline(y, x, "-", self.tableWidth - x)
 
   # Prints text to the mini-buffer 
   def printToMiniBuffer(self, s):
@@ -532,7 +532,7 @@ class EdScreen:
 
     elif(dX != 0):
       if(dX > 0):
-        if(self.cX + dX < self.displayTableWidth - 1):
+        if(self.cX + dX < self.tableWidth - 1):
           self.cX += dX
       else:
         if(self.cX + dX >= 0):
@@ -544,8 +544,8 @@ class EdScreen:
       s.visible = False
       s.exposed = False
       self.hiddenSectIDs.append(s.ID)
-      self.drawPpad() # Sets self.displayTableWidth
-      self.cX = min(self.cX, self.displayTableWidth - 2)
+      self.drawPpad()
+      self.cX = min(self.cX, self.tableWidth - 2)
       self.refresh()
 
   def unhideLastSection(self):
@@ -566,8 +566,8 @@ class EdScreen:
     if(s.exposed):
       s.exposed = False
     else:
-      if(s._width + self.displayTableWidth < self.maxX):
-        s.exposed = True
+      s.exposed = True
+
     self.drawPpad()
     self.cX = self.sectionCenter(s.ID)
     self.refresh()
@@ -631,8 +631,8 @@ class EdScreen:
   # Returns cY and cX to legal position(s)
   def resetCursor(self):
     # Handle X
-    if(self.cX > self.displayTableWidth):
-      self.cX = self.displayTableWidth
+    if(self.cX > self.tableWidth):
+      self.cX = self.tableWidth
 
     # Handle Y
     if(len(self.cap.packets) <= 1):
@@ -807,3 +807,7 @@ while True:
     if(cfg.debug):
       cfg.dbgF.close()
   
+
+
+class ScreenError(Exception):
+  pass
