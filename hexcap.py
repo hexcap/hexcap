@@ -92,7 +92,7 @@ class EdScreen:
     if(self.ppadRows != len(self.cap.packets)): # Our capture has changed in size
       self.buildSections()
 
-    # Draw our ppad
+    # Draw our packet ppad
     self.ppadRows = len(self.cap.packets)
     self.ppadWidth = self.tableWidth + 1 # Don't understand, why the extra 1?
     self.ppad = curses.newpad(self.ppadRows, self.ppadWidth)
@@ -103,16 +103,21 @@ class EdScreen:
       self.drawPktLine(y, p.out())
       y += 1
 
+    # Create our header ppad
+    self.headPpad = curses.newpad(2, self.ppadWidth)
+
   def refresh(self):
     if(curses.is_term_resized(self.maxY, self.maxX)):
       cfg.dbg("Caught resize event. Consider using immedok()")
       self.tearDown()
     
     self.drawHeader()
+    self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
     self.stdscr.move(self.cY, self.cX)
     self.refreshBoldPacket()
-    self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.maxX)
+#    cfg.dbg(" ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + str(self.ppadWidth) + " maxX:" + str(self.maxX))
+    self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.maxX - 1)
     self.stdscr.refresh()
     curses.doupdate()
 
@@ -308,11 +313,16 @@ class EdScreen:
   def drawPktLine(self, y, row, bold=False, reverse=False):
     if("unsupported" in row): # If packet is unsupported we only print the pid and tstamp
       msg = ''
+      decr = 0
       if(self.sections[0].exposed):
         msg += row['pid']['pid'] + "|"
+        decr += self.sections[0].width
       if(self.sections[1].exposed):
         msg += row['tstamp']['tstamp'] + "|" 
-      self.ppad.addstr(y, 0, msg + " <<Unsp>>")
+        decr += self.sections[1].width
+
+      msg += "<<Unsupported>>".center(self.tableWidth - decr - 1) + "|"
+      self.ppad.addstr(y, 0, msg)
       return
 
     x = 0
@@ -331,14 +341,14 @@ class EdScreen:
                   
                 x += width + 1
           else:
-            cfg.dbg("exp==True tw:" + str(self.tableWidth) + " maxX:" + str(self.maxX) + " ppW:" + str(self.ppadWidth) +
-                    " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(width))
+#            cfg.dbg("exp==True tw:" + str(self.tableWidth) + " maxX:" + str(self.maxX) + " ppW:" + str(self.ppadWidth) +
+#                    " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(width))
             self.ppadHline(y, x, " ", s.width - 1)
             self.ppadAddstr(y, x + s.width - 1, "|")
             x += s.width
         else:
-          cfg.dbg("exp==False tw:" + str(self.tableWidth) + " maxX:" + str(self.maxX) + " ppW:" + str(self.ppadWidth) + 
-                  " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(s.width))
+#          cfg.dbg("exp==False tw:" + str(self.tableWidth) + " maxX:" + str(self.maxX) + " ppW:" + str(self.ppadWidth) + 
+#                  " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(s.width))
           self.ppadHline(y, x, "-", s.width - 1)
           self.ppadAddstr(y, x + s.width - 1, "|")
           x += s.width
@@ -355,18 +365,21 @@ class EdScreen:
           if(s.exposed):
             head = "{" + s.ID + "}"
             head = head.center(s.width - 1, " ") + "|"
-            self.stdscr.addstr(0, x0, head)
+
+#            cfg.dbg("tw:" + str(self.tableWidth) + " maxX:" + str(self.maxX) + " ppW:" + str(self.ppadWidth) + 
+#                    " ID:" + s.ID + " x0:" + str(x0) + " lenHead:" + str(len(head)))
+            self.headPpadAddstr(0, x0, head)
             x0 += s.width
             for column, width in s.c.iteritems():
               col = column.center(width, " ")
-              self.stdscr.addstr(1, x1, col + "|", curses.A_REVERSE)
+              self.headPpadAddstr(1, x1, col + "|", curses.A_REVERSE)
               x1 += width + 1
 
           else:
             head = "{" + s.ID + "}|"
-            self.stdscr.addstr(0, x0, head)
-            self.stdscr.hline(1, x1, "-", s.width - 1, curses.A_REVERSE)
-            self.stdscr.addstr(1, x1 + s.width - 1, "|", curses.A_REVERSE)
+            self.headPpadAddstr(0, x0, head)
+            self.headPpadHline(1, x1, "-", s.width - 1, curses.A_REVERSE)
+            self.headPpadAddstr(1, x1 + s.width - 1, "|", curses.A_REVERSE)
             x0 += s.width
             x1 += s.width
         else:
@@ -606,7 +619,7 @@ class EdScreen:
     inpt = hex(self.ppad.inch(y, x))
     return list((int(inpt[2:4], 16), chr(int(inpt[4:], 16))))
 
-  # Wrapper for ppad.addstr with exception handling
+  # Wrapper for packet ppad.addstr with exception handling
   def ppadAddstr(self, y, x, s, atr=None):
     try:
       if(atr):
@@ -618,10 +631,37 @@ class EdScreen:
       curses.endwin()
       raise
 
-  # Wrapper for ppad.hline with exception handling
-  def ppadHline(self, y, x, char, width):
+  # Wrapper for packet ppad.hline with exception handling
+  def ppadHline(self, y, x, char, width, atr=None):
     try:
-      self.ppad.hline(y, x, char, width)
+      if(atr):
+        self.ppad.hline(y, x, char, width, atr)
+      else:
+        self.ppad.hline(y, x, char, width)
+    except:
+      curses.echo()
+      curses.endwin()
+      raise
+
+  # Wrapper for header ppad.addstr with exception handling
+  def headPpadAddstr(self, y, x, s, atr=None):
+    try:
+      if(atr):
+        self.headPpad.addstr(y, x, s, atr)
+      else:
+        self.headPpad.addstr(y, x, s)
+    except:
+      curses.echo()
+      curses.endwin()
+      raise
+
+  # Wrapper for ppad.hline with exception handling
+  def headPpadHline(self, y, x, char, width, atr=None):
+    try:
+      if(atr):
+        self.headPpad.hline(y, x, char, width, atr)
+      else:
+        self.headPpad.hline(y, x, char, width)
     except:
       curses.echo()
       curses.endwin()
