@@ -114,9 +114,10 @@ class EdScreen:
     self.drawHeader()
     self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
+#    cfg.dbg("ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + str(self.ppadWidth) + " maxX:" + str(self.maxX))
+#    cfg.dbg("cY:" + str(self.cY) + " cX:" + str(self.cX))
     self.stdscr.move(self.cY, self.cX)
     self.refreshBoldPacket()
-#    cfg.dbg(" ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + str(self.ppadWidth) + " maxX:" + str(self.maxX))
     self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.maxX - 1)
     self.stdscr.refresh()
     curses.doupdate()
@@ -185,7 +186,7 @@ class EdScreen:
         totX += s.width
     return dSections.reversed.next()
 
-  # Returns header section and column that passed X value is currently in
+  # Returns header section and column key that passed X value is currently in
   # Takes X screen position
   def cursorColumn(self, x):
     totX = self.ppadCurX * -1
@@ -216,8 +217,12 @@ class EdScreen:
     raise ScreenError, "sectionLeft:Section not found"
 
   # Returns leftmost screen X value(after "|") for passed section and column name
-  def columnLeft(self, sid, cid):
+  # If column is None then returns leftmost screen X value(after "|") for section only
+  def columnLeft(self, sid, cid=None):
     rv = self.sectionLeft(sid)
+    if(cid == None):
+      return rv
+
     for s in self.displayedSections:
       if(s.ID == sid):
         if(s.exposed):
@@ -234,6 +239,7 @@ class EdScreen:
     raise ScreenError, "columnLeft:Column not found"
 
   # Returns rightmost screen X value(before "|") for passed section and column name
+  # TODO:Assumes passed section is exposed
   def columnRight(self, sid, cid):
     for s in self.displayedSections:
       if(s.ID == sid):
@@ -478,7 +484,14 @@ class EdScreen:
 
   # Moves cursor right and left by delta columns
   def shiftColumn(self, delta):
-    if(delta == 0):
+    if(self.cX >= self.maxX): # Reset our cursor if we shifted off screen
+      s, col = self.cursorColumn(self.maxX - 5)
+      self.cX = self.columnLeft(s.ID, col)
+    elif(self.cX <= 0):
+      s, col = self.cursorColumn(5)
+      self.cX = self.columnLeft(s.ID, col)
+
+    if(delta == 0): # Where every call to this function eventually ends up
       return
 
     dispSections = self.displayedSections
@@ -496,16 +509,14 @@ class EdScreen:
               return
             else:
               ns = dispSections[ii + 1]
-              nc = ns.c.getStrKey(0)
-              self.cX = self.columnLeft(ns.ID, nc)
+              self.cX = self.columnLeft(ns.ID, None)
               self.shiftColumn(delta - 1)
           else:
             if(ii == 0):
               return
             else:
               ns = dispSections[ii - 1]
-              nc = ns.c.getStrKey(len(ns.c) - 1)
-              self.cX = self.columnLeft(ns.ID, nc)
+              self.cX = self.columnLeft(ns.ID, None)
               self.shiftColumn(delta + 1)
 
     else:
@@ -619,6 +630,7 @@ class EdScreen:
     inpt = hex(self.ppad.inch(y, x))
     return list((int(inpt[2:4], 16), chr(int(inpt[4:], 16))))
 
+  # TODO: Change these to high order functions
   # Wrapper for packet ppad.addstr with exception handling
   def ppadAddstr(self, y, x, s, atr=None):
     try:
