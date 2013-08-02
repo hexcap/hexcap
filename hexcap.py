@@ -114,8 +114,8 @@ class EdScreen:
     self.drawHeader()
     self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
-#    cfg.dbg("ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + str(self.ppadWidth) + " maxX:" + str(self.maxX))
-#    cfg.dbg("cY:" + str(self.cY) + " cX:" + str(self.cX))
+    cfg.dbg("ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + str(self.ppadWidth) + " maxX:" + str(self.maxX))
+    cfg.dbg("cY:" + str(self.cY) + " cX:" + str(self.cX))
     self.stdscr.move(self.cY, self.cX)
     self.refreshBoldPacket()
     self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.maxX - 1)
@@ -363,44 +363,30 @@ class EdScreen:
 
   # Draws our top 2 header rows
   def drawHeader(self):
-    x0 = self.ppadCurX * -1
-    x1 = self.ppadCurX * -1
+    x0 = 0
+    x1 = 0
     for s in self.sections:
-      if(x0 >= 0):
-        if(s.visible):
-          if(s.exposed):
-            head = "{" + s.ID + "}"
-            head = head.center(s.width - 1, " ") + "|"
+      if(s.visible):
+        if(s.exposed):
+          head = "{" + s.ID + "}"
+          head = head.center(s.width - 1, " ") + "|"
 
-#            cfg.dbg("tw:" + str(self.tableWidth) + " maxX:" + str(self.maxX) + " ppW:" + str(self.ppadWidth) + 
-#                    " ID:" + s.ID + " x0:" + str(x0) + " lenHead:" + str(len(head)))
-            self.headPpadAddstr(0, x0, head)
-            x0 += s.width
-            for column, width in s.c.iteritems():
-              col = column.center(width, " ")
-              self.headPpadAddstr(1, x1, col + "|", curses.A_REVERSE)
-              x1 += width + 1
+          self.headPpadAddstr(0, x0, head)
+          x0 += s.width
+          for column, width in s.c.iteritems():
+            col = column.center(width, " ")
+            self.headPpadAddstr(1, x1, col + "|", curses.A_REVERSE)
+            x1 += width + 1
 
-          else:
-            head = "{" + s.ID + "}|"
-            self.headPpadAddstr(0, x0, head)
-            self.headPpadHline(1, x1, "-", s.width - 1, curses.A_REVERSE)
-            self.headPpadAddstr(1, x1 + s.width - 1, "|", curses.A_REVERSE)
-            x0 += s.width
-            x1 += s.width
         else:
-          continue
+          head = "{" + s.ID + "}|"
+          self.headPpadAddstr(0, x0, head)
+          self.headPpadHline(1, x1, "-", s.width - 1, curses.A_REVERSE)
+          self.headPpadAddstr(1, x1 + s.width - 1, "|", curses.A_REVERSE)
+          x0 += s.width
+          x1 += s.width
       else:
-        if(s.visible):
-          if(s.exposed):
-            x0 += s.width
-            for column, width in s.c.iteritems():
-              x1 += width + 1
-          else:
-            x0 += s.width
-            x1 += s.width
-        else:
-          continue
+        continue
         
   def drawFooter(self):
     y = self.maxY - self.footerHeight
@@ -439,6 +425,7 @@ class EdScreen:
     self.stdscr.hline(y, x, "-", divider)
     x += divider
 
+    cfg.dbg("drawFooter cX:" + str(self.cX))
     s,c = self.cursorColumn(self.cX)
     if(s.exposed):
       if(s.RO):
@@ -484,44 +471,46 @@ class EdScreen:
 
   # Moves cursor right and left by delta columns
   def shiftColumn(self, delta):
-    if(self.cX >= self.maxX): # Reset our cursor if we shifted off screen
+    dSections = self.displayedSections
+    if(len(dSections) < 2):
+      return
+
+    if(self.cX >= self.maxX): # Reset our cursor and shift screen if we shifted off screen
+      self.ppadCurX += self.cX - self.maxX
       s, col = self.cursorColumn(self.maxX - 5)
       self.cX = self.columnLeft(s.ID, col)
     elif(self.cX <= 0):
+      self.ppadCurX += self.cX
       s, col = self.cursorColumn(5)
       self.cX = self.columnLeft(s.ID, col)
 
     if(delta == 0): # Where every call to this function eventually ends up
       return
 
-    dispSections = self.displayedSections
-    if(dispSections < 2):
-      return
-
     sect, col = self.cursorColumn(self.cX)
     if(col == None):
       ii = -1
-      for s in dispSections:
+      for s in dSections:
         ii += 1
         if(s.ID == sect.ID): # Found sect
           if(delta > 0):
-            if(ii == len(dispSections) - 1):
+            if(ii == len(dSections) - 1):
               return
             else:
-              ns = dispSections[ii + 1]
+              ns = dSections[ii + 1]
               self.cX = self.columnLeft(ns.ID, None)
               self.shiftColumn(delta - 1)
           else:
             if(ii == 0):
               return
             else:
-              ns = dispSections[ii - 1]
+              ns = dSections[ii - 1]
               self.cX = self.columnLeft(ns.ID, None)
               self.shiftColumn(delta + 1)
 
     else:
       sii = -1
-      for s in dispSections:
+      for s in dSections:
         sii += 1
         if(sect.ID == s.ID):
           cii = -1
@@ -530,10 +519,10 @@ class EdScreen:
             if(c == col): # Found sect and col
               if(delta > 0):
                 if(cii == len(s.c) - 1): # Last column
-                  if(sii == len(dispSections) - 1): # Last section and column
+                  if(sii == len(dSections) - 1): # Last section and column
                     return
                   else:
-                    ns = dispSections[sii + 1]
+                    ns = dSections[sii + 1]
                     nc = ns.c.getStrKey(0)
                     self.cX = self.columnLeft(ns.ID, nc)
                     self.shiftColumn(delta - 1)
@@ -545,7 +534,7 @@ class EdScreen:
                   if(sii == 0):
                     return
                   else:
-                    ns = dispSections[sii - 1]
+                    ns = dSections[sii - 1]
                     nc = ns.c.getStrKey(len(ns.c) - 1)
                     self.cX = self.columnLeft(ns.ID, nc)
                     self.shiftColumn(delta + 1)
@@ -572,11 +561,22 @@ class EdScreen:
 
     elif(dX != 0):
       if(dX > 0):
-        if(self.cX + dX < self.tableWidth - 1):
-          self.cX += dX
+        cfg.dbg("move tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " cX:" + str(self.cX))
+        if(self.cX + dX < self.tableWidth -self.ppadCurX - 1):
+          if(self.cX + dX < self.maxX):
+            self.cX += dX
+          else:
+            self.ppadCurX += dX
+        else:
+          if(self.cX + dX == self.tableWidth -self.ppadCurX - 1):
+            self.ppadCurX += 1
       else:
         if(self.cX + dX >= 0):
           self.cX += dX
+        else:
+          if(self.cX + dX >= self.ppadCurX * -1):
+            self.ppadCurX += 1
+            self.cX -= 1
 
   def hideSection(self):
     if(len(self.displayedSections) > 1):
@@ -718,6 +718,7 @@ class EdScreen:
 
   # Called after an action MAY cause cY or cX to be in illegal position
   # Returns cY and cX to legal position(s)
+  # TODO: I don't like that this function exists at all
   def resetCursor(self):
     # Handle X
     if(self.cX > self.tableWidth):
@@ -851,11 +852,11 @@ while True:
       elif(c == ord(">")): # Shift right 1 column
         mainScr.shiftColumn(1)
 
-      elif(c == cfg.KEY_CTRL_H): # Hide section
-        mainScr.hideSection()
+#      elif(c == cfg.KEY_CTRL_H): # Hide section
+#        mainScr.hideSection()
 
-      elif(c == cfg.KEY_CTRL_U): # Unhide last hidden section
-        mainScr.unhideLastSection()
+#      elif(c == cfg.KEY_CTRL_U): # Unhide last hidden section
+#        mainScr.unhideLastSection()
 
       elif(c == cfg.KEY_CTRL_R): # Reread packet capture from disk
         readError = False
