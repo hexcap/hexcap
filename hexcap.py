@@ -114,8 +114,8 @@ class EdScreen:
     self.drawHeader()
     self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
-    cfg.dbg("ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + str(self.ppadWidth) + " maxX:" + str(self.maxX))
-    cfg.dbg("cY:" + str(self.cY) + " cX:" + str(self.cX))
+    cfg.dbg("refresh ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + 
+            str(self.ppadWidth) + " maxX:" + str(self.maxX) + " cY:" + str(self.cY) + " cX:" + str(self.cX))
     self.stdscr.move(self.cY, self.cX)
     self.refreshBoldPacket()
     self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.maxX - 1)
@@ -425,7 +425,7 @@ class EdScreen:
     self.stdscr.hline(y, x, "-", divider)
     x += divider
 
-    cfg.dbg("drawFooter cX:" + str(self.cX))
+    cfg.dbg("drawFooter cX:" + str(self.cX) + " tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX))
     s,c = self.cursorColumn(self.cX)
     if(s.exposed):
       if(s.RO):
@@ -561,15 +561,17 @@ class EdScreen:
 
     elif(dX != 0):
       if(dX > 0):
-        cfg.dbg("move tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " cX:" + str(self.cX))
+#        cfg.dbg("move tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " cX:" + str(self.cX))
         if(self.cX + dX < self.tableWidth -self.ppadCurX - 1):
           if(self.cX + dX < self.maxX):
             self.cX += dX
           else:
             self.ppadCurX += dX
         else:
-          if(self.cX + dX == self.tableWidth -self.ppadCurX - 1):
-            self.ppadCurX += 1
+          if(self.cX + dX == self.tableWidth - self.ppadCurX - 1):
+            if(self.cX + dX == self.maxX):
+              self.ppadCurX += 1
+              self.cX -= dX
       else:
         if(self.cX + dX >= 0):
           self.cX += dX
@@ -577,26 +579,6 @@ class EdScreen:
           if(self.cX + dX >= self.ppadCurX * -1):
             self.ppadCurX += 1
             self.cX -= 1
-
-  def hideSection(self):
-    if(len(self.displayedSections) > 1):
-      s = self.cursorSection(self.cX)
-      s.visible = False
-      s.exposed = False
-      self.hiddenSectIDs.append(s.ID)
-      self.drawPpad()
-      self.cX = min(self.cX, self.tableWidth - 2)
-      self.refresh()
-
-  def unhideLastSection(self):
-    if(len(self.hiddenSectIDs) > 0):
-      sectId = self.hiddenSectIDs.pop()
-      for s in self.sections:
-        if(s.ID == sectId):
-          s.visible = True
-          self.cX = self.sectionCenter(sectId)
-      self.drawPpad()
-      self.refresh()
 
   def toggleExpose(self):
     s = self.cursorSection(self.cX)
@@ -607,9 +589,10 @@ class EdScreen:
       s.exposed = False
     else:
       s.exposed = True
+      self.cX = self.sectionCenter(s.ID)
 
     self.drawPpad()
-    self.cX = self.sectionCenter(s.ID)
+    self.resetCursor()
     self.refresh()
 
   def toggleInsert(self):
@@ -718,11 +701,14 @@ class EdScreen:
 
   # Called after an action MAY cause cY or cX to be in illegal position
   # Returns cY and cX to legal position(s)
-  # TODO: I don't like that this function exists at all
   def resetCursor(self):
     # Handle X
-    if(self.cX > self.tableWidth):
-      self.cX = self.tableWidth
+    if(self.cX > self.maxX - 1):
+      self.cX = self.maxX - 1
+    elif(self.cX > self.tableWidth - self.ppadCurX - 2):
+      self.cX = self.tableWidth - self.ppadCurX - 2
+    elif(self.cX < 0):
+      self.cX = 0
 
     # Handle Y
     if(len(self.cap.packets) <= 1):
@@ -763,6 +749,29 @@ class EdScreen:
     self.resetCursor()
     self.drawPpad()
     self.refresh()
+
+  '''
+  DEPRECATED
+  def hideSection(self):
+    if(len(self.displayedSections) > 1):
+      s = self.cursorSection(self.cX)
+      s.visible = False
+      s.exposed = False
+      self.hiddenSectIDs.append(s.ID)
+      self.drawPpad()
+      self.cX = min(self.cX, self.tableWidth - 2)
+      self.refresh()
+
+  def unhideLastSection(self):
+    if(len(self.hiddenSectIDs) > 0):
+      sectId = self.hiddenSectIDs.pop()
+      for s in self.sections:
+        if(s.ID == sectId):
+          s.visible = True
+          self.cX = self.sectionCenter(sectId)
+      self.drawPpad()
+      self.refresh()
+  '''
 
 ###########################
 # BEGIN PROGRAM EXECUTION #
