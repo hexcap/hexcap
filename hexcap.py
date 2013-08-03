@@ -23,6 +23,7 @@ import math
 import curses
 import locale
 import sys
+import time
 
 # hexcap specific imports
 import cfg
@@ -208,13 +209,21 @@ class EdScreen:
     rv = self.ppadCurX * -1
     for s in self.displayedSections:
       if(s.ID == sid):
-        if(rv >= 0):
-          return rv
-        else:
-          raise ScreenError, "sectionLeft:Section on left side of horizontal scroll boundary"
+        return rv
       else:
         rv += s.width
     raise ScreenError, "sectionLeft:Section not found"
+
+  # Returns center screen X value for passed section name
+  def sectionCenter(self, sid):
+    rv = self.ppadCurX * -1
+    for s in self.displayedSections:
+      if(s.ID == sid):
+        c = rv + (int(math.floor(s.width / 2)))
+        return c
+      else:
+        rv += s.width
+    raise ScreenError, "sectionCenter:Section not found"
 
   # Returns leftmost screen X value(after "|") for passed section and column name
   # If column is None then returns leftmost screen X value(after "|") for section only
@@ -228,10 +237,7 @@ class EdScreen:
         if(s.exposed):
           for col, width in s.c.iteritems():
             if(col == cid):
-              if(rv >= 0):
-                return rv
-              else:
-                raise ScreenError, "columnLeft:Column on left side of horizontal scroll boundary"
+              return rv
             else:
               rv += width + 1
         else:
@@ -239,25 +245,13 @@ class EdScreen:
     raise ScreenError, "columnLeft:Column not found"
 
   # Returns rightmost screen X value(before "|") for passed section and column name
-  # TODO:Assumes passed section is exposed
   def columnRight(self, sid, cid):
     for s in self.displayedSections:
       if(s.ID == sid):
-        return self.columnLeft(sid, cid) + s.c[cid] - 1
-
-  # Returns center screen X value for passed section name
-  def sectionCenter(self, sid):
-    rv = self.ppadCurX * -1
-    for s in self.displayedSections:
-      if(s.ID == sid):
-        c = rv + (int(math.floor(s.width / 2)))
-        if(c > 0):
-          return c
+        if(s.exposed):
+          return self.columnLeft(sid, cid) + s.c[cid] - 1
         else:
-          raise ScreenError, "sectionCenter:Section center on left side of horizontal scroll boundary"
-      else:
-        rv += s.width
-    raise ScreenError, "sectionCenter:Section not found"
+          return self.sectionLeft(sid) + s.width - 1
 
   # Handle regular refreshing of packet lines
   #    cfg.dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
@@ -425,7 +419,7 @@ class EdScreen:
     self.stdscr.hline(y, x, "-", divider)
     x += divider
 
-    cfg.dbg("drawFooter cX:" + str(self.cX) + " tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX))
+#    cfg.dbg("drawFooter cX:" + str(self.cX) + " tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX))
     s,c = self.cursorColumn(self.cX)
     if(s.exposed):
       if(s.RO):
@@ -479,12 +473,12 @@ class EdScreen:
       self.ppadCurX += self.cX - self.maxX
       s, col = self.cursorColumn(self.maxX - 5)
       self.cX = self.columnLeft(s.ID, col)
-    elif(self.cX <= 0):
+    elif(self.cX < 0):
       self.ppadCurX += self.cX
-      s, col = self.cursorColumn(5)
-      self.cX = self.columnLeft(s.ID, col)
+      s, col = self.cursorColumn(1)
+      self.cX = self.columnRight(s.ID, col)
 
-    if(delta == 0): # Where every call to this function eventually ends up
+    if(delta == 0): # Where every call to this function usually ends up
       return
 
     sect, col = self.cursorColumn(self.cX)
@@ -505,6 +499,8 @@ class EdScreen:
               return
             else:
               ns = dSections[ii - 1]
+              cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
+                      " cX:" + str(self.cX) + " ns.ID:" + ns.ID)
               self.cX = self.columnLeft(ns.ID, None)
               self.shiftColumn(delta + 1)
 
@@ -536,6 +532,8 @@ class EdScreen:
                   else:
                     ns = dSections[sii - 1]
                     nc = ns.c.getStrKey(len(ns.c) - 1)
+                    cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
+                            " cX:" + str(self.cX) + " ns.ID:" + ns.ID + " nc:" + nc)
                     self.cX = self.columnLeft(ns.ID, nc)
                     self.shiftColumn(delta + 1)
                 else:
@@ -560,8 +558,8 @@ class EdScreen:
             self.ppadCurY -= 1
 
     elif(dX != 0):
+#      cfg.dbg("move tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " cX:" + str(self.cX))
       if(dX > 0):
-#        cfg.dbg("move tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " cX:" + str(self.cX))
         if(self.cX + dX < self.tableWidth -self.ppadCurX - 1):
           if(self.cX + dX < self.maxX):
             self.cX += dX
@@ -573,15 +571,16 @@ class EdScreen:
               self.ppadCurX += 1
               self.cX -= dX
       else:
-        if(self.cX + dX >= 0):
+        if(self.cX + dX > 0):
           self.cX += dX
         else:
-          if(self.cX + dX >= self.ppadCurX * -1):
-            self.ppadCurX += 1
-            self.cX -= 1
+          if(self.cX + dX > self.ppadCurX * -1):
+            self.ppadCurX -= 1
 
-  def toggleExpose(self):
-    s = self.cursorSection(self.cX)
+  def toggleExpose(self, s=None):
+    if(not s):
+      s = self.cursorSection(self.cX)
+
     if(not s.exposable):
       return
 
@@ -594,6 +593,23 @@ class EdScreen:
     self.drawPpad()
     self.resetCursor()
     self.refresh()
+
+  # Either expose all sections or unexpose all sections, whichever will toggle more sections
+  def toggleExposeAll(self):
+    x = 0
+    for s in self.sections:
+      if(s.exposed):
+        x += 1
+      else:
+        x -= 1
+
+    if(x > int(math.floor(len(self.sections) / 2))):
+      expose = False
+    else:
+      expose = True
+    for s in self.sections:
+      if(expose != s.exposed):
+        self.toggleExpose(s)
 
   def toggleInsert(self):
     if(self.mark): # Cannot enter insert mode with mark set
@@ -784,6 +800,21 @@ def usage(s):
   print "FILE must be a valid pcap file"
   sys.exit(1)
 
+# Is inter-key time gap greater than repeatKey
+# Resets typeMaticStamp
+def checkRepeatKey():
+  global repeatKeyStamp
+  if(repeatKeyStamp > int(round(time.time() * 100)) - repeatKeyDelay):
+    repeatKeyStamp = int(round(time.time() * 100))
+    return True
+  else:
+    repeatKeyStamp = int(round(time.time() * 100))
+    return False
+
+# Used for checking for repeat keys
+repeatKeyStamp = int(round(time.time() * 100))
+repeatKeyDelay = 40 # In hundreths of a second
+
 # Check for bad args
 if(len(sys.argv) != 2): usage("Insufficient Arguments")
 if(not os.path.exists(sys.argv[1])): usage("Bad Filename")
@@ -794,7 +825,6 @@ try:
   f = open(fName, 'rb')
 except:
   usage("Unable to open file for reading >> " + fName)
-
 pc = capture.Capture(f, fName)
 f.close()
 
@@ -827,7 +857,10 @@ while True:
         mainScr.move(1, 0)
 
       elif(c == cfg.KEY_CTRL_E): # Toggle Expose
-        mainScr.toggleExpose()
+        if(checkRepeatKey()):
+          mainScr.toggleExposeAll()
+        else:
+          mainScr.toggleExpose()
 
       elif(c == cfg.KEY_CTRL_F): # Page Down
         mainScr.page(10)
