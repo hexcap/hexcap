@@ -470,9 +470,12 @@ class EdScreen:
       return
 
     if(self.cX >= self.maxX): # Reset our cursor and shift screen if we shifted off screen
-      self.ppadCurX += self.cX - self.maxX
-      s, col = self.cursorColumn(self.maxX - 5)
-      self.cX = self.columnLeft(s.ID, col)
+      s, col = self.cursorColumn(self.cX)
+      if(col == None):
+        self.ppadCurX += s.width
+      else:
+        self.ppadCurX += s.c[col]
+      self.cX = self.maxX - 1
     elif(self.cX < 0):
       self.ppadCurX += self.cX
       s, col = self.cursorColumn(1)
@@ -499,8 +502,8 @@ class EdScreen:
               return
             else:
               ns = dSections[ii - 1]
-              cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
-                      " cX:" + str(self.cX) + " ns.ID:" + ns.ID)
+#              cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
+#                      " cX:" + str(self.cX) + " ns.ID:" + ns.ID)
               self.cX = self.columnLeft(ns.ID, None)
               self.shiftColumn(delta + 1)
 
@@ -523,6 +526,9 @@ class EdScreen:
                     self.cX = self.columnLeft(ns.ID, nc)
                     self.shiftColumn(delta - 1)
                 else:
+#                  cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
+#                          " cX:" + str(self.cX) + " s.ID:" + s.ID + " cii:" + str(cii))
+
                   self.cX = self.columnLeft(s.ID, s.c.getStrKey(cii + 1))
                   self.shiftColumn(delta - 1)
               else:
@@ -532,8 +538,8 @@ class EdScreen:
                   else:
                     ns = dSections[sii - 1]
                     nc = ns.c.getStrKey(len(ns.c) - 1)
-                    cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
-                            " cX:" + str(self.cX) + " ns.ID:" + ns.ID + " nc:" + nc)
+#                    cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
+#                            " cX:" + str(self.cX) + " ns.ID:" + ns.ID + " nc:" + nc)
                     self.cX = self.columnLeft(ns.ID, nc)
                     self.shiftColumn(delta + 1)
                 else:
