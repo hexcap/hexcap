@@ -1,1 +1,0 @@
-A simple hex editor for pcap files using ncurses.  Written in Python using dpkt curses.
