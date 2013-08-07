@@ -893,7 +893,8 @@ while True:
             f.close()
         else:
           mainScr.printToMiniBuffer("ERROR: Not all packets supported for read/write")
-        '''
+      '''
+
       elif(c == ord("<")): # Shift left 1 column
         mainScr.shiftColumn(-1)
 
@@ -944,4 +945,3 @@ while True:
     mainScr.tearDown()
     if(cfg.debug):
       cfg.dbgF.close()
-  
