@@ -115,8 +115,8 @@ class EdScreen:
     self.drawHeader()
     self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
-    cfg.dbg("refresh ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + 
-            str(self.ppadWidth) + " maxX:" + str(self.maxX) + " cY:" + str(self.cY) + " cX:" + str(self.cX))
+#    cfg.dbg("refresh ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + 
+#            str(self.ppadWidth) + " maxX:" + str(self.maxX) + " cY:" + str(self.cY) + " cX:" + str(self.cX))
     self.stdscr.move(self.cY, self.cX)
     self.refreshBoldPacket()
     self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.maxX - 1)
@@ -817,6 +817,7 @@ def checkRepeatKey():
     repeatKeyStamp = int(round(time.time() * 100))
     return False
 
+cfg.dbg('Start')
 # Used for checking for repeat keys
 repeatKeyStamp = int(round(time.time() * 100))
 repeatKeyDelay = 40 # In hundreths of a second
@@ -836,6 +837,7 @@ f.close()
 
 mainScr = EdScreen()
 mainScr.initPad(pc)
+
 
 while True:
   try:

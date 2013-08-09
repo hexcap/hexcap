@@ -81,8 +81,11 @@ class Layer:
     return False
 
   # For debugging only
-  def dump(self):
+  def __repr__(self):
     return repr(self.vals)
+
+  def __str__(self):
+    return self.__repr__()
 
 # Holds the packet ID ano nothing more
 class PktID(Layer):

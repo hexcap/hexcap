@@ -16,6 +16,8 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 '''
 
+import datetime
+
 ######################
 # Global definitions #
 ######################
@@ -26,9 +28,11 @@ debug = True
 if(debug):
   dbgF = open('hexcap.log', 'a', 0)
 
-def dbg(str):
+def dbg(msg):
   if(debug):
-    dbgF.write(str + '\n')
+    dt = datetime.datetime.now()
+    ts = dt.strftime("%m/%d/%y %H:%M:%S.%f") + " "
+    dbgF.write(ts + msg + '\n')
 
 # We can't count past 99,999
 pktIDWidth = 5

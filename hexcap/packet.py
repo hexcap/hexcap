@@ -63,7 +63,7 @@ class Packet:
           self.layers.append(layer.EthernetDot2(d)) # 802.2
           self.initLayers(d.data)
       else:
-        self.unsupport()
+        self.unsupport(d)
         return
 
     elif(isinstance(d, dpkt.cdp.CDP)):
@@ -96,7 +96,7 @@ class Packet:
 
     elif(isinstance(d, dpkt.igmp.IGMP)):
       if(d.type == 0x22): # IGMPv3
-        self.unsupport()
+        self.unsupport(d)
         return
       else:
         self.layers.append(layer.IGMP(d))
@@ -115,12 +115,13 @@ class Packet:
       self.initLayers(d.data)
 
     else:
-      self.unsupport()
+      self.unsupport(d)
       return
 
-  # Mark a packet as unsupported
-  def unsupport(self):
+  # Mark a packet as unsupported and save the leftovers
+  def unsupport(self, d):
     self.unsupported = True
+    self.leftovers = d
 
   # Sets the value of section,column to val
   def setColumn(self, sid, col, val):
@@ -142,22 +143,32 @@ class Packet:
       if(isinstance(TStamp, lay)):
         return lay.vals['tstamp']
 
-  # Returns the pcap formatted packet
+  # Returns the dpkt packet object
   # Does not work with timestamps
   # Returns False if pcap data cannot be constructed
   def data(self):
-    if(not self.RW): return False
     for lay in self.layers:
       if(lay.ID == 'pid' or lay.ID == 'tstamp'):
         continue
       elif(isinstance(lay, layer.Ethernet)):
         rv = lay.toPcap()
       else:
-        d = rv
-        while(isinstance(d.data, dpkt.Packet)):
-          d = d.data
-        d.data = lay.toPcap()
-    return self.sizePkt(rv)
+        rv = self.pushDpktLayer(rv, lay.toPcap())
+    if(self.unsupported):
+      rv = self.pushDpktLayer(rv, self.leftovers)
+      return rv
+    else:
+      return self.sizePkt(rv)
+
+  # Totally unpythonic but don't care
+  # Takes a dpktObj and pushes a new layer onto it
+  # We're basically just treating the dpkt object like a stack
+  def pushDpktLayer(self, dpktObj, lay):
+    d = dpktObj
+    while(isinstance(d.data, dpkt.Packet)):
+      d = d.data
+    d.data = lay
+    return dpktObj
 
   # Pads our pcap packet and returns False on packets greater than MTU
   def sizePkt(self, pkt):
@@ -174,11 +185,14 @@ class Packet:
     return pkt
 
   # For debugging only
-  def dump(self):
+  def __repr__(self):
     rv = ''
     for lay in self.layers:
-      rv += "\n" + lay.ID + lay.dump()
+      rv += "\n" + lay.ID + repr(lay)
     return rv
+
+  def __str__(self):
+    return self.__repr__()
 
   def out(self):
     rv = dict()

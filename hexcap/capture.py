@@ -64,8 +64,7 @@ class Capture:
   def write(self, f):
     out = dpkt.pcap.Writer(f)
     for pkt in self.packets:
-      if(pkt.RW):
-        out.writepkt(dpkt.ethernet.Ethernet.pack(pkt.data()))
+      out.writepkt(dpkt.ethernet.Ethernet.pack(pkt.data()))
         
   # Yanks packets from main capture and puts them in the clipboard
   # Takes inclusive first and last packets to be yanked as integers(zero based)
