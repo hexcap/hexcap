@@ -55,7 +55,7 @@ class EdScreen:
     # Cursor inits
     self.maxY, self.maxX = self.stdscr.getmaxyx()
     self.cY = self.headerHeight
-    self.cX = 0
+    self.cX = cfg.pktIDWidth + 1
 
     # Our stack of hidden sections
     self.hiddenSectIDs = []
@@ -506,7 +506,7 @@ class EdScreen:
               self.cX = self.columnLeft(ns.ID, None)
               self.shiftColumn(delta - 1)
           else:
-            if(ii == 0):
+            if(ii < 2): # pid section is off limits
               return
             else:
               ns = dSections[ii - 1]
@@ -532,14 +532,11 @@ class EdScreen:
                     self.cX = self.columnLeft(ns.ID, nc)
                     self.shiftColumn(delta - 1)
                 else:
-#                  cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
-#                          " cX:" + str(self.cX) + " s.ID:" + s.ID + " cii:" + str(cii))
-
                   self.cX = self.columnLeft(s.ID, s.c.getStrKey(cii + 1))
                   self.shiftColumn(delta - 1)
               else:
                 if(cii == 0):
-                  if(sii == 0):
+                  if(sii < 2): # pid section is off limits
                     return
                   else:
                     ns = dSections[sii - 1]
@@ -582,7 +579,7 @@ class EdScreen:
               self.ppadCurX += 1
               self.cX -= dX
       else:
-        if(self.cX + dX > 0):
+        if(self.cX + dX > cfg.pktIDWidth):
           self.cX += dX
         else:
           if(self.cX + dX > self.ppadCurX * -1):
