@@ -40,18 +40,22 @@ pktIDWidth = 5
 # Key Constants
 # Consider using curses.keyname(k)
 KEY_CTRL_SPACE = 0
+KEY_CTRL_A = 1
 KEY_CTRL_B = 2
 KEY_CTRL_E = 5
 KEY_CTRL_F = 6
+KEY_CTRL_H = 263
 KEY_CTRL_I = 9
 KEY_CTRL_K = 11
+KEY_CTRL_M = 10
 KEY_CTRL_Q = 17
 KEY_CTRL_R = 18
 KEY_CTRL_S = 19
 KEY_CTRL_U = 21
 KEY_CTRL_W = 23
 KEY_CTRL_Y = 25
-KEY_CTRL_H = 263
+KEY_CTRL_Z = 26
+
 
 # Allowed hexidecimal characters
 hexChars = []

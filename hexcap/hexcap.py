@@ -66,6 +66,9 @@ class EdScreen:
     # Packet ID of marked packet. One based.
     self.mark = 0 # Zero means no marked packet
 
+    # Flag is True if miniBuffer has focus
+    self.miniBuffer = False
+
   def tearDown(self, dieStr=''):
     self.stdscr.keypad(0)
     curses.echo()
@@ -434,14 +437,6 @@ class EdScreen:
     if(self.tableWidth > x):
       self.stdscr.hline(y, x, "-", self.tableWidth - x)
 
-  # Prints text to the mini-buffer 
-  def printToMiniBuffer(self, s):
-    self.stdscr.addstr(self.maxY - 1, 0, s.strip()[:self.maxX])
-    
-  # Clears minibuffer
-  def clearMiniBuffer(self):
-    self.stdscr.hline(self.maxY - 1, 0, " ", self.maxX)
-
   # Handles pageUp and pageDown
   def page(self, dY):
     if(self.ppadBottomY >= self.ppadRows):
@@ -462,6 +457,19 @@ class EdScreen:
         self.ppadCurY = max(self.ppadCurY + dY, 0)
       else:
         self.cY = self.ppadTopY
+
+  # Move cursor to first column after pktID
+  def gotoLineBegin(self):
+    self.ppadCurX = 0
+    self.cX = cfg.pktIDWidth + 1
+
+  # Move cursor to end of line
+  def gotoLineEnd(self):
+    if(self.maxX > self.tableWidth):
+      self.cX = self.tableWidth - 2
+    else:
+      self.ppadCurX = self.tableWidth - self.maxX
+      self.cX = self.maxX - 2
 
   # Moves cursor right and left by delta columns
   def shiftColumn(self, delta):
@@ -502,8 +510,6 @@ class EdScreen:
               return
             else:
               ns = dSections[ii - 1]
-#              cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
-#                      " cX:" + str(self.cX) + " ns.ID:" + ns.ID)
               self.cX = self.columnLeft(ns.ID, None)
               self.shiftColumn(delta + 1)
 
@@ -564,9 +570,8 @@ class EdScreen:
             self.ppadCurY -= 1
 
     elif(dX != 0):
-#      cfg.dbg("move tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " cX:" + str(self.cX))
       if(dX > 0):
-        if(self.cX + dX < self.tableWidth -self.ppadCurX - 1):
+        if(self.cX + dX < self.tableWidth - self.ppadCurX - 1):
           if(self.cX + dX < self.maxX):
             self.cX += dX
           else:
@@ -621,10 +626,24 @@ class EdScreen:
     if(self.mark): # Cannot enter insert mode with mark set
       return
 
-    if(self.insert == True):
+    if(self.insert):
       self.insert = False
     else:
       self.insert = True
+
+  def toggleMiniBuffer(self):
+    if(self.miniBuffer):
+      self.miniBuffer = False
+    else:
+      self.miniBuffer = True
+
+  # Prints text to the mini-buffer 
+  def printToMiniBuffer(self, s):
+    self.stdscr.addstr(self.maxY - 1, 0, s.strip()[:self.maxX])
+    
+  # Clears minibuffer
+  def clearMiniBuffer(self):
+    self.stdscr.hline(self.maxY - 1, 0, " ", self.maxX)
 
   def getch(self):
     return self.stdscr.getch()
@@ -864,7 +883,7 @@ while True:
       elif(c == curses.KEY_DOWN):
         mainScr.move(1, 0)
 
-      elif(c == cfg.KEY_CTRL_E): # Toggle Expose
+      elif(c == cfg.KEY_CTRL_Z): # Toggle Expose
         if(checkRepeatKey()):
           mainScr.toggleExposeAll()
         else:
@@ -875,6 +894,12 @@ while True:
 
       elif(c == cfg.KEY_CTRL_B): # Page Up
         mainScr.page(-10)
+
+      elif(c == cfg.KEY_CTRL_A): # Goto beginning of line
+        mainScr.gotoLineBegin()
+
+      elif(c == cfg.KEY_CTRL_E): # Goto end of line
+        mainScr.gotoLineEnd()
 
       elif(c == cfg.KEY_CTRL_S): # Save file
         pc.write(open('garbage.pcap', 'wb'))
@@ -902,12 +927,6 @@ while True:
 
       elif(c == ord(">")): # Shift right 1 column
         mainScr.shiftColumn(1)
-
-#      elif(c == cfg.KEY_CTRL_H): # Hide section
-#        mainScr.hideSection()
-
-#      elif(c == cfg.KEY_CTRL_U): # Unhide last hidden section
-#        mainScr.unhideLastSection()
 
       elif(c == cfg.KEY_CTRL_R): # Reread packet capture from disk
         readError = False
