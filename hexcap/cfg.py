@@ -56,7 +56,6 @@ KEY_CTRL_W = 23
 KEY_CTRL_Y = 25
 KEY_CTRL_Z = 26
 
-
 # Allowed hexidecimal characters
 hexChars = []
 for x in xrange(0,10):
@@ -67,4 +66,13 @@ hexChars.append(ord('c'))
 hexChars.append(ord('d'))
 hexChars.append(ord('e'))
 hexChars.append(ord('f'))
+
+# miniBuffer commands
+mBufferCmds = (
+  ('set-pkt-min-size', 'setPktMinSize'),
+  ('set-pkt-max-size', 'setPktMaxSize'),
+  ('append-layer', 'layerAppend'),
+  ('insert-layer', 'layerInsert'),
+  ('delete-layer', 'layerDelete')
+  )
 

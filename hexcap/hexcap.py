@@ -631,6 +631,7 @@ class EdScreen:
   def toggleMiniBuffer(self):
     if(self.miniBuffer):
       self.miniBuffer = False
+      self.clearMiniBuffer()
     else:
       self.miniBuffer = True
 
@@ -854,12 +855,11 @@ f.close()
 mainScr = EdScreen()
 mainScr.initPad(pc)
 
-
 while True:
   try:
     mainScr.refresh()
     c = mainScr.getch()
-    mainScr.clearMiniBuffer()
+#    mainScr.clearMiniBuffer()
 
     if(c != -1):
       cfg.dbg("KeyPress:" + str(c))
@@ -938,6 +938,9 @@ while True:
           pc = Capture(f, pc.fName)
           f.close()
           mainScr.initPad(pc)
+
+      elif(c == cfg.KEY_CTRL_M): # Toggle miniBuffer focus
+        mainScr.toggleMiniBuffer()
 
       elif(c == cfg.KEY_CTRL_I): # Toggle insert mode
         mainScr.toggleInsert()
