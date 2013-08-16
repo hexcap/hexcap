@@ -66,8 +66,11 @@ class EdScreen:
     # Packet ID of marked packet. One based.
     self.mark = 0 # Zero means no marked packet
 
-    # Flag is True if miniBuffer has focus
-    self.miniBuffer = False
+    # Flag is True if mini-buffer has focus
+    self.miniBufferFocus = False
+
+    # Actual miniBuffer buffer
+    self.mBuf = ''
 
   def tearDown(self, dieStr=''):
     self.stdscr.keypad(0)
@@ -344,14 +347,10 @@ class EdScreen:
                   
                 x += width + 1
           else:
-#            cfg.dbg("exp==True tw:" + str(self.tableWidth) + " maxX:" + str(self.maxX) + " ppW:" + str(self.ppadWidth) +
-#                    " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(width))
             self.ppadHline(y, x, " ", s.width - 1)
             self.ppadAddstr(y, x + s.width - 1, "|")
             x += s.width
         else:
-#          cfg.dbg("exp==False tw:" + str(self.tableWidth) + " maxX:" + str(self.maxX) + " ppW:" + str(self.ppadWidth) + 
-#                  " ID:" + s.ID + " y:" + str(y) + " x:" + str(x) + " width:" + str(s.width))
           self.ppadHline(y, x, "-", s.width - 1)
           self.ppadAddstr(y, x + s.width - 1, "|")
           x += s.width
@@ -628,18 +627,21 @@ class EdScreen:
     else:
       self.insert = True
 
-  def toggleMiniBuffer(self):
-    if(self.miniBuffer):
-      self.miniBuffer = False
+  # mini-buffer functions
+  # mini-buffer refers to the screen location and user space
+  # mBuf refers to the actual mini-buffer buffer
+  def toggleMiniBufferFocus(self):
+    if(self.miniBufferFocus):
+      self.miniBufferFocus = False
       self.clearMiniBuffer()
     else:
-      self.miniBuffer = True
+      self.miniBufferFocus = True
 
   # Prints text to the mini-buffer 
   def printToMiniBuffer(self, s):
     self.stdscr.addstr(self.maxY - 1, 0, s.strip()[:self.maxX])
     
-  # Clears minibuffer
+  # Clears mini-buffer
   def clearMiniBuffer(self):
     self.stdscr.hline(self.maxY - 1, 0, " ", self.maxX)
 
@@ -859,108 +861,111 @@ while True:
   try:
     mainScr.refresh()
     c = mainScr.getch()
-#    mainScr.clearMiniBuffer()
 
     if(c != -1):
-      cfg.dbg("KeyPress:" + str(c))
+      if(mainScr.miniBufferFocus):
+        pass
+      else:
+        mainScr.clearMiniBuffer()
+        cfg.dbg("KeyPress:" + str(c))
 
-      if(mainScr.insert):
-        if(c in cfg.hexChars):
-          mainScr.handleInsert(c)
+        if(mainScr.insert):
+          if(c in cfg.hexChars):
+            mainScr.handleInsert(c)
 
-      if(c == curses.KEY_RIGHT):
-        mainScr.move(0, 1)
+        elif(c == curses.KEY_RIGHT):
+          mainScr.move(0, 1)
 
-      elif(c == curses.KEY_LEFT):
-        mainScr.move(0, -1)
+        elif(c == curses.KEY_LEFT):
+          mainScr.move(0, -1)
 
-      elif(c == curses.KEY_UP):
-        mainScr.move(-1, 0)
+        elif(c == curses.KEY_UP):
+          mainScr.move(-1, 0)
 
-      elif(c == curses.KEY_DOWN):
-        mainScr.move(1, 0)
+        elif(c == curses.KEY_DOWN):
+          mainScr.move(1, 0)
 
-      elif(c == cfg.KEY_CTRL_Z): # Toggle Expose
-        if(checkRepeatKey()):
-          mainScr.toggleExposeAll()
-        else:
-          mainScr.toggleExpose()
+        elif(c == cfg.KEY_CTRL_Z): # Toggle Expose
+          if(checkRepeatKey()):
+            mainScr.toggleExposeAll()
+          else:
+            mainScr.toggleExpose()
 
-      elif(c == cfg.KEY_CTRL_F): # Page Down
-        mainScr.page(10)
+        elif(c == cfg.KEY_CTRL_F): # Page Down
+          mainScr.page(10)
 
-      elif(c == cfg.KEY_CTRL_B): # Page Up
-        mainScr.page(-10)
+        elif(c == cfg.KEY_CTRL_B): # Page Up
+          mainScr.page(-10)
 
-      elif(c == cfg.KEY_CTRL_A): # Goto beginning of line
-        mainScr.gotoLineBegin()
+        elif(c == cfg.KEY_CTRL_A): # Goto beginning of line
+          mainScr.gotoLineBegin()
 
-      elif(c == cfg.KEY_CTRL_E): # Goto end of line
-        mainScr.gotoLineEnd()
+        elif(c == cfg.KEY_CTRL_E): # Goto end of line
+          mainScr.gotoLineEnd()
 
-      elif(c == cfg.KEY_CTRL_S): # Save file
-        pc.write(open('garbage.pcap', 'wb'))
+        elif(c == cfg.KEY_CTRL_S): # Save file
+          pc.write(open('garbage.pcap', 'wb'))
 
-        '''
-        if(pc.RW):
-          writeError = False
-          try:
-            pass
-            f = open(pc.fName, 'wb')
-          except:
-            writeError = True
-            mainScr.printToMiniBuffer("ERROR: Unable to open file for writing >> " + pc.fName)
-
-          if(not writeError):
+          '''
+          if(pc.RW):
             writeError = False
-            pc.write(f)
-            f.close()
-        else:
-          mainScr.printToMiniBuffer("ERROR: Not all packets supported for read/write")
-      '''
+            try:
+              pass
+              f = open(pc.fName, 'wb')
+            except:
+              writeError = True
+              mainScr.printToMiniBuffer("ERROR: Unable to open file for writing >> " + pc.fName)
 
-      elif(c == ord("<")): # Shift left 1 column
-        mainScr.shiftColumn(-1)
+            if(not writeError):
+              writeError = False
+              pc.write(f)
+              f.close()
+          else:
+            mainScr.printToMiniBuffer("ERROR: Not all packets supported for read/write")
+          '''
 
-      elif(c == ord(">")): # Shift right 1 column
-        mainScr.shiftColumn(1)
+        elif(c == ord("<")): # Shift left 1 column
+          mainScr.shiftColumn(-1)
 
-      elif(c == cfg.KEY_CTRL_R): # Reread packet capture from disk
-        readError = False
-        try:
-          f = open(pc.fName, 'rb')
-        except:
-          readError = True
-          mainScr.printToMiniBuffer("ERROR: Unable to open file for reading >> " + pc.fName)
+        elif(c == ord(">")): # Shift right 1 column
+          mainScr.shiftColumn(1)
 
-        if(not readError):
+        elif(c == cfg.KEY_CTRL_R): # Reread packet capture from disk
           readError = False
-          pc = Capture(f, pc.fName)
-          f.close()
-          mainScr.initPad(pc)
+          try:
+            f = open(pc.fName, 'rb')
+          except:
+            readError = True
+            mainScr.printToMiniBuffer("ERROR: Unable to open file for reading >> " + pc.fName)
 
-      elif(c == cfg.KEY_CTRL_M): # Toggle miniBuffer focus
-        mainScr.toggleMiniBuffer()
+          if(not readError):
+            readError = False
+            pc = Capture(f, pc.fName)
+            f.close()
+            mainScr.initPad(pc)
 
-      elif(c == cfg.KEY_CTRL_I): # Toggle insert mode
-        mainScr.toggleInsert()
+        elif(c == cfg.KEY_CTRL_M): # Toggle miniBuffer focus
+          mainScr.toggleMiniBufferFocus()
 
-      elif(c == cfg.KEY_CTRL_SPACE): # Set new mark
-        mainScr.toggleMark()
+        elif(c == cfg.KEY_CTRL_I): # Toggle insert mode
+          mainScr.toggleInsert()
 
-      elif(c == cfg.KEY_CTRL_Y): # Paste packet(s)
-        mainScr.paste()
+        elif(c == cfg.KEY_CTRL_SPACE): # Set new mark
+          mainScr.toggleMark()
 
-      elif(c == cfg.KEY_CTRL_W): # Yank packets
-        mainScr.yank()
+        elif(c == cfg.KEY_CTRL_Y): # Paste packet(s)
+          mainScr.paste()
 
-      elif(c == cfg.KEY_CTRL_K): # Yank packet
-        mainScr.yankPacket()
+        elif(c == cfg.KEY_CTRL_W): # Yank packets
+          mainScr.yank()
 
-      elif(c == cfg.KEY_CTRL_Q or c == ord("q")):
-        if(cfg.debug):
-          cfg.dbgF.close()
-        mainScr.tearDown()
+        elif(c == cfg.KEY_CTRL_K): # Yank packet
+          mainScr.yankPacket()
+
+        elif(c == cfg.KEY_CTRL_Q or c == ord("q")):
+          if(cfg.debug):
+            cfg.dbgF.close()
+          mainScr.tearDown()
 
   except KeyboardInterrupt:
     mainScr.tearDown()
