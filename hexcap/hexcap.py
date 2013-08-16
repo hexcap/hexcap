@@ -633,9 +633,15 @@ class EdScreen:
   def toggleMiniBufferFocus(self):
     if(self.miniBufferFocus):
       self.miniBufferFocus = False
+      self.mBuf = ''
       self.clearMiniBuffer()
     else:
       self.miniBufferFocus = True
+
+  # Appends character c to self.mBuf
+  def mBufAppend(self, c):
+    cfg.dbg("mBufAppend c:" + str(c))
+    self.mBuf += chr(c)
 
   # Prints text to the mini-buffer 
   def printToMiniBuffer(self, s):
@@ -861,19 +867,23 @@ while True:
   try:
     mainScr.refresh()
     c = mainScr.getch()
+    cfg.dbg("KeyPress c:" + repr(c) + " ctrl:" + repr(curses.keyname(c)))
 
     if(c != -1):
       if(mainScr.miniBufferFocus):
-        pass
+        cfg.dbg("HIT")
+        if(c in cfg.mBufChars):
+          mainScr.mBufAppend(c)
+        elif(curses.keyname(c) == '^X'): # Toggle miniBuffer focus
+          mainScr.toggleMiniBufferFocus()
+
       else:
         mainScr.clearMiniBuffer()
-        cfg.dbg("KeyPress:" + str(c))
-
         if(mainScr.insert):
           if(c in cfg.hexChars):
             mainScr.handleInsert(c)
 
-        elif(c == curses.KEY_RIGHT):
+        if(c == curses.KEY_RIGHT):
           mainScr.move(0, 1)
 
         elif(c == curses.KEY_LEFT):
@@ -885,25 +895,25 @@ while True:
         elif(c == curses.KEY_DOWN):
           mainScr.move(1, 0)
 
-        elif(c == cfg.KEY_CTRL_Z): # Toggle Expose
+        elif(curses.keyname(c) == '^Z'): # Toggle Expose
           if(checkRepeatKey()):
             mainScr.toggleExposeAll()
           else:
             mainScr.toggleExpose()
 
-        elif(c == cfg.KEY_CTRL_F): # Page Down
+        elif(curses.keyname(c) == '^F'): # Page Down
           mainScr.page(10)
 
-        elif(c == cfg.KEY_CTRL_B): # Page Up
+        elif(curses.keyname(c) == '^B'): # Page Up
           mainScr.page(-10)
 
-        elif(c == cfg.KEY_CTRL_A): # Goto beginning of line
+        elif(curses.keyname(c) == '^A'): # Goto beginning of line
           mainScr.gotoLineBegin()
 
-        elif(c == cfg.KEY_CTRL_E): # Goto end of line
+        elif(curses.keyname(c) == '^E'): # Goto end of line
           mainScr.gotoLineEnd()
 
-        elif(c == cfg.KEY_CTRL_S): # Save file
+        elif(curses.keyname(c) == '^S'): # Save file
           pc.write(open('garbage.pcap', 'wb'))
 
           '''
@@ -924,13 +934,13 @@ while True:
             mainScr.printToMiniBuffer("ERROR: Not all packets supported for read/write")
           '''
 
-        elif(c == ord("<")): # Shift left 1 column
+        elif(curses.keyname(c) == '<'): # Shift left 1 column
           mainScr.shiftColumn(-1)
 
-        elif(c == ord(">")): # Shift right 1 column
+        elif(curses.keyname(c) == '>'): # Shift right 1 column
           mainScr.shiftColumn(1)
 
-        elif(c == cfg.KEY_CTRL_R): # Reread packet capture from disk
+        elif(curses.keyname(c) == '^R'): # Reread packet capture from disk
           readError = False
           try:
             f = open(pc.fName, 'rb')
@@ -940,29 +950,29 @@ while True:
 
           if(not readError):
             readError = False
-            pc = Capture(f, pc.fName)
+            pc = capture.Capture(f, pc.fName)
             f.close()
             mainScr.initPad(pc)
 
-        elif(c == cfg.KEY_CTRL_M): # Toggle miniBuffer focus
+        elif(curses.keyname(c) == '^X'): # Toggle miniBuffer focus
           mainScr.toggleMiniBufferFocus()
-
-        elif(c == cfg.KEY_CTRL_I): # Toggle insert mode
+            
+        elif(curses.keyname(c) == '^N'): # Toggle INS/NAV mode
           mainScr.toggleInsert()
 
-        elif(c == cfg.KEY_CTRL_SPACE): # Set new mark
+        elif(curses.keyname(c) == '^@'): # Set new mark (^@ == 'CTRL-SPACE')
           mainScr.toggleMark()
 
-        elif(c == cfg.KEY_CTRL_Y): # Paste packet(s)
+        elif(curses.keyname(c) == '^Y'): # Paste packet(s)
           mainScr.paste()
 
-        elif(c == cfg.KEY_CTRL_W): # Yank packets
+        elif(curses.keyname(c) == '^W'): # Yank packets
           mainScr.yank()
 
-        elif(c == cfg.KEY_CTRL_K): # Yank packet
+        elif(curses.keyname(c) == '^K'): # Yank packet
           mainScr.yankPacket()
 
-        elif(c == cfg.KEY_CTRL_Q or c == ord("q")):
+        elif(curses.keyname(c) == '^Q' or curses.keyname(c) == 'q'): # Quit
           if(cfg.debug):
             cfg.dbgF.close()
           mainScr.tearDown()
@@ -971,3 +981,11 @@ while True:
     mainScr.tearDown()
     if(cfg.debug):
       cfg.dbgF.close()
+
+
+# We can't accept the following keys due to possible collisions
+# ASCII-decimal  ASCII-character Ctrl-character 
+# 8 or 263       BS(Backspace)   H              
+# 9              TAB             I
+# 10             LF(\n)          M
+
