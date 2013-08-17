@@ -59,8 +59,8 @@ mBufChars.append(45) # - 'dash'
 # miniBuffer commands
 # key = command, val = internal function
 mBufCmds = dict()
-mBufCmds['set-pkt-min-size'] = 'setPktMinSize'
-mBufCmds['set-pkt-max-size'] = 'setPktMaxSize'
-mBufCmds['append-layer'] = 'layerAppend'
-mBufCmds['insert-layer'] = 'layerInsert'
-mBufCmds['delete-layer'] = 'layerDelete'
+mBufCmds['set-pkt-min-size'] = 'setPktMinSize()'
+mBufCmds['set-pkt-max-size'] = 'setPktMaxSize()'
+mBufCmds['append-layer'] = 'layerAppend()'
+mBufCmds['insert-layer'] = 'layerInsert()'
+mBufCmds['delete-layer'] = 'layerDelete()'

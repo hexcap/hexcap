@@ -654,7 +654,6 @@ class EdScreen:
       if(self.mBufMsg[0][0] == 0):
         self.mBufMsg.pop(0)
       else:
-        cfg.dbg("HIT")
         self.mBufMsg[0][0] -= 1
         self.printToMiniBuffer(self.mBufMsg[0][1])
         return
@@ -680,6 +679,7 @@ class EdScreen:
 
     elif(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
       if(self.mBuf in cfg.mBufCmds):
+        self.mBuf = ''
         eval(cfg.mBufCmds[self.mBuf])
       else:
         self.mBufMsg.append(list(((1), (self.mBuf + "   [Unknown Command]"))))
@@ -714,6 +714,44 @@ class EdScreen:
       else:
         self.mBuf = self.mBuf[:self.cMX -1] + chr(c) + self.mBuf[self.cMX:]
       self.cMX += 1
+
+  # Sets a prompt(PS) at mini-buffer and awaits input, returns once Enter is pressed or is escaped
+  def promptMiniBuffer(self, PS):
+    self.mBuf = PS
+    self.cMX = len(PS)
+    while True:
+      self.printToMiniBuffer(self.mBuf)
+      c = self.getch()
+      cfg.dbg("Prompt KeyPress c:" + repr(c) + " ctrl:" + repr(curses.keyname(c)))
+
+      if(c != -1):
+        if(curses.keyname(c) == '^X' or curses.keyname(c) == '^['): # Remove mini-buffer focus
+          self.toggleMiniBufferFocus()
+          return
+        elif(curses.keyname(c) == '^?'): # Backspace
+          if(len(self.mBuf) > len(PS)):
+            self.mBuf = self.mBuf[:len(self.mBuf)-1]
+            self.cMX -= 1
+
+        elif(c == curses.KEY_RIGHT):
+          if(self.cMX < len(self.mBuf)):
+            self.cMX += 1
+
+        elif(c == curses.KEY_LEFT):
+          if(self.cMX > len(PS)):
+            self.cMX -= 1
+
+        elif(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
+          self.mBuf = ''
+          return self.mBuf[len(PS):].strip()
+
+        elif(c in cfg.mBufChars):
+          if(self.cMX >= len(self.mBuf)):
+            self.mBuf += chr(c)
+          else:
+            self.mBuf = self.mBuf[:self.cMX -1] + chr(c) + self.mBuf[self.cMX:]
+          self.cMX += 1
+
 
   # Prints text to the mini-buffer 
   def printToMiniBuffer(self, s):
