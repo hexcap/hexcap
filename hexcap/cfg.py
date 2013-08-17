@@ -54,8 +54,6 @@ for x in xrange(0, 10): # digits 0-9
   mBufChars.append(ord(str(x)))
 for x in xrange(97, 123): # lowercase alpha
   mBufChars.append(x)
-mBufChars.append(9) # 'tab'
-mBufChars.append(10) # 'enter'
 mBufChars.append(45) # -
 
 # miniBuffer commands

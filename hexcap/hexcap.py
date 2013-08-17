@@ -56,6 +56,7 @@ class EdScreen:
     self.maxY, self.maxX = self.stdscr.getmaxyx()
     self.cY = self.headerHeight
     self.cX = cfg.pktIDWidth + 1
+    self.cMX = 0 # X cursor position in mini-buffer
 
     # Our stack of hidden sections
     self.hiddenSectIDs = []
@@ -70,7 +71,7 @@ class EdScreen:
     self.miniBufferFocus = False
 
     # Actual miniBuffer buffer
-    self.mBuf = ''
+    self.mBuf = []
 
   def tearDown(self, dieStr=''):
     self.stdscr.keypad(0)
@@ -121,9 +122,12 @@ class EdScreen:
     self.drawHeader()
     self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
-#    cfg.dbg("refresh ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + " ppadWidth:" + 
-#            str(self.ppadWidth) + " maxX:" + str(self.maxX) + " cY:" + str(self.cY) + " cX:" + str(self.cX))
-    self.stdscr.move(self.cY, self.cX)
+    if(self.miniBufferFocus):
+      self.drawMiniBuffer()
+      self.stdscr.move(self.maxY - 1, self.cMX)
+    else:
+      self.stdscr.move(self.cY, self.cX)
+
     self.refreshBoldPacket()
     self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.maxX - 1)
     self.stdscr.refresh()
@@ -638,10 +642,39 @@ class EdScreen:
     else:
       self.miniBufferFocus = True
 
+  def drawMiniBuffer(self):
+    self.clearMiniBuffer()
+    s = ''
+    for c in self.mBuf:
+      s += c
+    self.printToMiniBuffer(s)
+
   # Appends character c to self.mBuf
   def mBufAppend(self, c):
-    cfg.dbg("mBufAppend c:" + str(c))
-    self.mBuf += chr(c)
+    cfg.dbg("mBufAppend c:" + str(c) + " cMX:" + str(self.cMX) + " len_mBuf:" + str(len(self.mBuf)))
+
+    if(curses.keyname(c) == '^?'): # Backspace
+      if(len(self.mBuf) > 0):
+        self.mBuf.pop()
+        self.cMX -= 1
+    elif(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
+      pass
+    elif(curses.keyname(c) == '^I'): # TAB
+      pass
+    elif(c == curses.KEY_RIGHT):
+      if(self.cMX < len(self.mBuf)):
+        self.cMX += 1
+    elif(c == curses.KEY_LEFT):
+      if(self.cMX > 0):
+        self.cMX -= 1
+    elif(c in cfg.mBufChars):
+      if(self.cMX >= len(self.mBuf)):
+        self.mBuf.append(chr(c))
+      elif(self.cMX == 0):
+        return
+      else:
+        self.mBuf.insert(self.cMX, chr(c))
+      self.cMX += 1
 
   # Prints text to the mini-buffer 
   def printToMiniBuffer(self, s):
@@ -871,11 +904,14 @@ while True:
 
     if(c != -1):
       if(mainScr.miniBufferFocus):
-        cfg.dbg("HIT")
-        if(c in cfg.mBufChars):
-          mainScr.mBufAppend(c)
-        elif(curses.keyname(c) == '^X'): # Toggle miniBuffer focus
+        if(curses.keyname(c) == '^X' or curses.keyname(c) == '^['): # Toggle miniBuffer focus
           mainScr.toggleMiniBufferFocus()
+        elif(curses.keyname(c) == '^Q'): # Quit
+          if(cfg.debug):
+            cfg.dbgF.close()
+          mainScr.tearDown()
+        else:
+          mainScr.mBufAppend(c)
 
       else:
         mainScr.clearMiniBuffer()
