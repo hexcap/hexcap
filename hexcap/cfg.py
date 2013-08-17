@@ -32,7 +32,7 @@ def dbg(msg):
   if(debug):
     dt = datetime.datetime.now()
     ts = dt.strftime("%m/%d/%y %H:%M:%S.%f") + " "
-    dbgF.write(ts + msg + '\n')
+    dbgF.write(ts + str(msg) + '\n')
 
 # We can't count past 99,999
 pktIDWidth = 5
@@ -54,13 +54,13 @@ for x in xrange(0, 10): # digits 0-9
   mBufChars.append(ord(str(x)))
 for x in xrange(97, 123): # lowercase alpha
   mBufChars.append(x)
-mBufChars.append(45) # -
+mBufChars.append(45) # - 'dash'
 
 # miniBuffer commands
 # key = command, val = internal function
-mBufferCmds = dict()
-mBufferCmds['set-pkt-min-size'] = 'setPktMinSize'
-mBufferCmds['set-pkt-max-size'] = 'setPktMaxSize'
-mBufferCmds['append-layer'] = 'layerAppend'
-mBufferCmds['insert-layer'] = 'layerInsert'
-mBufferCmds['delete-layer'] = 'layerDelete'
+mBufCmds = dict()
+mBufCmds['set-pkt-min-size'] = 'setPktMinSize'
+mBufCmds['set-pkt-max-size'] = 'setPktMaxSize'
+mBufCmds['append-layer'] = 'layerAppend'
+mBufCmds['insert-layer'] = 'layerInsert'
+mBufCmds['delete-layer'] = 'layerDelete'

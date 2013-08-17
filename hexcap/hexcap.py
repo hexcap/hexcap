@@ -71,7 +71,12 @@ class EdScreen:
     self.miniBufferFocus = False
 
     # Actual miniBuffer buffer
-    self.mBuf = []
+    self.mBuf = ''
+
+    # Message to print to mini-buffer instead of mBufMsg
+    # Takes the form list((displayCycles), (msg))
+    # Where displayCycles is how many curses refresh cycles you want it to display for
+    self.mBufMsg = []
 
   def tearDown(self, dieStr=''):
     self.stdscr.keypad(0)
@@ -643,37 +648,71 @@ class EdScreen:
       self.miniBufferFocus = True
 
   def drawMiniBuffer(self):
+    cfg.dbg("drawMiniBuffer len_mBufMsg:" + str(len(self.mBufMsg)) + " mBuf:" + self.mBuf)
     self.clearMiniBuffer()
-    s = ''
-    for c in self.mBuf:
-      s += c
-    self.printToMiniBuffer(s)
+    if(len(self.mBufMsg) > 0):
+      if(self.mBufMsg[0][0] == 0):
+        self.mBufMsg.pop(0)
+      else:
+        cfg.dbg("HIT")
+        self.mBufMsg[0][0] -= 1
+        self.printToMiniBuffer(self.mBufMsg[0][1])
+        return
 
-  # Appends character c to self.mBuf
-  def mBufAppend(self, c):
-    cfg.dbg("mBufAppend c:" + str(c) + " cMX:" + str(self.cMX) + " len_mBuf:" + str(len(self.mBuf)))
+    self.printToMiniBuffer(self.mBuf)
+
+  # Inputs character c to self.mBuf
+  def mBufInput(self, c):
+    cfg.dbg("mBufInput c:" + str(c) + " cMX:" + str(self.cMX) + " mBuf:" + self.mBuf)
 
     if(curses.keyname(c) == '^?'): # Backspace
       if(len(self.mBuf) > 0):
-        self.mBuf.pop()
+        self.mBuf = self.mBuf[:len(self.mBuf)-1]
         self.cMX -= 1
-    elif(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
-      pass
-    elif(curses.keyname(c) == '^I'): # TAB
-      pass
+
     elif(c == curses.KEY_RIGHT):
       if(self.cMX < len(self.mBuf)):
         self.cMX += 1
+
     elif(c == curses.KEY_LEFT):
       if(self.cMX > 0):
         self.cMX -= 1
+
+    elif(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
+      if(self.mBuf in cfg.mBufCmds):
+        eval(cfg.mBufCmds[self.mBuf])
+      else:
+        self.mBufMsg.append(list(((1), (self.mBuf + "   [Unknown Command]"))))
+
+    elif(curses.keyname(c) == '^I'): # TAB
+      opts = []
+      for k,v in cfg.mBufCmds.iteritems():
+        if(k.startswith(self.mBuf)):
+          opts.append(k)
+
+      if(len(opts) == 0):
+        self.mBufMsg.append(list(((1), (self.mBuf + "   [Nothing found]"))))
+      elif(len(opts) == 1):
+        self.mBuf = opts[0]
+        self.cMX = len(self.mBuf)
+      else:
+        msg = self.mBuf + "   ["
+        for ii in xrange(len(opts)):
+          if(ii == 2):
+            msg += opts[ii] + "|..."
+            break
+          else:
+            msg += opts[ii] + "|"
+
+        self.mBufMsg.append(list(((1), (msg.rstrip("|")+ "]"))))
+
     elif(c in cfg.mBufChars):
       if(self.cMX >= len(self.mBuf)):
-        self.mBuf.append(chr(c))
+        self.mBuf += chr(c)
       elif(self.cMX == 0):
         return
       else:
-        self.mBuf.insert(self.cMX, chr(c))
+        self.mBuf = self.mBuf[:self.cMX -1] + chr(c) + self.mBuf[self.cMX:]
       self.cMX += 1
 
   # Prints text to the mini-buffer 
@@ -911,7 +950,7 @@ while True:
             cfg.dbgF.close()
           mainScr.tearDown()
         else:
-          mainScr.mBufAppend(c)
+          mainScr.mBufInput(c)
 
       else:
         mainScr.clearMiniBuffer()
