@@ -74,23 +74,18 @@ while True:
     cfg.dbg("KeyPress c:" + repr(c) + " ctrl:" + repr(curses.keyname(c)))
 
     if(c != -1):
-      if(mainScr.miniBufferFocus):
-        if(curses.keyname(c) == '^X' or curses.keyname(c) == '^['): # Toggle miniBuffer focus
-          mainScr.toggleMiniBufferFocus()
-        elif(curses.keyname(c) == '^Q'): # Quit
-          if(cfg.debug):
-            cfg.dbgF.close()
-          mainScr.tearDown()
-        else:
-          mainScr.mBufInput(c)
+      if(mainScr.mBufFocus):
+        mainScr.inputToMBuf(c)
 
       else:
-        mainScr.clearMiniBuffer()
         if(mainScr.insert):
           if(c in cfg.hexChars):
             mainScr.handleInsert(c)
 
-        if(c == curses.KEY_RIGHT):
+        if(curses.keyname(c) == '^X'):
+          mainScr.toggleMBuf()
+            
+        elif(c == curses.KEY_RIGHT):
           mainScr.move(0, 1)
 
         elif(c == curses.KEY_LEFT):
@@ -161,9 +156,6 @@ while True:
             f.close()
             mainScr.initPad(pc)
 
-        elif(curses.keyname(c) == '^X'): # Toggle miniBuffer focus
-          mainScr.toggleMiniBufferFocus()
-            
         elif(curses.keyname(c) == '^N'): # Toggle INS/NAV mode
           mainScr.toggleInsert()
 

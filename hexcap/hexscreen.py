@@ -26,6 +26,7 @@ import sys
 
 # hexcap specific imports
 import cfg
+import minibuffer
 import capture
 import packet
 import layer
@@ -55,7 +56,6 @@ class HexScreen:
     self.maxY, self.maxX = self.stdscr.getmaxyx()
     self.cY = self.headerHeight
     self.cX = cfg.pktIDWidth + 1
-    self.cMX = 0 # X cursor position in mini-buffer
 
     # Our stack of hidden sections
     self.hiddenSectIDs = []
@@ -64,18 +64,11 @@ class HexScreen:
     self.insert = False
 
     # Packet ID of marked packet. One based.
-    self.mark = 0 # Zero means no marked packet
+    # Zero means no marked packet
+    self.mark = 0
 
     # Flag is True if mini-buffer has focus
-    self.miniBufferFocus = False
-
-    # Actual miniBuffer buffer
-    self.mBuf = ''
-
-    # Message to print to mini-buffer instead of mBufMsg
-    # Takes the form list((displayCycles), (msg))
-    # Where displayCycles is how many curses refresh cycles you want it to display for
-    self.mBufMsg = []
+    self.mBufFocus = False
 
   def tearDown(self, dieStr=''):
     self.stdscr.keypad(0)
@@ -95,12 +88,12 @@ class HexScreen:
     self.ppadCurX = 0 # Current leftmost visible X in ppad
     self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.buildSections()
-    self.drawPpad()
+    self.drawPpads()
     self.refresh()
 
   # Completely redraws our ppad and rebuilds our section list
   # Sets ppadWidth
-  def drawPpad(self):
+  def drawPpads(self):
     if(self.ppadRows != len(self.cap.packets)): # Our capture has changed in size
       self.buildSections()
 
@@ -126,9 +119,9 @@ class HexScreen:
     self.drawHeader()
     self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
-    if(self.miniBufferFocus):
-      self.drawMiniBuffer()
-      self.stdscr.move(self.maxY - 1, self.cMX)
+    if(self.mBufFocus):
+      self.printToMBuf(self.mBuf.out())
+      self.stdscr.move(self.maxY - 1, self.mBuf.cX)
     else:
       self.stdscr.move(self.cY, self.cX)
 
@@ -605,7 +598,7 @@ class HexScreen:
       s.exposed = True
       self.cX = self.sectionCenter(s.ID)
 
-    self.drawPpad()
+    self.drawPpads()
     self.resetCursor()
     self.refresh()
 
@@ -635,130 +628,25 @@ class HexScreen:
     else:
       self.insert = True
 
-  # mini-buffer functions
-  # mini-buffer refers to the screen location and user space
-  # mBuf refers to the actual mini-buffer buffer
-  def toggleMiniBufferFocus(self):
-    if(self.miniBufferFocus):
-      self.miniBufferFocus = False
-      self.mBuf = ''
-      self.clearMiniBuffer()
+  def toggleMBuf(self):
+    if(self.mBufFocus):
+      self.mBufFocus = False
+      self.printToMBuf('')
+      del self.mBuf
     else:
-      self.miniBufferFocus = True
-
-  def drawMiniBuffer(self):
-    cfg.dbg("drawMiniBuffer len_mBufMsg:" + str(len(self.mBufMsg)) + " mBuf:" + self.mBuf)
-    self.clearMiniBuffer()
-    if(len(self.mBufMsg) > 0):
-      if(self.mBufMsg[0][0] == 0):
-        self.mBufMsg.pop(0)
-      else:
-        self.mBufMsg[0][0] -= 1
-        self.printToMiniBuffer(self.mBufMsg[0][1])
-        return
-
-    self.printToMiniBuffer(self.mBuf)
-
-  # Inputs character c to self.mBuf
-  def mBufInput(self, c):
-    cfg.dbg("mBufInput c:" + str(c) + " cMX:" + str(self.cMX) + " mBuf:" + self.mBuf)
-
-    if(curses.keyname(c) == '^?'): # Backspace
-      if(len(self.mBuf) > 0):
-        self.mBuf = self.mBuf[:len(self.mBuf)-1]
-        self.cMX -= 1
-
-    elif(c == curses.KEY_RIGHT):
-      if(self.cMX < len(self.mBuf)):
-        self.cMX += 1
-
-    elif(c == curses.KEY_LEFT):
-      if(self.cMX > 0):
-        self.cMX -= 1
-
-    elif(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
-      if(self.mBuf in cfg.mBufCmds):
-        self.mBuf = ''
-        eval(cfg.mBufCmds[self.mBuf])
-      else:
-        self.mBufMsg.append(list(((1), (self.mBuf + "   [Unknown Command]"))))
-
-    elif(curses.keyname(c) == '^I'): # TAB
-      opts = []
-      for k,v in cfg.mBufCmds.iteritems():
-        if(k.startswith(self.mBuf)):
-          opts.append(k)
-
-      if(len(opts) == 0):
-        self.mBufMsg.append(list(((1), (self.mBuf + "   [Nothing found]"))))
-      elif(len(opts) == 1):
-        self.mBuf = opts[0]
-        self.cMX = len(self.mBuf)
-      else:
-        msg = self.mBuf + "   ["
-        for ii in xrange(len(opts)):
-          if(ii == 2):
-            msg += opts[ii] + "|..."
-            break
-          else:
-            msg += opts[ii] + "|"
-
-        self.mBufMsg.append(list(((1), (msg.rstrip("|")+ "]"))))
-
-    elif(c in cfg.mBufChars):
-      if(self.cMX >= len(self.mBuf)):
-        self.mBuf += chr(c)
-      elif(self.cMX == 0):
-        return
-      else:
-        self.mBuf = self.mBuf[:self.cMX -1] + chr(c) + self.mBuf[self.cMX:]
-      self.cMX += 1
-
-  # Sets a prompt(PS) at mini-buffer and awaits input, returns once Enter is pressed or is escaped
-  def promptMiniBuffer(self, PS):
-    self.mBuf = PS
-    self.cMX = len(PS)
-    while True:
-      self.printToMiniBuffer(self.mBuf)
-      c = self.getch()
-      cfg.dbg("Prompt KeyPress c:" + repr(c) + " ctrl:" + repr(curses.keyname(c)))
-
-      if(c != -1):
-        if(curses.keyname(c) == '^X' or curses.keyname(c) == '^['): # Remove mini-buffer focus
-          self.toggleMiniBufferFocus()
-          return
-        elif(curses.keyname(c) == '^?'): # Backspace
-          if(len(self.mBuf) > len(PS)):
-            self.mBuf = self.mBuf[:len(self.mBuf)-1]
-            self.cMX -= 1
-
-        elif(c == curses.KEY_RIGHT):
-          if(self.cMX < len(self.mBuf)):
-            self.cMX += 1
-
-        elif(c == curses.KEY_LEFT):
-          if(self.cMX > len(PS)):
-            self.cMX -= 1
-
-        elif(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
-          self.mBuf = ''
-          return self.mBuf[len(PS):].strip()
-
-        elif(c in cfg.mBufChars):
-          if(self.cMX >= len(self.mBuf)):
-            self.mBuf += chr(c)
-          else:
-            self.mBuf = self.mBuf[:self.cMX -1] + chr(c) + self.mBuf[self.cMX:]
-          self.cMX += 1
-
+      self.mBuf = minibuffer.MiniBuffer()
+      self.mBufFocus = True
 
   # Prints text to the mini-buffer 
-  def printToMiniBuffer(self, s):
+  def printToMBuf(self, s):
     self.stdscr.addstr(self.maxY - 1, 0, s.strip()[:self.maxX])
-    
-  # Clears mini-buffer
-  def clearMiniBuffer(self):
-    self.stdscr.hline(self.maxY - 1, 0, " ", self.maxX)
+
+  # Handles all character input to mBuf
+  def inputToMBuf(self, c):
+    if(curses.keyname(c) == '^Q' or curses.keyname(c) == '^X' or curses.keyname(c) == '^['):
+      self.toggleMBuf()
+    else:
+      self.mBuf.input(c)
 
   def getch(self):
     return self.stdscr.getch()
@@ -850,7 +738,7 @@ class HexScreen:
 
     if(self.mark):
       self.mark = 0
-      self.drawPpad()
+      self.drawPpads()
       self.refresh()
     else:
       self.mark = self.ppadCY + 1
@@ -893,7 +781,7 @@ class HexScreen:
 
     self.mark = 0
     self.resetCursor()
-    self.drawPpad()
+    self.drawPpads()
     self.refresh()
 
   def paste(self):
@@ -903,7 +791,7 @@ class HexScreen:
     self.cap.paste(self.ppadCY)
     self.cY += len(self.cap.clipboard)
     self.resetCursor()
-    self.drawPpad()
+    self.drawPpads()
     self.refresh()
 
   '''
@@ -914,7 +802,7 @@ class HexScreen:
       s.visible = False
       s.exposed = False
       self.hiddenSectIDs.append(s.ID)
-      self.drawPpad()
+      self.drawPpads()
       self.cX = min(self.cX, self.tableWidth - 2)
       self.refresh()
 
@@ -925,6 +813,6 @@ class HexScreen:
         if(s.ID == sectId):
           s.visible = True
           self.cX = self.sectionCenter(sectId)
-      self.drawPpad()
+      self.drawPpads()
       self.refresh()
   '''
