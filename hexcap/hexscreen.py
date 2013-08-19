@@ -23,7 +23,6 @@ import math
 import curses
 import locale
 import sys
-import time
 
 # hexcap specific imports
 import cfg
@@ -39,7 +38,7 @@ class ScreenError(Exception):
     curses.endwin()
 
 # Our wrapper class for an ncurses screen
-class EdScreen:
+class HexScreen:
 
   def __init__(self):
     locale.setlocale(locale.LC_ALL, '')
@@ -880,7 +879,7 @@ class EdScreen:
     elif(self.cY + self.ppadCurY >= len(self.cap.packets)):
       self.cY = self.ppadTopY + len(self.cap.packets) - 1
 
-  #    cfg.dbg("Edscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + \
+  #    cfg.dbg("Hexscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + \
   #    " ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark)))
   def yank(self):
     if(not self.mark):
@@ -929,176 +928,3 @@ class EdScreen:
       self.drawPpad()
       self.refresh()
   '''
-
-###########################
-# BEGIN PROGRAM EXECUTION #
-###########################
-
-def usage(s):
-  print "FATAL ERROR: " + s
-  print ""
-  print "USAGE: " + sys.argv[0] + " FILE"
-  print "FILE must be a valid pcap file"
-  sys.exit(1)
-
-# Is inter-key time gap greater than repeatKey
-# Resets typeMaticStamp
-def checkRepeatKey():
-  global repeatKeyStamp
-  if(repeatKeyStamp > int(round(time.time() * 100)) - repeatKeyDelay):
-    repeatKeyStamp = int(round(time.time() * 100))
-    return True
-  else:
-    repeatKeyStamp = int(round(time.time() * 100))
-    return False
-
-cfg.dbg('Start')
-# Used for checking for repeat keys
-repeatKeyStamp = int(round(time.time() * 100))
-repeatKeyDelay = 40 # In hundreths of a second
-
-# Check for bad args
-if(len(sys.argv) != 2): usage("Insufficient Arguments")
-if(not os.path.exists(sys.argv[1])): usage("Bad Filename")
-fName = sys.argv[1]
-
-# Initialize
-try:
-  f = open(fName, 'rb')
-except:
-  usage("Unable to open file for reading >> " + fName)
-pc = capture.Capture(f, fName)
-f.close()
-
-mainScr = EdScreen()
-mainScr.initPad(pc)
-
-while True:
-  try:
-    mainScr.refresh()
-    c = mainScr.getch()
-    cfg.dbg("KeyPress c:" + repr(c) + " ctrl:" + repr(curses.keyname(c)))
-
-    if(c != -1):
-      if(mainScr.miniBufferFocus):
-        if(curses.keyname(c) == '^X' or curses.keyname(c) == '^['): # Toggle miniBuffer focus
-          mainScr.toggleMiniBufferFocus()
-        elif(curses.keyname(c) == '^Q'): # Quit
-          if(cfg.debug):
-            cfg.dbgF.close()
-          mainScr.tearDown()
-        else:
-          mainScr.mBufInput(c)
-
-      else:
-        mainScr.clearMiniBuffer()
-        if(mainScr.insert):
-          if(c in cfg.hexChars):
-            mainScr.handleInsert(c)
-
-        if(c == curses.KEY_RIGHT):
-          mainScr.move(0, 1)
-
-        elif(c == curses.KEY_LEFT):
-          mainScr.move(0, -1)
-
-        elif(c == curses.KEY_UP):
-          mainScr.move(-1, 0)
-
-        elif(c == curses.KEY_DOWN):
-          mainScr.move(1, 0)
-
-        elif(curses.keyname(c) == '^Z'): # Toggle Expose
-          if(checkRepeatKey()):
-            mainScr.toggleExposeAll()
-          else:
-            mainScr.toggleExpose()
-
-        elif(curses.keyname(c) == '^F'): # Page Down
-          mainScr.page(10)
-
-        elif(curses.keyname(c) == '^B'): # Page Up
-          mainScr.page(-10)
-
-        elif(curses.keyname(c) == '^A'): # Goto beginning of line
-          mainScr.gotoLineBegin()
-
-        elif(curses.keyname(c) == '^E'): # Goto end of line
-          mainScr.gotoLineEnd()
-
-        elif(curses.keyname(c) == '^S'): # Save file
-          pc.write(open('garbage.pcap', 'wb'))
-
-          '''
-          if(pc.RW):
-            writeError = False
-            try:
-              pass
-              f = open(pc.fName, 'wb')
-            except:
-              writeError = True
-              mainScr.printToMiniBuffer("ERROR: Unable to open file for writing >> " + pc.fName)
-
-            if(not writeError):
-              writeError = False
-              pc.write(f)
-              f.close()
-          else:
-            mainScr.printToMiniBuffer("ERROR: Not all packets supported for read/write")
-          '''
-
-        elif(curses.keyname(c) == '<'): # Shift left 1 column
-          mainScr.shiftColumn(-1)
-
-        elif(curses.keyname(c) == '>'): # Shift right 1 column
-          mainScr.shiftColumn(1)
-
-        elif(curses.keyname(c) == '^R'): # Reread packet capture from disk
-          readError = False
-          try:
-            f = open(pc.fName, 'rb')
-          except:
-            readError = True
-            mainScr.printToMiniBuffer("ERROR: Unable to open file for reading >> " + pc.fName)
-
-          if(not readError):
-            readError = False
-            pc = capture.Capture(f, pc.fName)
-            f.close()
-            mainScr.initPad(pc)
-
-        elif(curses.keyname(c) == '^X'): # Toggle miniBuffer focus
-          mainScr.toggleMiniBufferFocus()
-            
-        elif(curses.keyname(c) == '^N'): # Toggle INS/NAV mode
-          mainScr.toggleInsert()
-
-        elif(curses.keyname(c) == '^@'): # Set new mark (^@ == 'CTRL-SPACE')
-          mainScr.toggleMark()
-
-        elif(curses.keyname(c) == '^Y'): # Paste packet(s)
-          mainScr.paste()
-
-        elif(curses.keyname(c) == '^W'): # Yank packets
-          mainScr.yank()
-
-        elif(curses.keyname(c) == '^K'): # Yank packet
-          mainScr.yankPacket()
-
-        elif(curses.keyname(c) == '^Q' or curses.keyname(c) == 'q'): # Quit
-          if(cfg.debug):
-            cfg.dbgF.close()
-          mainScr.tearDown()
-
-  except KeyboardInterrupt:
-    mainScr.tearDown()
-    if(cfg.debug):
-      cfg.dbgF.close()
-
-
-# We can't accept the following keys due to possible collisions
-# ASCII-decimal  ASCII-character Ctrl-character 
-# 8 or 263       BS(Backspace)   H              
-# 9              TAB             I
-# 10             LF(\n)          M
-

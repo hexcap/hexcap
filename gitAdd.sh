@@ -8,7 +8,7 @@ do
   /usr/bin/git add $BDIR/$F
 done
 
-for F in cp.py cfg.py hexcap.py section.py capture.py packet.py layer.py assoc.py __init__.py pdiff.sh
+for F in cp.py cfg.py hexcap hexscreen.py section.py capture.py packet.py layer.py assoc.py __init__.py pdiff.sh
 do
   /usr/bin/git add $BDIR/hexcap/$F
 done
