@@ -47,20 +47,3 @@ hexChars.append(ord('c'))
 hexChars.append(ord('d'))
 hexChars.append(ord('e'))
 hexChars.append(ord('f'))
-
-# Allowed mini-buffer characters
-mBufChars = []
-for x in xrange(0, 10): # digits 0-9
-  mBufChars.append(ord(str(x)))
-for x in xrange(97, 123): # lowercase alpha
-  mBufChars.append(x)
-mBufChars.append(45) # - 'dash'
-
-# miniBuffer commands
-# key = command, val = internal function
-mBufCmds = dict()
-mBufCmds['set-pkt-min-size'] = 'setPktMinSize()'
-mBufCmds['set-pkt-max-size'] = 'setPktMaxSize()'
-mBufCmds['append-layer'] = 'layerAppend()'
-mBufCmds['insert-layer'] = 'layerInsert()'
-mBufCmds['delete-layer'] = 'layerDelete()'

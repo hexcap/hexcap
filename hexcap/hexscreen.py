@@ -639,7 +639,12 @@ class HexScreen:
 
   # Prints text to the mini-buffer 
   def printToMBuf(self, s):
-    self.stdscr.addstr(self.maxY - 1, 0, s.strip()[:self.maxX])
+    cfg.dbg("printToMBuf s:" + s)
+    if(len(s.strip()) > 0):
+      self.stdscr.addstr(self.maxY - 1, 0, s.strip()[:self.maxX])
+      self.stdscr.hline(self.maxY - 1, len(s.strip()), " ", self.maxX)
+    else:
+      self.stdscr.hline(self.maxY - 1, 0, " ", self.maxX)
 
   # Handles all character input to mBuf
   def inputToMBuf(self, c):
