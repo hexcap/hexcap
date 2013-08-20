@@ -97,3 +97,27 @@ class Capture:
       for lay in self.packets[ii].layers:
         if(lay.ID == 'pid'):
           lay.setColumn('pid', ii + 1)
+
+  # get and set for minSize of every packet in capture
+  def _get_minPktSize(self):
+    rv = self.packets[0].minSize
+    for pkt in self.packets:
+      if(rv > pkt.minSize):
+        rv = pkt.minSize
+    return rv
+  def _set_minPktSize(self, s):
+    for pkt in self.packets:
+      pkt.minSize = s
+  minPktSize = property(_get_minPktSize, _set_minPktSize)
+
+  # get and set for maxSize of every packet in capture
+  def _get_maxPktSize(self):
+    rv = 0
+    for pkt in self.packets:
+      if(rv < pkt.maxSize):
+        rv = pkt.maxSize
+    return rv
+  def _set_maxPktSize(self, s):
+    for pkt in self.packets:
+      pkt.maxSize = s
+  maxPktSize = property(_get_maxPktSize, _set_maxPktSize)

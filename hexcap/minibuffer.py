@@ -21,24 +21,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 import curses
 import cfg
 
-def cmd_setPktMinSize():
-  pass
-
-def cmd_setPktMaxSize():
-  pass
-
-def cmd_setPktSizeRange():
-  pass
-
-def cmd_layerAppend():
-  pass
-
-def cmd_layerInsert():
-  pass
-
-def cmd_layerDelete():
-  pass
-
 # Implements a simple Emacs style mini-buffer
 class MiniBuffer:
 
@@ -57,44 +39,43 @@ class MiniBuffer:
   # Where type can be either s(string) or i(integer)
   # if type=='s' then range is a list of possible strings
   # if type=='i' then range is a range given as 'min-max' inclusive
+  # function is eval()'d in the context of parent object
   cmds = {
-    'set-pkt-min-size' : [cmd_setPktMinSize, [['i', '60-70']]],
-    'set-pkt-max-size' : [cmd_setPktMaxSize, [['i', '1000-1500']]],
-    'set-pkt-size-range' : [cmd_setPktSizeRange, [['i', '60-70'], ['i', '1000-1500']]],
-    'append-layer' : [cmd_layerAppend, [['s', ['funk']]]],
-    'insert-layer' : [cmd_layerInsert, [['s', ['funk', 'bar']]]],
-    'delete-layer' : [cmd_layerDelete, [['s', ['funk', 'foo']]]]
+    'set-pkt-min-size' : ['self.cap._set_minPktSize', [['i', '60-70']]],
+    'set-pkt-max-size' : ['self.cap._set_maxPktSize', [['i', '1000-1500']]],
+    'set-pkt-size-range' : ['self.cap.setPktSizeRange', [['i', '60-70'], ['i', '1000-1500']]],
+    'append-layer' : ['self.cap.appendLayer', [['s', ['funk']]]],
+    'insert-layer' : ['self.cap.insertLayer', [['s', ['funk', 'bar']]]],
+    'delete-layer' : ['self.cap.deleteLayer', [['s', ['funk', 'foo']]]]
     }
   
   def __init__(self):
+    # The function and argument-list to be eval()'d by parent object
+    self.func = ''
+    self.args = []
+    self.resetPrompt()
+
+  def __del__(self):
+    pass
+
+  # Resets prompt
+  def resetPrompt(self):
     # Actual MiniBuffer buffer
     self.buf = ''
 
     # Our X cursor position
     self.cX = 0
 
+    # Our prompt when awating arguments
+    self.argPrompt = ''
+
     # Message to return from out() instead of buf
     # Will be printed for 1 cycle then discarded
     self.msg = ''
 
-    # Our prompt when awating arguments
-    self.argPrompt = ''
-
-    # The function and argument-list to be eval()'d by parent object
-    self.func = ''
-    self.args = []
-
-  def __del__(self):
-    pass
-
-  # Clears MiniBuffer
-  def clear(self):
-    self.buf = ''
-    self.cX = 0
-
   # Returns string to be printed to minibuffer
   def out(self):
-    cfg.dbg("mBuf.out len_mBufMsg:" + str(len(self.msg)) + " mBuf:" + self.buf)
+#    cfg.dbg("mBuf.out len_mBufMsg:" + str(len(self.msg)) + " mBuf:" + self.buf)
     if(len(self.msg) > 0):
       msg = self.msg
       self.msg = ''
@@ -103,18 +84,21 @@ class MiniBuffer:
       return self.buf
 
   # Returns string to be eval()'d by parent object
+  # Returns False if nothing to execute
   def exe(self):
-    if(len(self.func) > 0):
+    if(len(self.func) == 0):
       return False
     elif(len(self.args) == len(self.cmds[self.func][1])):
-      rv = self.func + "("
+      rv = self.cmds[self.func][0] + "("
       for a in self.args:
         rv += a + ","
       return rv.rstrip(",") + ")"
+    else:
+      return False
 
   # Top-level input
   def input(self, c):
-    cfg.dbg("mBuf.input c:" + str(c) + " cMX:" + str(self.cX) + " mBuf:" + self.buf + " argPrompt:" + self.argPrompt)
+#    cfg.dbg("mBuf.input c:" + str(c) + " cX:" + str(self.cX) + " buf:" + self.buf + " argPrompt:" + self.argPrompt)
     if(curses.keyname(c) == '^?'): # Backspace
       if(len(self.buf) > len(self.argPrompt)):
         self.buf = self.buf[:len(self.buf)-1]
@@ -151,7 +135,6 @@ class MiniBuffer:
 
   # Handles input until a mini-buffer function is reached
   def inputFunc(self, c):
-    cfg.dbg("mBuf.inputFunc c:" + str(c) + " cMX:" + str(self.cX) + " mBuf:" + self.buf)
     if(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
       if(self.buf in self.cmds):
         self.func = self.buf
@@ -195,7 +178,6 @@ class MiniBuffer:
 
   # Handles gathering of arguments for chosen function
   def inputArgs(self, c):
-    cfg.dbg("mBuf.inputArgs c:" + str(c) + " cMX:" + str(self.cX) + " mBuf:" + self.buf + " argPrompt:" + self.argPrompt)
     arg = self.buf[len(self.argPrompt):]
     if(len(arg) < 1):
       return
@@ -204,10 +186,22 @@ class MiniBuffer:
     if(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
       if(argDef[0] == 'i'):
         if(arg.isdigit()):
-          arg = int(arg)
           rMin, rMax = argDef[1].split("-")
+          rMin = int(rMin)
+          rMax = int(rMax)
+          arg = int(arg)
           if((arg >= rMin) and (arg <= rMax)):
-            self.args.append(arg)
+            self.args.append(str(arg))
+          else:
+            self.msg = self.buf + "   [Out of Range " + str(rMin) + "-" + str(rMax) + "]"
+
       elif(argDef[0] == 's'):
         if(arg in argDef[1]):
           self.args.append(arg)
+
+    # Are we done collecting args
+    if(len(self.args) == len(self.cmds[self.func][1])):
+      self.resetPrompt()
+    else:
+      self.buf = self.argPrompt
+      self.cX = len(self.argPrompt)
