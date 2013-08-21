@@ -323,7 +323,7 @@ class HexScreen:
 
   # Draws a packet line onto our ppad
   # Takes a y value and list of cells that correlates to our global header list
-  #    cfg.dbg("y:" + str(y) + " pid:" + str(row['pid']['pid'])+ " bold:" + str(bold) + " rev:" + str(reverse))
+  # cfg.dbg("drawPktLine y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
     if("unsupported" in row): # If packet is unsupported we only print the pid and tstamp
       msg = ''
@@ -352,8 +352,8 @@ class HexScreen:
                   self.ppadAddstr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_BOLD)
                 else:
                   self.ppadAddstr(y, x, row[s.ID][colName].rjust(width) + "|")
-                  
-                x += width + 1
+              x += width + 1
+
           else:
             self.ppadHline(y, x, " ", s.width - 1)
             self.ppadAddstr(y, x + s.width - 1, "|")
@@ -673,6 +673,7 @@ class HexScreen:
   def ppadAddstr(self, y, x, s, atr=None):
     try:
       if(atr):
+#        cfg.dbg("ppadAddstr s:" + s + " atr:" + repr(atr))
         self.ppad.addstr(y, x, s, atr)
       else:
         self.ppad.addstr(y, x, s)
