@@ -52,11 +52,6 @@ class HexScreen:
     self.headerHeight = 2 # Section / Column names
     self.footerHeight = 2 # Includes blank line
 
-    # Cursor inits
-    self.maxY, self.maxX = self.stdscr.getmaxyx()
-    self.cY = self.headerHeight
-    self.cX = cfg.pktIDWidth + 1
-
     # Our stack of hidden sections
     self.hiddenSectIDs = []
 
@@ -70,6 +65,8 @@ class HexScreen:
     # Flag is True if mini-buffer has focus
     self.mBufFocus = False
 
+    self.initCursor()
+
   def tearDown(self, dieStr=''):
     self.stdscr.keypad(0)
     curses.echo()
@@ -81,15 +78,22 @@ class HexScreen:
   # Initializes our ncurses pad
   # Takes a Capture object
   def initPad(self, cap):
+    self.initCursor()
     self.cap = cap
     self.ppadTopY = self.headerHeight # Topmost ppad position on screen
     self.ppadBottomY = self.maxY - self.footerHeight # Bottommost ppad position on screen
-    self.ppadCurY = 0 # Current topmost visible Y in ppad
-    self.ppadCurX = 0 # Current leftmost visible X in ppad
     self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.buildSections()
     self.drawPpads()
     self.refresh()
+
+  # Initialize all cursor attributes
+  def initCursor(self):
+    self.maxY, self.maxX = self.stdscr.getmaxyx()
+    self.cY = self.headerHeight
+    self.cX = cfg.pktIDWidth + 1
+    self.ppadCurY = 0 # Current topmost visible Y in ppad
+    self.ppadCurX = 0 # Current leftmost visible X in ppad
 
   # Completely redraws our ppad and rebuilds our section list
   # Sets ppadWidth
@@ -122,7 +126,6 @@ class HexScreen:
     if(self.mBufFocus):
       eStr = self.mBuf.exe()
       if(eStr):
-#        cfg.dbg("hexscreen refresh() eStr:" + eStr)
         self.toggleMBuf()
         self.stdscr.move(self.cY, self.cX)
         eval(eStr)
@@ -429,7 +432,6 @@ class HexScreen:
     self.stdscr.hline(y, x, "-", divider)
     x += divider
 
-#    cfg.dbg("drawFooter cX:" + str(self.cX) + " tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX))
     s,c = self.cursorColumn(self.cX)
     if(s.exposed):
       if(s.RO):
@@ -548,8 +550,6 @@ class HexScreen:
                   else:
                     ns = dSections[sii - 1]
                     nc = ns.c.getStrKey(len(ns.c) - 1)
-#                    cfg.dbg("shiftColumn ppadCurX:" + str(self.ppadCurX) + " tw:" + str(self.tableWidth) + 
-#                            " cX:" + str(self.cX) + " ns.ID:" + ns.ID + " nc:" + nc)
                     self.cX = self.columnLeft(ns.ID, nc)
                     self.shiftColumn(delta + 1)
                 else:

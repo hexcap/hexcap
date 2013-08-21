@@ -151,7 +151,7 @@ while True:
             mainScr.printToMiniBuffer("ERROR: Unable to open file for reading >> " + pc.fName)
 
           if(not readError):
-            readError = False
+            del readError
             pc = capture.Capture(f, pc.fName)
             f.close()
             mainScr.initPad(pc)
