@@ -673,7 +673,6 @@ class HexScreen:
   def ppadAddstr(self, y, x, s, atr=None):
     try:
       if(atr):
-#        cfg.dbg("ppadAddstr s:" + s + " atr:" + repr(atr))
         self.ppad.addstr(y, x, s, atr)
       else:
         self.ppad.addstr(y, x, s)
