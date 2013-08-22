@@ -121,6 +121,7 @@ class HexScreen:
       self.tearDown()
     
     self.drawHeader()
+#    cfg.dbg("hexscreen.py refresh tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " maxX:" + str(self.maxX))
     self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
     if(self.mBufFocus):
@@ -415,10 +416,10 @@ class HexScreen:
     self.stdscr.hline(y, x, "-", divider)
     x += divider
 
-    self.stdscr.addstr(y, x, "[x:" + str(self.cX + self.ppadCurX).rjust(3))
+    self.stdscr.addstr(y, x, "[x:" + str(self.ppadCX).rjust(3))
     x += posWidth
 
-    txt = " p:" + str(self.ppadCurY + self.cY - self.ppadTopY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
+    txt = " p:" + str(self.ppadCY - self.ppadTopY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
     self.stdscr.addstr(y, x, txt)
     x += len(txt)
 
@@ -456,7 +457,7 @@ class HexScreen:
     if(self.ppadBottomY >= self.ppadRows):
       return
 
-    ppadPos = self.cY - self.ppadTopY + self.ppadCurY
+    ppadPos = self.ppadCY - self.ppadTopY
     self.drawPktLine(ppadPos, self.cap.packets[ppadPos].out())
 
     if(dY > 0):
@@ -566,7 +567,7 @@ class HexScreen:
     if(dY != 0):
       if(dY > 0):
         if(self.cY + dY < self.ppadBottomY):
-          if(self.cY + self.ppadCurY <= len(self.cap.packets)):
+          if(self.ppadCY <= len(self.cap.packets)):
             self.cY += dY
         else:
           if(self.ppadCurY + self.ppadBottomY - self.ppadTopY < self.ppadRows):
@@ -763,10 +764,14 @@ class HexScreen:
     else:
       self.mark = self.ppadCY + 1
 
-  # Called after an action MAY cause cY or cX to be in illegal position
-  # Returns cY and cX to legal position(s)
+  # Called after an action MAY cause cY,cX,ppadCurY,ppadCurX to be in illegal position(s)
+  # Returns them to legal position(s)
   def resetCursor(self):
     # Handle X
+    if(self.ppadCurX >= self.tableWidth - self.maxX):
+      self.ppadCurX = self.tableWidth - self.maxX - 2
+    self.ppadCurX = max(0, self.ppadCurX)
+
     if(self.cX > self.maxX - 1):
       self.cX = self.maxX - 1
     elif(self.cX > self.tableWidth - self.ppadCurX - 2):
@@ -775,6 +780,10 @@ class HexScreen:
       self.cX = 0
 
     # Handle Y
+    if(self.ppadCurY >= len(self.cap.packets) - self.maxY):
+      self.ppadCurY = len(self.cap.packets) - self.maxY - 1
+    self.ppadCurY = max(0, self.ppadCurY)
+
     if(len(self.cap.packets) <= 1):
       self.cY = self.ppadTopY
 
@@ -784,7 +793,7 @@ class HexScreen:
     elif(self.cY > self.ppadBottomY):
       self.cY = self.ppadBottomY
 
-    elif(self.cY + self.ppadCurY >= len(self.cap.packets)):
+    elif(self.ppadCY >= len(self.cap.packets)):
       self.cY = self.ppadTopY + len(self.cap.packets) - 1
 
   #    cfg.dbg("Hexscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + \

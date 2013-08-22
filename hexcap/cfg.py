@@ -23,7 +23,7 @@ import datetime
 ######################
 
 # Debugging globals
-debug = False
+debug = True
 
 if(debug):
   dbgF = open('hexcap.log', 'a', 0)
