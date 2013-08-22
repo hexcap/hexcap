@@ -116,9 +116,8 @@ while True:
           mainScr.gotoLineEnd()
 
         elif(curses.keyname(c) == '^S'): # Save file
-          pc.write(open('garbage.pcap', 'wb'))
+          #          pc.write(open('garbage.pcap', 'wb'))
 
-          '''
           if(pc.RW):
             writeError = False
             try:
@@ -134,7 +133,6 @@ while True:
               f.close()
           else:
             mainScr.printToMiniBuffer("ERROR: Not all packets supported for read/write")
-          '''
 
         elif(curses.keyname(c) == '<'): # Shift left 1 column
           mainScr.shiftColumn(-1)

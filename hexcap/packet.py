@@ -31,18 +31,20 @@ class Packet:
     self.layers.append(layer.PktID(pid))
     self.layers.append(layer.TStamp(ts))
 
+    self.leftovers = None
     self.minSize = len(packet)
     self.maxSize = max(dpkt.ethernet.ETH_MTU, len(packet))
     self.initLayers(dpkt.ethernet.Ethernet(packet))
 
   # Is every layer of this packet writable
+  # TODO:Add more checks in the future
   def _RW(self):
-    if(self.unsupported): return False
     for lay in self.layers:
       if(lay.ID == 'pid' or lay.ID == 'tstamp'):
         continue
       elif(not lay.toPcap()):
-        return False
+        if(not self.leftovers):
+          return False
     return True
   RW = property(_RW)
 
@@ -122,7 +124,7 @@ class Packet:
   def unsupport(self, d):
     self.unsupported = True
     self.leftovers = d
-
+  
   # Sets the value of section,column to val
   def setColumn(self, sid, col, val):
     for lay in self.layers:
@@ -142,6 +144,15 @@ class Packet:
     for lay in self.layers:
       if(isinstance(TStamp, lay)):
         return lay.vals['tstamp']
+
+  # Convenience method
+  # Return True if passed sid corresponds with layer in pkt
+  # Else returns False
+  def hasLayer(self, sid):
+    for lay in self.layers:
+      if(lay.ID == sid):
+        return True
+    return False
 
   # Returns the dpkt packet object
   # Does not work with timestamps
@@ -205,7 +216,6 @@ class Packet:
     for lay in self.layers:
       rv[lay.ID] = lay.vals
     return rv
-
 
 class PacketError(Exception):
   pass

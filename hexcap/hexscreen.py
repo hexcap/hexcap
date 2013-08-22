@@ -175,6 +175,11 @@ class HexScreen:
     return self.ppadCurY + self.cY - self.ppadTopY
   ppadCY = property(_get_ppadCY)
 
+  # Relative X cursor position in our ppad
+  def _get_ppadCX(self):
+    return self.ppadCurX + self.cX
+  ppadCX = property(_get_ppadCX)
+
   # An ordered list of displayed sections
   def _get_displayedSections(self):
     rv = []
@@ -720,13 +725,17 @@ class HexScreen:
   # Handles our character insertion
   # Modifies column then increments cursor X position by 1
   def handleInsert(self, c):
-    attr,char = self.inch(self.ppadCY, self.cX)
-    if(ord(char) not in cfg.hexChars): # immutable character
-      self.move(0, 1)
+    sect,col = self.cursorColumn(self.cX) 
+    if(sect.RO): # Cursor section ReadOnly
+      return
+    elif(not sect.exposed): # Cursor section not exposed
+      return
+    elif(not self.cap.packets[self.ppadCY].hasLayer(sect.ID)): # Cursor section not in packet
       return
 
-    sect,col = self.cursorColumn(self.cX)
-    if(sect.RO): # ReadOnly section
+    attr,char = self.inch(self.ppadCY, self.ppadCX)
+    if(ord(char) not in cfg.hexChars): # Cursor character is immutable
+      self.move(0, 1)
       return
 
     leftX = self.columnLeft(sect.ID, col)
@@ -737,7 +746,7 @@ class HexScreen:
       if(x == self.cX):
         val += chr(c)
       else:
-        attr,char = self.inch(self.ppadCY, x)
+        attr,char = self.inch(self.ppadCY, self.ppadCurX + x)
         val += char
 
     self.cap.packets[self.ppadCY].setColumn(sect.ID, col, val)
