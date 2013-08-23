@@ -129,7 +129,7 @@ class HexScreen:
       if(eStr):
         self.toggleMBuf()
         self.stdscr.move(self.cY, self.cX)
-        eval(eStr)
+        self.genericTry(eStr)
       else:
         self.printToMBuf(self.mBuf.out())
         self.stdscr.move(self.maxY - 1, self.mBuf.cX)
@@ -355,21 +355,21 @@ class HexScreen:
           if(s.ID in row):
             for colName, width in s.c.iteritems():
               if(reverse):
-                self.ppadAddstr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_REVERSE)
+                self.ppadAddStr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_REVERSE)
               else:
                 if(bold):
-                  self.ppadAddstr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_BOLD)
+                  self.ppadAddStr(y, x, row[s.ID][colName].rjust(width) + "|", curses.A_BOLD)
                 else:
-                  self.ppadAddstr(y, x, row[s.ID][colName].rjust(width) + "|")
+                  self.ppadAddStr(y, x, row[s.ID][colName].rjust(width) + "|")
               x += width + 1
 
           else:
-            self.ppadHline(y, x, " ", s.width - 1)
-            self.ppadAddstr(y, x + s.width - 1, "|")
+            self.ppadHLine(y, x, " ", s.width - 1)
+            self.ppadAddStr(y, x + s.width - 1, "|")
             x += s.width
         else:
-          self.ppadHline(y, x, "-", s.width - 1)
-          self.ppadAddstr(y, x + s.width - 1, "|")
+          self.ppadHLine(y, x, "-", s.width - 1)
+          self.ppadAddStr(y, x + s.width - 1, "|")
           x += s.width
       else:
         continue
@@ -384,18 +384,18 @@ class HexScreen:
           head = "{" + s.ID + "}"
           head = head.center(s.width - 1, " ") + "|"
 
-          self.headPpadAddstr(0, x0, head)
+          self.headPpadAddStr(0, x0, head)
           x0 += s.width
           for column, width in s.c.iteritems():
             col = column.center(width, " ")
-            self.headPpadAddstr(1, x1, col + "|", curses.A_REVERSE)
+            self.headPpadAddStr(1, x1, col + "|", curses.A_REVERSE)
             x1 += width + 1
 
         else:
           head = "{" + s.ID + "}|"
-          self.headPpadAddstr(0, x0, head)
-          self.headPpadHline(1, x1, "-", s.width - 1, curses.A_REVERSE)
-          self.headPpadAddstr(1, x1 + s.width - 1, "|", curses.A_REVERSE)
+          self.headPpadAddStr(0, x0, head)
+          self.headPpadHLine(1, x1, "-", s.width - 1, curses.A_REVERSE)
+          self.headPpadAddStr(1, x1 + s.width - 1, "|", curses.A_REVERSE)
           x0 += s.width
           x1 += s.width
       else:
@@ -416,10 +416,10 @@ class HexScreen:
     self.stdscr.hline(y, x, "-", divider)
     x += divider
 
-    self.stdscr.addstr(y, x, "[x:" + str(self.ppadCX).rjust(3))
+    self.stdscr.addstr(y, x, "[x:" + str(self.ppadCX - cfg.pktIDWidth).rjust(3))
     x += posWidth
 
-    txt = " p:" + str(self.ppadCY - self.ppadTopY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
+    txt = " p:" + str(self.ppadCY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
     self.stdscr.addstr(y, x, txt)
     x += len(txt)
 
@@ -457,9 +457,7 @@ class HexScreen:
     if(self.ppadBottomY >= self.ppadRows):
       return
 
-    ppadPos = self.ppadCY - self.ppadTopY
-    self.drawPktLine(ppadPos, self.cap.packets[ppadPos].out())
-
+    self.drawPktLine(self.ppadCY, self.cap.packets[self.ppadCY].out())
     if(dY > 0):
       ppadHeight = self.ppadBottomY - self.ppadTopY
       if(self.ppadCurY + ppadHeight < self.ppadRows):
@@ -566,8 +564,8 @@ class HexScreen:
   def move(self, dY, dX):
     if(dY != 0):
       if(dY > 0):
-        if(self.cY + dY < self.ppadBottomY):
-          if(self.ppadCY <= len(self.cap.packets)):
+        if(self.cY + dY < self.ppadBottomY): # Are we at the bottom of the screen
+          if(self.ppadCY < len(self.cap.packets) - 1):
             self.cY += dY
         else:
           if(self.ppadCurY + self.ppadBottomY - self.ppadTopY < self.ppadRows):
@@ -595,7 +593,7 @@ class HexScreen:
         if(self.cX + dX > cfg.pktIDWidth):
           self.cX += dX
         else:
-          if(self.cX + dX > self.ppadCurX * -1):
+          if(self.cX + dX > self.ppadCurX * -1 +  cfg.pktIDWidth):
             self.ppadCurX -= 1
 
   def toggleExpose(self, s=None):
@@ -674,54 +672,43 @@ class HexScreen:
     inpt = hex(self.ppad.inch(y, x))
     return list((int(inpt[2:4], 16), chr(int(inpt[4:], 16))))
 
-  # TODO: Change these to high order functions
-  # Wrapper for packet ppad.addstr with exception handling
-  def ppadAddstr(self, y, x, s, atr=None):
+  # Executes passed string in try/except
+  # Properly exits if exception raised
+  def genericTry(self, s):
     try:
-      if(atr):
-        self.ppad.addstr(y, x, s, atr)
-      else:
-        self.ppad.addstr(y, x, s)
+      eval(s)
     except:
       curses.echo()
       curses.endwin()
       raise
 
-  # Wrapper for packet ppad.hline with exception handling
-  def ppadHline(self, y, x, char, width, atr=None):
-    try:
-      if(atr):
-        self.ppad.hline(y, x, char, width, atr)
-      else:
-        self.ppad.hline(y, x, char, width)
-    except:
-      curses.echo()
-      curses.endwin()
-      raise
+  # Wrapper for packet ppad.addstr
+  def ppadAddStr(self, y, x, s, atr=None):
+    if(atr):
+      self.genericTry("self.ppad.addstr(" + str(y) + "," + str(x) + ",'" + s + "'," + str(atr) + ")")
+    else:
+      self.genericTry("self.ppad.addstr(" + str(y) + "," + str(x) + ",'" + s + "')")
 
-  # Wrapper for header ppad.addstr with exception handling
-  def headPpadAddstr(self, y, x, s, atr=None):
-    try:
-      if(atr):
-        self.headPpad.addstr(y, x, s, atr)
-      else:
-        self.headPpad.addstr(y, x, s)
-    except:
-      curses.echo()
-      curses.endwin()
-      raise
+  # Wrapper for ppad.hline
+  def ppadHLine(self, y, x, char, width, atr=None):
+    if(atr):
+      self.genericTry("self.ppad.hline(" + str(y) + "," + str(x) + ",'" + char + "'," + str(width) + "," + str(atr) + ")")
+    else:
+      self.genericTry("self.ppad.hline(" + str(y) + "," + str(x) + ",'" + char + "'," + str(width) + ")")
 
-  # Wrapper for ppad.hline with exception handling
-  def headPpadHline(self, y, x, char, width, atr=None):
-    try:
-      if(atr):
-        self.headPpad.hline(y, x, char, width, atr)
-      else:
-        self.headPpad.hline(y, x, char, width)
-    except:
-      curses.echo()
-      curses.endwin()
-      raise
+  # Wrapper for header ppad.addstr
+  def headPpadAddStr(self, y, x, s, atr=None):
+    if(atr):
+      self.genericTry("self.headPpad.addstr(" + str(y) + "," + str(x) + ",'" + s + "'," + str(atr) + ")")
+    else:
+      self.genericTry("self.headPpad.addstr(" + str(y) + "," + str(x) + ",'" + s + "')")
+
+  # Wrapper for ppad.hline
+  def headPpadHLine(self, y, x, char, width, atr=None):
+    if(atr):
+      self.genericTry("self.headPpad.hline(" + str(y) + "," + str(x) + ",'" + char + "'," + str(width) + "," + str(atr) + ")")
+    else:
+      self.genericTry("self.headPpad.hline(" + str(y) + "," + str(x) + ",'" + char + "'," + str(width) + ",)")
 
   # Handles our character insertion
   # Modifies column then increments cursor X position by 1
