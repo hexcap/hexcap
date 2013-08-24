@@ -18,6 +18,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 '''
 
+import re
 import curses
 import cfg
 
@@ -30,23 +31,36 @@ class MiniBuffer:
     allowedChars.append(ord(str(x)))
   for x in xrange(97, 123): # lowercase alpha
     allowedChars.append(x)
-  allowedChars.append(45) # - 'dash'
+  allowedChars.append(33) # ! bang
+  allowedChars.append(37) # % percent
+  allowedChars.append(43) # + plus
+  allowedChars.append(45) # - dash
+  allowedChars.append(46) # . dot
+  allowedChars.append(47) # / forward slash
+  allowedChars.append(61) # = equals
+  allowedChars.append(64) # @ at
+  allowedChars.append(95) # _ underscore
 
-  # MiniBuffer dispatch table
-  # key = command, val = fList
-  # Where fList takes the form [function, [argList]]
-  # Where argList is a list of 2 string pairs [type, range]
-  # Where type can be either s(string) or i(integer)
-  # if type=='s' then range is a list of possible strings
-  # if type=='i' then range is a range given as 'min-max' inclusive
-  # function is eval()'d in the context of parent object
+  '''
+   MiniBuffer dispatch table
+   key = mini-buffer command, val = fList
+   flist is eval()'d in the context of parent object
+   Where fList takes the form [cmd, [argList]]
+   If cmd.endswitch("()") then it is interpreted as a function call
+   If cmd.endswitch("=") then it is interpreted as an attribute
+   argList is a list of 2 string pairs [type, desc]
+   Where type can be either s(string) or i(integer)
+   if type=='s' then desc is a regexp that must match
+   if type=='i' then desc is a range given as 'min-max' inclusive
+   '''
   cmds = {
-    'set-pkt-min-size' : ['self.cap._set_minPktSize', [['i', '60-70']]],
-    'set-pkt-max-size' : ['self.cap._set_maxPktSize', [['i', '1000-1500']]],
-    'set-pkt-size-range' : ['self.cap.setPktSizeRange', [['i', '60-70'], ['i', '1000-1500']]],
-    'append-layer' : ['self.cap.appendLayer', [['s', ['funk']]]],
-    'insert-layer' : ['self.cap.insertLayer', [['s', ['funk', 'bar']]]],
-    'delete-layer' : ['self.cap.deleteLayer', [['s', ['funk', 'foo']]]]
+    'set-pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]],
+    'set-pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000-1500']]],
+    'save-to-file' : ['self.cap.saveTo()', [['s', '^[\w.-_=+,!:%@]*$']]],
+    'set-pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70'], ['i', '1000-1500']]],
+    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
+    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],
+    'delete-layer' : ['self.cap.deleteLayer()', [['s', 'foo']]]
     }
   
   def __init__(self):
@@ -75,7 +89,6 @@ class MiniBuffer:
 
   # Returns string to be printed to minibuffer
   def out(self):
-#    cfg.dbg("mBuf.out len_mBufMsg:" + str(len(self.msg)) + " mBuf:" + self.buf)
     if(len(self.msg) > 0):
       msg = self.msg
       self.msg = ''
@@ -84,21 +97,24 @@ class MiniBuffer:
       return self.buf
 
   # Returns string to be eval()'d by parent object
-  # Returns False if nothing to execute
+  # Returns None if nothing to execute
   def exe(self):
     if(len(self.func) == 0):
-      return False
+      return None
     elif(len(self.args) == len(self.cmds[self.func][1])):
-      rv = self.cmds[self.func][0] + "("
-      for a in self.args:
-        rv += a + ","
-      return rv.rstrip(",") + ")"
+      cmd = self.cmds[self.func][0]
+      if(cmd.endswith("()")):
+        rv = cmd.rstrip(")")
+        for a in self.args:
+          rv += a + ","
+        return rv.rstrip(",") + ")"
+      else:
+        return cmd + self.args.pop()
     else:
-      return False
+      return None
 
   # Top-level input
   def input(self, c):
-#    cfg.dbg("mBuf.input c:" + str(c) + " cX:" + str(self.cX) + " buf:" + self.buf + " argPrompt:" + self.argPrompt)
     if(curses.keyname(c) == '^?'): # Backspace
       if(len(self.buf) > len(self.argPrompt)):
         self.buf = self.buf[:len(self.buf)-1]
@@ -196,8 +212,10 @@ class MiniBuffer:
             self.msg = self.buf + "   [Out of Range " + str(rMin) + "-" + str(rMax) + "]"
 
       elif(argDef[0] == 's'):
-        if(arg in argDef[1]):
-          self.args.append(arg)
+        reg = re.compile(argDef[1])
+        match = reg.match(arg)
+        if(match.span()[1] == len(arg)):
+          self.args.append("\'" + str(arg) + "\'")
 
     # Are we done collecting args
     if(len(self.args) == len(self.cmds[self.func][1])):

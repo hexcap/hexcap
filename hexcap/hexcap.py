@@ -116,23 +116,10 @@ while True:
           mainScr.gotoLineEnd()
 
         elif(curses.keyname(c) == '^S'): # Save file
-          #          pc.write(open('garbage.pcap', 'wb'))
-
-          if(pc.RW):
-            writeError = False
-            try:
-              pass
-              f = open(pc.fName, 'wb')
-            except:
-              writeError = True
-              mainScr.printToMiniBuffer("ERROR: Unable to open file for writing >> " + pc.fName)
-
-            if(not writeError):
-              writeError = False
-              pc.write(f)
-              f.close()
-          else:
-            mainScr.printToMiniBuffer("ERROR: Not all packets supported for read/write")
+          try:
+            pc.save()
+          except IOError:
+            mainScr.mBufMsg = "Error writing file: " + pc.fName
 
         elif(curses.keyname(c) == '<'): # Shift left 1 column
           mainScr.shiftColumn(-1)
@@ -141,15 +128,11 @@ while True:
           mainScr.shiftColumn(1)
 
         elif(curses.keyname(c) == '^R'): # Reread packet capture from disk
-          readError = False
           try:
             f = open(pc.fName, 'rb')
-          except:
-            readError = True
-            mainScr.printToMiniBuffer("ERROR: Unable to open file for reading >> " + pc.fName)
-
-          if(not readError):
-            del readError
+          except IOError:
+            mainScr.mBufMsg = "Error reading file: " + pc.fName
+          else:
             pc = capture.Capture(f, pc.fName)
             f.close()
             mainScr.initPad(pc)

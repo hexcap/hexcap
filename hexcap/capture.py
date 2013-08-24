@@ -61,10 +61,35 @@ class Capture:
     return rv
 
   # Writes our capture to the passed filehandle
-  def write(self, f):
+  # Not meant to be called externally
+  # Should raise IOError if problems but pcap.Writer does not support it
+  def __write(self, f):
     out = dpkt.pcap.Writer(f)
     for pkt in self.packets:
       out.writepkt(dpkt.ethernet.Ethernet.pack(pkt.data()))
+
+  # Saves our capture file
+  # Raises IOError if problems
+  def save(self):
+    try:
+      f = open(self.fName, 'wb')
+    except:
+      raise IOError
+    else:
+      self.__write(f)
+      f.close()
+      
+  # Changes our save file to passed arg and then saves to it
+  # Raises IOError if problems
+  def saveTo(self, name):
+    try:
+      f = open(name, 'wb')
+    except:
+      raise IOError
+    else:
+      f.close()
+      self.fName = name
+      self.save()
         
   # Yanks packets from main capture and puts them in the clipboard
   # Takes inclusive first and last packets to be yanked as integers(zero based)

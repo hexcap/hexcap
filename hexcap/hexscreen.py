@@ -23,6 +23,7 @@ import math
 import curses
 import locale
 import sys
+import time
 
 # hexcap specific imports
 import cfg
@@ -64,6 +65,9 @@ class HexScreen:
 
     # Flag is True if mini-buffer has focus
     self.mBufFocus = False
+
+    # Message to be printed to mBuf for one cycle and then cleared
+    self.mBufMsg = ''
 
     self.initCursor()
 
@@ -119,11 +123,13 @@ class HexScreen:
     if(curses.is_term_resized(self.maxY, self.maxX)):
       cfg.dbg("Caught resize event. Consider using immedok()")
       self.tearDown()
-    
+
     self.drawHeader()
-#    cfg.dbg("hexscreen.py refresh tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " maxX:" + str(self.maxX))
+    #    cfg.dbg("hexscreen.py refresh tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " maxX:" + str(self.maxX))
     self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
+
+    # Handle the mini-buffer
     if(self.mBufFocus):
       eStr = self.mBuf.exe()
       if(eStr):
@@ -134,6 +140,8 @@ class HexScreen:
         self.printToMBuf(self.mBuf.out())
         self.stdscr.move(self.maxY - 1, self.mBuf.cX)
     else:
+      self.printToMBuf(self.mBufMsg)
+      self.mBufMsg = ''
       self.stdscr.move(self.cY, self.cX)
 
     self.refreshBoldPacket()
@@ -642,14 +650,14 @@ class HexScreen:
   def toggleMBuf(self):
     if(self.mBufFocus):
       self.mBufFocus = False
-      self.printToMBuf('')
+      self.printToMBuf()
       del self.mBuf
     else:
       self.mBuf = minibuffer.MiniBuffer()
       self.mBufFocus = True
 
-  # Prints text to the mini-buffer 
-  def printToMBuf(self, s):
+  # Prints text to the mini-buffer
+  def printToMBuf(self, s=''):
     if(len(s.strip()) > 0):
       self.stdscr.addstr(self.maxY - 1, 0, s.strip()[:self.maxX])
       self.stdscr.hline(self.maxY - 1, len(s.strip()), " ", self.maxX)
