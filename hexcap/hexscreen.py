@@ -23,7 +23,6 @@ import math
 import curses
 import locale
 import sys
-import time
 
 # hexcap specific imports
 import cfg
