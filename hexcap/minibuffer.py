@@ -56,7 +56,7 @@ class MiniBuffer:
   cmds = {
     'set-pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]],
     'set-pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000-1500']]],
-    'save-to-file' : ['self.cap.saveTo()', [['s', '^[\w.-_=+,!:%@]*$']]],
+    'save-as' : ['self.cap.saveAs()', [['s', '^[\w.-_=+,!:%@]*$']]],
     'set-pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70'], ['i', '1000-1500']]],
     'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],

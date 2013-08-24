@@ -81,7 +81,7 @@ class Capture:
       
   # Changes our save file to passed arg and then saves to it
   # Raises IOError if problems
-  def saveTo(self, name):
+  def saveAs(self, name):
     try:
       f = open(name, 'wb')
     except:
