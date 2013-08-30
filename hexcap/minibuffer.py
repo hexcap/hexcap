@@ -52,11 +52,14 @@ class MiniBuffer:
    Where type can be either s(string) or i(integer)
    if type=='s' then desc is a regexp that must match
    if type=='i' then desc is a range given as 'min-max' inclusive
+
+   Do NOT make keys where (keyX.startswith(keyY) == True) for keys keyX and keyY
    '''
   cmds = {
     'set-pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]],
     'set-pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000-1500']]],
-    'save-as' : ['self.cap.saveAs()', [['s', '^[\w.-_=+,!:%@]*$']]],
+    'save-as-file' : ['self.cap.saveAs()', [['s', '^[\w.-_=+,!:%@]*$']]],
+    'save-file' : ['self.cap.save()', []],
     'set-pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70'], ['i', '1000-1500']]],
     'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],
@@ -101,17 +104,21 @@ class MiniBuffer:
   def exe(self):
     if(len(self.func) == 0):
       return None
-    elif(len(self.args) == len(self.cmds[self.func][1])):
-      cmd = self.cmds[self.func][0]
-      if(cmd.endswith("()")):
-        rv = cmd.rstrip(")")
-        for a in self.args:
-          rv += a + ","
-        return rv.rstrip(",") + ")"
-      else:
-        return cmd + self.args.pop()
     else:
-      return None
+      if(len(self.args) == len(self.cmds[self.func][1])):
+        if(len(self.cmds[self.func][1]) == 0):
+          return self.cmds[self.func][0]
+        else:
+          cmd = self.cmds[self.func][0]
+          if(cmd.endswith("()")):
+            rv = cmd.rstrip(")")
+            for a in self.args:
+              rv += a + ","
+            return rv.rstrip(",") + ")"
+          else:
+            return cmd + self.args.pop()
+      else:
+        return None
 
   # Top-level input
   def input(self, c):
@@ -154,8 +161,10 @@ class MiniBuffer:
     if(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
       if(self.buf in self.cmds):
         self.func = self.buf
-        self.buf += ":"
-        self.argPrompt = self.buf
+        if(self.cmds[self.buf][1]):
+          self.buf += ":"
+          self.argPrompt = self.buf
+
         self.cX = len(self.buf)
       else:
         self.msg = self.buf + "   [Unknown Command]"
