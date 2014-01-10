@@ -1,0 +1,91 @@
+.\" Manpage for hexcap.
+.\" Contact andrewm@ischool.berkeley.edu to correct errors or typos.
+.TH man 8 "09 Jan 2014" "0.1" "hexcap man page"
+
+.SH NAME
+hexcap \- An hex editor for libpcap files.
+
+.SH SYNOPSIS
+hexcap 
+.I
+filename
+
+.SH DESCRIPTION
+hexcap is an interactive hex editor for libpcap files.  It can be used to edit individual packets within a libpcap file.  It is different from other hex editors because it is protocol aware.  Currently hexcap supports the following network protocols:Ethernet(802.2, 802.3, Ethernet II, SNAP), 802.1q, Cisco Discovery Protocol(CDP), Extreme Networks Discovery Protocol(EDP), Spanning Tree Protocol, ARP, IPv4, IPv6, IGMPv1, IGMPv2, ICMP, UDP, and TCP.  Currently hexcap does not support libpcapng.
+
+.SH OPTIONS
+hexcap has no command line options.
+
+.SH EDITOR
+Once the editor has been invoked the following commands are available.
+
+.TP 12
+Ctrl-A - Goto beginning of line
+.TP
+Ctrl-B - Page Up
+.TP
+Ctrl-F - Page Down
+.TP
+Ctrl-E - Goto end of line
+.TP
+Ctrl-K - Yank single packet
+.TP
+Ctrl-N - Toggle Navigate/Insert modes
+.TP
+Ctrl-Q - Quit
+.TP
+Ctrl-R - Reread file from disk.
+.TP
+Ctrl-S - Save file
+.TP
+Ctrl-W - Yank packet(s)
+.TP
+Ctrl-X - Toggle mini-buffer focus. See the MINI-BUFFER section for a full list of supported commands.
+.TP
+Ctrl-Y - Paste packet(s)
+.TP
+Ctrl-Z - Show/Hide the current column
+.TP
+Ctrl-SPACEBAR - Set mark
+.TP
+< - Move left one column.
+.TP
+> - Move right one column.
+.TP
+The arrow keys navigate the screen.  In Insert mode, [1-9,a-f] change values.  The editor has modes Navigate and Insert.  Values may only be changed in Insert mode.
+
+.SH MINI-BUFFER
+.TP 12
+The mini-buffer allows invocation of more complex editing commands and supports TAB completion.  
+.TP
+Ctrl-X - Toggle mini-buffer focus.
+.TP
+q - Toggle mini-buffer focus.
+.TP
+set-pkt-min-size - Set minTU
+.TP
+set-pkt-max-size - Set maxTU aka MTU
+.TP
+save-as-file - Save to a new file and continue working on new file
+.TP
+save-file - Save current file
+.TP
+set-pkt-size-range - Set both minTU and maxTU
+.TP
+append-layer - Not yet implemented
+.TP
+insert-layer - Not yet implemented
+.TP
+delete-layer - Not yet implemented
+
+.SH SEE ALSO
+tcpdump(8), tcpreplay(1), wireshark(1)
+
+.SH BUGS
+No known bugs, but probably some unknown ones.
+
+.SH AUTHOR
+Andrew McConachie (andrewm@ischool.berkeley.edu)
+
+
+
