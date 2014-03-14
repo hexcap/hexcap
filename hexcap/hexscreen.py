@@ -807,6 +807,14 @@ class HexScreen:
     self.drawPpads()
     self.refresh()
 
+  # Yanks a single packet to clipboard
+  def yankPacket(self):
+    self.cap.yank(self.ppadCY, self.ppadCY)
+    
+    self.resetCursor()
+    self.drawPpads()
+    self.refresh()
+
   def paste(self):
     if(len(self.cap.clipboard) == 0):
       return

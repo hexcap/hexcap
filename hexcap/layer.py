@@ -30,7 +30,7 @@ from collections import OrderedDict
 
 class Layer:
   RO = False # Is this layer read-only?
-  exposed = False # Is this layer exposed
+  exposed = True # Is this layer exposed
   exposable = True # Can the exposed boolean be toggled?
 
   # Convert int to hex without leading 0x
@@ -91,7 +91,6 @@ class Layer:
 class PktID(Layer):
   ID = "pid"
   RO = True
-  exposed = True
   exposable = False
   position = 0
   

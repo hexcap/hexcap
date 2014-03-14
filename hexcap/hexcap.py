@@ -146,10 +146,10 @@ while True:
         elif(curses.keyname(c) == '^Y'): # Paste packet(s)
           mainScr.paste()
 
-        elif(curses.keyname(c) == '^W'): # Yank packets
+        elif(curses.keyname(c) == '^W'): # Yank packet(s)
           mainScr.yank()
 
-        elif(curses.keyname(c) == '^K'): # Yank packet
+        elif(curses.keyname(c) == '^K'): # Yank single packet
           mainScr.yankPacket()
 
         elif(curses.keyname(c) == '^Q' or curses.keyname(c) == 'q'): # Quit
