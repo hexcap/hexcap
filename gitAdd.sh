@@ -21,7 +21,24 @@ do
   /usr/bin/git add $BDIR/hexcap/traces/$F
 done
 
-for F in __init__.py stp.py ethernet.py igmp.py dot1q.py edp.py llc.py
+# Grab all of dpkt except .pyc files  
+for F in `ls $BDIR/dpkt-read-only/`
+do
+  /usr/bin/git add $BDIR/dpkt-read-only/$F
+done
+
+for F in `ls $BDIR/dpkt-read-only/dpkt/|grep .py`
 do
   /usr/bin/git add $BDIR/dpkt-read-only/dpkt/$F
 done
+
+for F in `ls $BDIR/dpkt-read-only/tests/`
+do
+  /usr/bin/git add $BDIR/dpkt-read-only/tests/$F
+done
+
+for F in `ls $BDIR/dpkt-read-only/examples/`
+do
+  /usr/bin/git add $BDIR/dpkt-read-only/examples/$F
+done
+
