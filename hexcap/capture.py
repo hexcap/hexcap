@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 import sys
 sys.path.insert(0, '../dpkt-read-only/')
 import dpkt
+from os import path as osp
 
 # hexcap specific imports
 import cfg
@@ -80,12 +81,20 @@ class Capture:
       f.close()
       
   # Changes our save file to passed arg and then saves to it
+  # We don't create directories, only files if they do not exist
   # Raises IOError if problems
   def saveAs(self, name):
+    name = name.strip()
+
+    # Check that directory exists
+    if(name.split("/")):
+      if(not osp.isdir(osp.split(name)[0])):
+        return "Error:Directory does not exist"
+
     try:
       f = open(name, 'wb')
     except:
-      raise IOError
+      return "Error:Cannot open file"
     else:
       f.close()
       self.fName = name

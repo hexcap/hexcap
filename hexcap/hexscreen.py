@@ -683,7 +683,9 @@ class HexScreen:
   # Properly exits if exception raised
   def genericTry(self, s):
     try:
-      eval(s)
+      rv = eval(s)
+      if(rv):
+        self.printToMBuf(rv)
     except:
       curses.echo()
       curses.endwin()
