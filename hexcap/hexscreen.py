@@ -341,20 +341,6 @@ class HexScreen:
   # Takes a y value and list of cells that correlates to our global header list
   # cfg.dbg("drawPktLine y:" + str(y) + " pid:" + str(row['pid']['pid']) + " bold:" + str(bold) + " rev:" + str(reverse))
   def drawPktLine(self, y, row, bold=False, reverse=False):
-    if("unsupported" in row): # If packet is unsupported we only print the pid and tstamp
-      msg = ''
-      decr = 0
-      if(self.sections[0].exposed):
-        msg += row['pid']['pid'] + "|"
-        decr += self.sections[0].width
-      if(self.sections[1].exposed):
-        msg += row['tstamp']['tstamp'] + "|" 
-        decr += self.sections[1].width
-
-      msg += "<<Unsupported>>".center(self.tableWidth - decr - 1) + "|"
-      self.ppad.addstr(y, 0, msg)
-      return
-
     x = 0
     for s in self.sections:
       if(s.visible):
@@ -826,26 +812,3 @@ class HexScreen:
     self.resetCursor()
     self.drawPpads()
     self.refresh()
-
-  '''
-  DEPRECATED
-  def hideSection(self):
-    if(len(self.displayedSections) > 1):
-      s = self.cursorSection(self.cX)
-      s.visible = False
-      s.exposed = False
-      self.hiddenSectIDs.append(s.ID)
-      self.drawPpads()
-      self.cX = min(self.cX, self.tableWidth - 2)
-      self.refresh()
-
-  def unhideLastSection(self):
-    if(len(self.hiddenSectIDs) > 0):
-      sectId = self.hiddenSectIDs.pop()
-      for s in self.sections:
-        if(s.ID == sectId):
-          s.visible = True
-          self.cX = self.sectionCenter(sectId)
-      self.drawPpads()
-      self.refresh()
-  '''

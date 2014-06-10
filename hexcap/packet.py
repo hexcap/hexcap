@@ -26,7 +26,6 @@ import layer
 
 class Packet:
   def __init__(self, ts, packet, pid):
-    self.unsupported = False
     self.layers = []
     self.layers.append(layer.PktID(pid))
     self.layers.append(layer.TStamp(ts))
@@ -120,10 +119,11 @@ class Packet:
       self.unsupport(d)
       return
 
-  # Mark a packet as unsupported and save the leftovers
+  # Catchall function for unsupported protocols
+  # If we find an unsupported protocol we end up here
+  # Just save the leftovers in one generic layer
   def unsupport(self, d):
-    self.unsupported = True
-    self.leftovers = d
+    self.layers.append(layer.Leftovers(d))
   
   # Sets the value of section,column to val
   def setColumn(self, sid, col, val):
@@ -165,11 +165,8 @@ class Packet:
         rv = lay.toPcap()
       else:
         rv = self.pushDpktLayer(rv, lay.toPcap())
-    if(self.unsupported):
-      rv = self.pushDpktLayer(rv, self.leftovers)
-      return rv
-    else:
-      return self.sizePkt(rv)
+
+    return self.sizePkt(rv)
 
   # Totally unpythonic but don't care
   # Takes a dpktObj and pushes a new layer onto it
@@ -207,12 +204,6 @@ class Packet:
 
   def out(self):
     rv = dict()
-    if(self.unsupported):
-      rv['pid'] = self.layers[0].vals
-      rv['tstamp'] = self.layers[1].vals
-      rv['unsupported'] = True
-      return rv
-
     for lay in self.layers:
       rv[lay.ID] = lay.vals
     return rv

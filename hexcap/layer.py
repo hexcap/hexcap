@@ -87,7 +87,7 @@ class Layer:
   def __str__(self):
     return self.__repr__()
 
-# Holds the packet ID ano nothing more
+# Holds the packet ID and nothing more
 class PktID(Layer):
   ID = "pid"
   RO = True
@@ -125,6 +125,33 @@ class TStamp(Layer):
 
   def toPcap(self):
     return float(self.vals['tstamp'])
+
+# A layer to hold our unsupported protocol components
+class Leftovers(Layer):
+  ID = "Undefined"
+  RO = True # For now, undefined layers are Read-Only
+  position = 99
+  uWidth = 20 # Somewhat arbitrary width in nibbles
+  dotWidth = 2 # How many trailing dots?
+
+  cols = OrderedDict() 
+  cols['udefined'] = uWidth
+
+  def __init__(self, data):
+    self.data = data # We store the actual data here
+    self.vals = dict()
+
+    s = self.pcapToHexStr(data.pack(), ":", len(data.pack()))
+    if(s > self.uWidth):
+      s = s[:self.uWidth - self.dotWidth]
+      for ii in xrange(self.dotWidth):
+        s += "."
+      self.vals['udefined'] = s
+    else:
+      self.vals['udefined'] = s.ljust(self.uWidth, "x")
+
+  def toPcap(self):
+    return self.data
 
 # Our generic ethernet class
 class Ethernet(Layer):
@@ -222,6 +249,7 @@ class EthernetSNAP(Ethernet):
     rv.plen = self.vals['plen']
     return rv
 
+# IEEE 802.1q
 class Dot1q(Layer):
   ID = "802.1q"
   position = 20
@@ -253,6 +281,7 @@ class Dot1q(Layer):
     else:
       self.vals[col] = val
 
+# Cisco Discovery Protocol
 class CDP(Layer):
   ID = "cdp"
   position = 20
@@ -274,6 +303,7 @@ class CDP(Layer):
     rv.data = self.vals['data']
     return rv
 
+# Extreme Discovery Protocol
 class EDP(Layer):
   ID = "edp"
   position = 20
@@ -305,6 +335,7 @@ class EDP(Layer):
     rv.data = self.vals['data']
     return rv
 
+# Spanning Tree Protocol
 class STP(Layer):
   ID = "stp"
   position = 30
@@ -352,6 +383,7 @@ class STP(Layer):
     rv.data = self.vals['data']
     return rv
 
+# Adress Resolution Protocol for IPv4
 # Assumptions
 # HTYPE == 1(Ethernet)
 # PTYPE == 0x0800(IPv4)
@@ -383,6 +415,7 @@ class ARP(Layer):
     rv.tpa = self.hexStrToPcap(self.vals['tpa'], ".")
     return rv
 
+# Internet Protocol version 4
 class IPv4(Layer):
   ID = "ipv4"
   position = 40
@@ -422,6 +455,7 @@ class IPv4(Layer):
     rv.opts = self.vals['opts']
     return rv
 
+# Internet Protocol Version 6
 class IPv6(Layer):
   ID = "ipv6"
   position = 40
@@ -461,6 +495,8 @@ class IPv6(Layer):
 
     return rv
 
+# Internet Group Management Protocol v1/v2
+# We do not currently support v3
 class IGMP(Layer):
   ID = "igmp"
   position = 50
@@ -483,6 +519,7 @@ class IGMP(Layer):
     rv.group = self.hexStrToPcap(self.vals['group'], ".")
     return rv
 
+# Internet Control Message Protocol
 # Assumes ICMP type is either 0 or 8(echo or echo_reply)
 class ICMP(Layer):
   ID = "icmp"
@@ -509,6 +546,7 @@ class ICMP(Layer):
     rv.data.data = self.vals['data']
     return rv
 
+# User Datagram Protocol
 class UDP(Layer):
   ID = "udp"
   position = 50  
@@ -533,6 +571,7 @@ class UDP(Layer):
     rv.data = self.vals['data']
     return rv
 
+# Transport Control Protocol
 class TCP(Layer):
   ID = "tcp"
   position = 50
@@ -576,6 +615,7 @@ class TCP(Layer):
     rv.off = self.vals['off']
     return rv
 
+# These tests are horribly outdated and unmaintained
 # Run through some tests for our Layers
 # Takes a capture file
 def test(cap):

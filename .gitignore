@@ -1,0 +1,4 @@
+*.pyc
+bin/hexcap
+hexcap/hexcap.log
+
