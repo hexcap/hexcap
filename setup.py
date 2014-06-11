@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+'''
+Copyright (c) 2014, Andrew McConachie <smutt@depht.com>
+All rights reserved.
+'''
+
 from distutils.core import setup
 import hexcap
 import dpkt-read-only/dpkt
