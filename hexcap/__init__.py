@@ -2,9 +2,9 @@
 
 __author__ = 'Andrew McConachie'
 __author_email__ = 'smutt@depht.com'
-__copyright__ = 'Copyright (c) 2013 Andrew McConachie'
-__license__ = 'GPLv2'
-__url__ = 'https://github.com/smutt/hexcap/'
+__copyright__ = 'Copyright (c) 2014 Andrew McConachie'
+__license__ = 'BSD'
+__url__ = 'https://github.com/hexcap/hexcap/'
 __version__ = '0.1'
 
 import cfg

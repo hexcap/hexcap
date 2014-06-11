@@ -6,7 +6,7 @@ All rights reserved.
 '''
 
 import sys
-sys.path.insert(0, '../dpkt-read-only/')
+sys.path.insert(0, '../dpkt/')
 import dpkt
 from os import path as osp
 
