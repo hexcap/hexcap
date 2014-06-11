@@ -5,9 +5,11 @@ Copyright (c) 2014, Andrew McConachie <smutt@depht.com>
 All rights reserved.
 '''
 
+# TODO: Import py-libdnet
+
 from distutils.core import setup
 import hexcap
-import dpkt-read-only/dpkt
+import dpkt/dpkt
 
 setup(name = 'hexcap',
       version = hexcap.__version__,
