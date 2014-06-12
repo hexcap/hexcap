@@ -25,13 +25,16 @@ class Capture:
 
     # Set our default ethernet device
     # TODO: Need more OS's here
-    osType = os.uname()[0].lower()
-    if(osType == "openbsd"):
-      self.ifName = "em0"
-    elif(osType == "linux"):
-      self.ifName = "eth0"
+    if(os.getuid() or os.geteuid()):
+      self.ifName = None
     else:
-      self.ifName = "bme0"
+      osType = os.uname()[0].lower()
+      if(osType == "openbsd"):
+        self.ifName = "em0"
+      elif(osType == "linux"):
+        self.ifName = "eth0"
+      else:
+        self.ifName = "hme0" # Old skool Solaris
 
     self.read(f)
 
