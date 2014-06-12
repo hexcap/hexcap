@@ -154,10 +154,27 @@ class Capture:
     self.ifName = name
 
   # Send the entire capture
-  # Takes an iterator for number of iterations to send capture
-  def sendAll(self, ii):
+  # Takes number of iterations to send capture
+  # Returns err msg on failure, num pkts sent msg on success
+  def sendAll(self, iterations):
     if(os.getuid() or os.geteuid()):
       return "Error:Requires root access"
+
+    fail = False
+    pktSent = 0
+    iface = deth(self.ifName)
+
+    for ii in xrange(iterations):
+      for pkt in self.packets:
+        if(iface.send(str(pkt.data())) == -1):
+          fail = True
+        else:
+          pktSent += 1
+          
+    if(fail):
+      return "Error:One or more packets failed to send"
+    else:
+      return str(pktSent) + " packets egressed " + self.ifName
 
   # get and set for minSize of every packet in capture
   def _get_minPktSize(self):

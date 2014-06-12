@@ -49,7 +49,7 @@ class MiniBuffer:
     'save-file' : ['self.cap.save()', []],
     'set-pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70'], ['i', '1000-1500']]],
     'set-interface' : ['self.cap.setInterface()', [['s', '^[\w.-_=+,!:%@]*$']]],
-    'send-all' :  ['self.cap.sendAll()', []]
+    'send-all' : ['self.cap.sendAll()', [['i', '1-999']]]
 
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],
