@@ -429,6 +429,13 @@ class HexScreen:
     self.stdscr.addstr(y, x, txt)
     x += len(txt)
 
+    self.stdscr.hline(y, x, "-", divider)
+    x += divider
+
+    txt = "[" + self.cap.ifName + "]"
+    self.stdscr.addstr(y, x, txt)
+    x += len(txt)
+
     if(self.tableWidth > x):
       self.stdscr.hline(y, x, "-", self.tableWidth - x)
 

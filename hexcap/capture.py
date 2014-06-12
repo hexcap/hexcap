@@ -8,7 +8,8 @@ All rights reserved.
 import sys
 sys.path.insert(0, '../dpkt/')
 import dpkt
-from os import path as osp
+import os
+from dnet import eth as deth
 
 # hexcap specific imports
 import cfg
@@ -21,6 +22,17 @@ class Capture:
     self.clipboard = [] # Our buffer for yanking and pasting
     if(len(name) > 0):
       self.fName = name
+
+    # Set our default ethernet device
+    # TODO: Need more OS's here
+    osType = os.uname()[0].lower()
+    if(osType == "openbsd"):
+      self.ifName = "em0"
+    elif(osType == "linux"):
+      self.ifName = "eth0"
+    else:
+      self.ifName = "bme0"
+
     self.read(f)
 
   # Reads a filehandle to a pcap file
@@ -75,7 +87,7 @@ class Capture:
 
     # Check that directory exists
     if(name.split("/")):
-      if(not osp.isdir(osp.split(name)[0])):
+      if(not os.path.isdir(os.path.split(name)[0])):
         return "Error:Directory does not exist"
 
     try:
@@ -119,6 +131,31 @@ class Capture:
         if(lay.ID == 'pid'):
           lay.setColumn('pid', ii + 1)
 
+  # Sets the interface for sending and capturing
+  def setInterface(self, name):
+    name = name.strip()
+
+    if(os.getuid() or os.geteuid()):
+      return "Error:Requires root access"
+
+    try:
+      iface = deth(name)
+    except:
+      return "Error:Interface does not exist"
+
+    try:
+      iface.get()
+    except:
+      return "Error:Interface has no MAC"
+
+    self.ifName = name
+
+  # Send the entire capture
+  # Takes an iterator for number of iterations to send capture
+  def sendAll(self, ii):
+    if(os.getuid() or os.geteuid()):
+      return "Error:Requires root access"
+
   # get and set for minSize of every packet in capture
   def _get_minPktSize(self):
     rv = self.packets[0].minSize
@@ -126,6 +163,7 @@ class Capture:
       if(rv > pkt.minSize):
         rv = pkt.minSize
     return rv
+
   def _set_minPktSize(self, s):
     for pkt in self.packets:
       pkt.minSize = s
@@ -138,6 +176,7 @@ class Capture:
       if(rv < pkt.maxSize):
         rv = pkt.maxSize
     return rv
+
   def _set_maxPktSize(self, s):
     for pkt in self.packets:
       pkt.maxSize = s
