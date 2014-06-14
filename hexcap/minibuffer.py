@@ -43,14 +43,15 @@ class MiniBuffer:
    Do NOT make keys where (keyX.startswith(keyY) == True) for keys keyX and keyY
    '''
   cmds = {
-    'pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]],
+    'pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]], # Couldn't get property set to work here
     'pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000-1500']]],
     'pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70'], ['i', '1000-1500']]],
     'interface' : ['self.cap.setInterface()', [['s', '^[\w.-_=+,!:%@]*$']]],
-    'save-as-file' : ['self.cap.saveAs()', [['s', '^[\w.-_=+,!:%@]*$']]],
     'save-file' : ['self.cap.save()', []],
-    'send-all' : ['self.cap.sendAll()', [['i', '1-999']]],
-    'send-pkt' : ['self.cap.sendPkt(self.ppadCY,)', [['i', '1-999']]]
+    'save-as-file' : ['self.cap.saveAs()', [['s', '^[\w.-_=+,!:%@]*$']]],
+    'send-all' : ['self.cap.sendRange(1,len(self.cap),)', [['i', '1-999']]],
+    'send-pkt' : ['self.cap.sendRange(self.ppadCY+1,self.ppadCY+1,)', [['i', '1-999']]],
+    'send-range' : ['self.cap.sendRange()', [['i', '1-999'], ['i', '1-999'], ['i', '1-999']]]
 
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],
@@ -62,6 +63,7 @@ class MiniBuffer:
     self.func = ''
     self.args = []
     self.resetPrompt()
+    self.tabOptions = 5 # How many options to display with tab completion?
 
   def __del__(self):
     pass
@@ -183,14 +185,18 @@ class MiniBuffer:
               self.cX = len(self.buf)
               brk = True
 
+        opts.sort()
         msg = self.buf + "   ["
         for ii in xrange(len(opts)):
-          if(ii == 2):
+          if((ii == self.tabOptions - 1) and (len(opts) > self.tabOptions)):
             msg += opts[ii] + "|..."
+            break
+          elif(ii == self.tabOptions - 1):
+            msg += opts[ii]
             break
           else:
             msg += opts[ii] + "|"
-        self.msg = msg.rstrip("|")+ "]"
+        self.msg = msg.rstrip("|") + "]"
 
   # Handles gathering of arguments for chosen function
   def inputArgs(self, c):
@@ -210,6 +216,7 @@ class MiniBuffer:
             self.args.append(str(arg))
           else:
             self.msg = self.buf + "   [Out of Range " + str(rMin) + "-" + str(rMax) + "]"
+            return
 
       elif(argDef[0] == 's'):
         reg = re.compile(argDef[1])
@@ -221,5 +228,6 @@ class MiniBuffer:
     if(len(self.args) == len(self.cmds[self.func][1])):
       self.resetPrompt()
     else:
+      self.argPrompt += self.args[-1] + " :"
       self.buf = self.argPrompt
-      self.cX = len(self.argPrompt)
+      self.cX = len(self.buf)

@@ -30,7 +30,7 @@ class Capture:
     else:
       osType = os.uname()[0].lower()
       if(osType == "openbsd"):
-        self.ifName = "em0"
+        self.ifName = "em1"
       elif(osType == "linux"):
         self.ifName = "eth0"
       else:
@@ -57,6 +57,9 @@ class Capture:
         return False
     return True
   RW = property(_RW)
+
+  def __len__(self):
+    return len(self.packets)
 
   # For debugging only
   def dump(self):
@@ -136,6 +139,12 @@ class Capture:
         if(lay.ID == 'pid'):
           lay.setColumn('pid', ii + 1)
 
+  # Sets both min and max pkt size
+  def setPktSizeRange(self, pktMin, pktMax):
+    cfg.dbg("setPktSizeRange:" + str(pktMin) + " " + str(pktMax))
+    self.minPktSize = pktMin
+    self.maxPktSize = pktMax
+
   # Sets the interface for sending and capturing
   def setInterface(self, name):
     name = name.strip()
@@ -156,43 +165,55 @@ class Capture:
     self.ifName = name
     self.iface = deth(self.ifName)
 
-  # Send the entire capture
-  # Takes number of iterations to send capture
-  # Returns err msg on failure, num pkts sent msg on success
-  def sendAll(self, iterations):
-    if(os.getuid() or os.geteuid()):
-      return "Error:Requires root access"
-
-    fail = False
-    pktSent = 0
-
-    for ii in xrange(iterations):
-      for pkt in self.packets:
-        if(self.iface.send(str(pkt.data())) == -1):
-          fail = True
-        else:
-          pktSent += 1
-          
-    if(fail):
-      return "Error:One or more packets failed to send"
+  # Private function for sending a single packet
+  # Takes a packet object to send
+  # Returns True on success and false on failure
+  def _sendPkt(self, pkt):
+    if(self.iface.send(str(pkt.data())) == -1):
+      return False
     else:
-      return str(pktSent) + " packets egressed " + self.ifName
+      return True
 
-  # Sends a single packet
-  # Takes id of pkt and iterations to send it
-  def sendPkt(self, pkt, iterations):
+  # Sends an inclusive range of packets
+  # Takes first pkt ID, last pkt ID and iterations to send it
+  # Passed pkt IDs are one's based from user's perspective
+  # Returns err msg on failure, num pkts sent msg on success
+  def sendRange(self, first, last, iterations):
     if(os.getuid() or os.geteuid()):
       return "Error:Requires root access"
 
     fail = False
     pktSent = 0
 
+    # Convert from user's 1-based numbering to our 0-based numbering, and handle bad user input
+    first -= 1
+    last -= 1
+
+    if(first <= last): # User wants normal ordering
+      if(first < 0):
+        first = 0
+      if(last > len(self.packets) - 1):
+        last =  len(self.packets) - 1
+      pkts = []
+      for jj in xrange(first, last+1):
+        pkts.append(jj)
+
+    else: # User wants reverse ordering
+      if(last < 0):
+        last = 0
+      if(first > len(self.packets) - 1):
+        first =  len(self.packets) - 1
+      pkts = []
+      for jj in xrange(first, last-1, -1):
+        pkts.append(jj)
+
     for ii in xrange(iterations):
-      if(self.iface.send(str(self.packets[pkt].data())) == -1):
-        fail = True
-      else:
-        pktSent += 1
-          
+      for jj in pkts:
+        if(self._sendPkt(self.packets[jj])):
+          pktSent += 1
+        else:
+          fail = True
+        
     if(fail):
       return "Error:One or more packets failed to send"
     else:
@@ -200,6 +221,7 @@ class Capture:
 
   # get and set for minSize of every packet in capture
   def _get_minPktSize(self):
+    cfg.dbg("_get_minPktSize:")
     rv = self.packets[0].minSize
     for pkt in self.packets:
       if(rv > pkt.minSize):
@@ -207,6 +229,7 @@ class Capture:
     return rv
 
   def _set_minPktSize(self, s):
+    cfg.dbg("_set_minPktSize:" + str(s))
     for pkt in self.packets:
       pkt.minSize = s
   minPktSize = property(_get_minPktSize, _set_minPktSize)
