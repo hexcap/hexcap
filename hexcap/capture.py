@@ -36,6 +36,8 @@ class Capture:
       else:
         self.ifName = "hme0" # Old skool Solaris
 
+      self.iface = deth(self.ifName)
+
     self.read(f)
 
   # Reads a filehandle to a pcap file
@@ -152,6 +154,7 @@ class Capture:
       return "Error:Interface has no MAC"
 
     self.ifName = name
+    self.iface = deth(self.ifName)
 
   # Send the entire capture
   # Takes number of iterations to send capture
@@ -162,14 +165,33 @@ class Capture:
 
     fail = False
     pktSent = 0
-    iface = deth(self.ifName)
 
     for ii in xrange(iterations):
       for pkt in self.packets:
-        if(iface.send(str(pkt.data())) == -1):
+        if(self.iface.send(str(pkt.data())) == -1):
           fail = True
         else:
           pktSent += 1
+          
+    if(fail):
+      return "Error:One or more packets failed to send"
+    else:
+      return str(pktSent) + " packets egressed " + self.ifName
+
+  # Sends a single packet
+  # Takes id of pkt and iterations to send it
+  def sendPkt(self, pkt, iterations):
+    if(os.getuid() or os.geteuid()):
+      return "Error:Requires root access"
+
+    fail = False
+    pktSent = 0
+
+    for ii in xrange(iterations):
+      if(self.iface.send(str(self.packets[pkt].data())) == -1):
+        fail = True
+      else:
+        pktSent += 1
           
     if(fail):
       return "Error:One or more packets failed to send"

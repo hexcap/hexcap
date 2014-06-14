@@ -33,7 +33,7 @@ class MiniBuffer:
    key = mini-buffer command, val = fList
    flist is eval()'d in the context of parent object
    Where fList takes the form [cmd, [argList]]
-   If cmd.endswitch("()") then it is interpreted as a function call
+   If cmd.endswitch(")") then it is interpreted as a function call
    If cmd.endswitch("=") then it is interpreted as an attribute
    argList is a list of 2 string pairs [type, desc]
    Where type can be either s(string) or i(integer)
@@ -43,13 +43,14 @@ class MiniBuffer:
    Do NOT make keys where (keyX.startswith(keyY) == True) for keys keyX and keyY
    '''
   cmds = {
-    'set-pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]],
-    'set-pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000-1500']]],
+    'pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]],
+    'pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000-1500']]],
+    'pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70'], ['i', '1000-1500']]],
+    'interface' : ['self.cap.setInterface()', [['s', '^[\w.-_=+,!:%@]*$']]],
     'save-as-file' : ['self.cap.saveAs()', [['s', '^[\w.-_=+,!:%@]*$']]],
     'save-file' : ['self.cap.save()', []],
-    'set-pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70'], ['i', '1000-1500']]],
-    'set-interface' : ['self.cap.setInterface()', [['s', '^[\w.-_=+,!:%@]*$']]],
-    'send-all' : ['self.cap.sendAll()', [['i', '1-999']]]
+    'send-all' : ['self.cap.sendAll()', [['i', '1-999']]],
+    'send-pkt' : ['self.cap.sendPkt(self.ppadCY,)', [['i', '1-999']]]
 
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],
@@ -100,7 +101,7 @@ class MiniBuffer:
           return self.cmds[self.func][0]
         else:
           cmd = self.cmds[self.func][0]
-          if(cmd.endswith("()")):
+          if(cmd.endswith(")")):
             rv = cmd.rstrip(")")
             for a in self.args:
               rv += a + ","
