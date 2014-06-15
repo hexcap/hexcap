@@ -8,7 +8,6 @@ All rights reserved.
 import re
 import curses
 import cfg
-import time
 
 # Implements a simple Emacs style mini-buffer
 class MiniBuffer:
