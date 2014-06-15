@@ -8,6 +8,7 @@ All rights reserved.
 import re
 import curses
 import cfg
+import time
 
 # Implements a simple Emacs style mini-buffer
 class MiniBuffer:
@@ -35,23 +36,25 @@ class MiniBuffer:
    Where fList takes the form [cmd, [argList]]
    If cmd.endswitch(")") then it is interpreted as a function call
    If cmd.endswitch("=") then it is interpreted as an attribute
-   argList is a list of 2 string pairs [type, desc]
-   Where type can be either s(string) or i(integer)
-   if type=='s' then desc is a regexp that must match
-   if type=='i' then desc is a range given as 'min-max' inclusive
+   argList is a list of 3 string pairs [type, desc, helpText]
+   -Where type can be either s(string) or i(integer)
+   --if type=='s' then desc is a regexp that must match
+   --if type=='i' then desc is a range given as 'min-max' inclusive
+   -Where desc is either regex for 's' OR a range for 'i'
+   -Where helpText is optional and shown when inputting, useful when multiple args present
 
    Do NOT make keys where (keyX.startswith(keyY) == True) for keys keyX and keyY
    '''
   cmds = {
     'pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]], # Couldn't get property set to work here
     'pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000-1500']]],
-    'pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70'], ['i', '1000-1500']]],
+    'pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70', ' min:'], ['i', '1000-1500', ' max:']]],
     'interface' : ['self.cap.setInterface()', [['s', '^[\w.-_=+,!:%@]*$']]],
     'save-file' : ['self.cap.save()', []],
     'save-as-file' : ['self.cap.saveAs()', [['s', '^[\w.-_=+,!:%@]*$']]],
-    'send-all' : ['self.cap.sendRange(1,len(self.cap),)', [['i', '1-999']]],
-    'send-pkt' : ['self.cap.sendRange(self.ppadCY+1,self.ppadCY+1,)', [['i', '1-999']]],
-    'send-range' : ['self.cap.sendRange()', [['i', '1-999'], ['i', '1-999'], ['i', '1-999']]]
+    'send-all' : ['self.cap.sendRange(1,len(self.cap),)', [['i', '1-999', ' repeat:']]],
+    'send-pkt' : ['self.cap.sendRange(self.ppadCY+1,self.ppadCY+1,)', [['i', '1-999', ' repeat:']]],
+    'send-range' : ['self.cap.sendRange()', [['i', '1-999', ' first:'], ['i', '1-999', ' last:'], ['i', '1-999', ' repeat:']]]
 
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],
@@ -75,6 +78,9 @@ class MiniBuffer:
 
     # Our X cursor position
     self.cX = 0
+
+    # The user chosen command from our dispatch table
+    self.cmdRef = None
 
     # Our prompt when awating arguments
     self.argPrompt = ''
@@ -154,8 +160,12 @@ class MiniBuffer:
     if(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
       if(self.buf in self.cmds):
         self.func = self.buf
+        self.cmdRef = self.cmds[self.func][1]
         if(self.cmds[self.buf][1]):
-          self.buf += ":"
+          if(len(self.cmdRef[0]) == 3): # Do we have helpText for our first arg?
+            self.buf += self.cmdRef[0][2]
+          else:
+            self.buf += ":"
           self.argPrompt = self.buf
 
         self.cX = len(self.buf)
@@ -204,7 +214,7 @@ class MiniBuffer:
     if(len(arg) < 1):
       return
 
-    argDef = self.cmds[self.func][1][len(self.args)]
+    argDef = self.cmdRef[len(self.args)]
     if(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
       if(argDef[0] == 'i'):
         if(arg.isdigit()):
@@ -228,6 +238,9 @@ class MiniBuffer:
     if(len(self.args) == len(self.cmds[self.func][1])):
       self.resetPrompt()
     else:
-      self.argPrompt += self.args[-1] + " :"
+      if(len(self.cmdRef[len(self.args)]) == 3): # Do we have helpText for our next arg?
+        self.argPrompt += self.args[-1] + self.cmdRef[len(self.args)][2]
+      else:
+        self.argPrompt += self.args[-1] + " :"
       self.buf = self.argPrompt
       self.cX = len(self.buf)

@@ -141,7 +141,6 @@ class Capture:
 
   # Sets both min and max pkt size
   def setPktSizeRange(self, pktMin, pktMax):
-    cfg.dbg("setPktSizeRange:" + str(pktMin) + " " + str(pktMax))
     self.minPktSize = pktMin
     self.maxPktSize = pktMax
 
@@ -221,7 +220,6 @@ class Capture:
 
   # get and set for minSize of every packet in capture
   def _get_minPktSize(self):
-    cfg.dbg("_get_minPktSize:")
     rv = self.packets[0].minSize
     for pkt in self.packets:
       if(rv > pkt.minSize):
@@ -229,7 +227,6 @@ class Capture:
     return rv
 
   def _set_minPktSize(self, s):
-    cfg.dbg("_set_minPktSize:" + str(s))
     for pkt in self.packets:
       pkt.minSize = s
   minPktSize = property(_get_minPktSize, _set_minPktSize)
