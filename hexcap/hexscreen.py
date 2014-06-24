@@ -122,6 +122,7 @@ class HexScreen:
         self.toggleMBuf()
         self.stdscr.move(self.cY, self.cX)
         self.genericTry(eStr)
+        self.refresh()
       else:
         self.printToMBuf(self.mBuf.out())
         self.stdscr.move(self.maxY - 1, self.mBuf.cX)
@@ -381,30 +382,22 @@ class HexScreen:
       else:
         continue
         
+  # Draws our footer
   def drawFooter(self):
     y = self.maxY - self.footerHeight
-    fName = "[" + self.cap.fName + "]"
+    x = 0
     divider = 3
-    posWidth = 6
 
-    self.stdscr.hline(y, 0, "-", divider)
-    x = divider
+    def addElement(sf):
+      self.stdscr.hline(y, x, "-", divider)
+      self.stdscr.addstr(y, x + divider, sf)
+      return divider + len(sf)
 
-    self.stdscr.addstr(y, x, fName)
-    x += len(fName)
+    x += addElement("[" + self.cap.fName + "]")
 
-    self.stdscr.hline(y, x, "-", divider)
-    x += divider
-
-    self.stdscr.addstr(y, x, "[x:" + str(self.ppadCX - cfg.pktIDWidth).rjust(3))
-    x += posWidth
-
-    txt = " p:" + str(self.ppadCY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
-    self.stdscr.addstr(y, x, txt)
-    x += len(txt)
-
-    self.stdscr.hline(y, x, "-", divider)
-    x += divider
+    txt = "[x:" + str(self.ppadCX - cfg.pktIDWidth).rjust(3)
+    txt += " p:" + str(self.ppadCY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
+    x += addElement(txt)
 
     if(self.mark):
       txt = "[MRK]"
@@ -412,11 +405,7 @@ class HexScreen:
       txt = "[INS]"
     else:
       txt = "[NAV]"
-    self.stdscr.addstr(y, x, txt)
-    x += len(txt)
-
-    self.stdscr.hline(y, x, "-", divider)
-    x += divider
+    x += addElement(txt)
 
     s,c = self.cursorColumn(self.cX)
     if(s.exposed):
@@ -426,17 +415,12 @@ class HexScreen:
         txt = "[" + s.ID + "/" + c + "/RW]"
     else:
       txt = "[" + s.ID + "/-/-]"
-    self.stdscr.addstr(y, x, txt)
-    x += len(txt)
+    x += addElement(txt)
 
     if(self.cap.ifName):
-      self.stdscr.hline(y, x, "-", divider)
-      x += divider
+      x += addElement("[" + self.cap.ifName + "]")
 
-      txt = "[" + self.cap.ifName + "]"
-      self.stdscr.addstr(y, x, txt)
-      x += len(txt)
-
+    # Claim remaining space
     if(self.tableWidth > x):
       self.stdscr.hline(y, x, "-", self.tableWidth - x)
 
