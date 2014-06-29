@@ -48,12 +48,14 @@ class MiniBuffer:
     'pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]], # Couldn't get property set to work here
     'pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000-1500']]],
     'pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70', ' min:'], ['i', '1000-1500', ' max:']]],
-    'interface' : ['self.cap.setInterface()', [['s', '^[\w.-_=+,!:%@]*$']]],
+    'interface' : ['self.cap.setInterface()', [['s', '^[\w]{2,}[0-9]{1,}$']]],
     'save-file' : ['self.cap.save()', []],
     'save-as-file' : ['self.cap.saveAs()', [['s', '^[\w.-_=+,!:%@]*$']]],
     'send-all' : ['self.cap.sendRange(1,len(self.cap),)', [['i', '1-999', ' repeat:']]],
     'send-pkt' : ['self.cap.sendRange(self.ppadCY+1,self.ppadCY+1,)', [['i', '1-999', ' repeat:']]],
-    'send-range' : ['self.cap.sendRange()', [['i', '1-999', ' first:'], ['i', '1-999', ' last:'], ['i', '1-999', ' repeat:']]]
+    'send-range' : ['self.cap.sendRange()', [['i', '1-999', ' first:'], ['i', '1-999', ' last:'], ['i', '1-999', ' repeat:']]],
+    'capture-all' : ['self.block(\'self.cap.capture()\',)', [['i', '1-999', ' count:']]],
+    'capture-filter' : ['self.block(\'self.cap.capture()\',)', [['i', '1-999', ' count:'], ['s', '^[\w. ]{0,}$', ' filter:']]]
 
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],
@@ -226,12 +228,18 @@ class MiniBuffer:
           else:
             self.msg = self.buf + "   [Out of Range " + str(rMin) + "-" + str(rMax) + "]"
             return
+        else:
+          self.msg = self.buf + "   [Bad Input]"
+          return
 
       elif(argDef[0] == 's'):
         reg = re.compile(argDef[1])
         match = reg.match(arg)
         if(match.span()[1] == len(arg)):
           self.args.append("\'" + str(arg) + "\'")
+        else:
+          self.msg = self.buf + "   [Bad Input]"
+          return
 
     # Are we done collecting args
     if(len(self.args) == len(self.cmds[self.func][1])):

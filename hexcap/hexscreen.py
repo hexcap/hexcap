@@ -656,6 +656,29 @@ class HexScreen:
       curses.endwin()
       raise
 
+  # Blocks until passed function returns or ESC is pressed
+  # Takes function and variable length args for that function
+  def block(self, f, *args):
+    if(len(args) > 0):
+      f = f.strip(')')
+      for a in args:
+        if(isinstance(a, basestring)):
+          f += '\'' + a + '\'' + ','
+        else:
+          f += str(a) + ','
+
+      f = f.strip(',')
+      f += ')'
+
+    self.printToMBuf("Ctrl-C to break")
+    try:
+      cfg.dbg(f)
+      self.genericTry(f)
+      self.refresh()
+    except KeyboardInterrupt:
+      self.refresh()
+      return
+
   # Wrapper for packet ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):
     if(atr):
