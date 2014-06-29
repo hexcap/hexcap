@@ -219,11 +219,10 @@ class Capture:
       return str(pktSent) + " packets egressed " + self.ifName
 
   # Captures packets on configured interface
-  # Takes number of packets to capture and a tcpdump filter
+  # Takes number of packets to capture and a filter
   # Filt can be NULL
   def capture(self, count, *filt):
     return "derp"
-
 
   # get and set for minSize of every packet in capture
   def _get_minPktSize(self):
