@@ -663,36 +663,39 @@ class HexScreen:
   def capture(self, count, *filt):
     cfg.dbg("f_capture:" + str(count))
 
-    def tryCap():
-      capLen = len(self.cap)
-      try:
-        rv = self.cap.captureAppend()
-        if(rv != None):
-          self.printToMBuf(rv)
-          return
-      except KeyboardInterrupt:
-        return
-      if(capLen < len(self.cap)):
-        self.initPad(self.cap)
+    def end(): # Called before we return
+      self.initPad(self.cap)
+      self.refresh()
 
     if(count < 0): # This should never happen
       return
 
-    if(len(filt) > 0):
-      self.cap.filter = filt
-    elif(len(filt) > 1): # This should not happen
+    if(len(filt) == 1):
+      rv = self.cap.captureInit(filt[0])
+      if(rv != None):
+        self.printToMBuf(rv)
+        return
+    elif(len(filt) == 0):
+      rv = self.cap.captureInit('')
+      if(rv != None):
+        self.printToMBuf(rv)
+        return
+    else: # This should not happen
       return
 
     if(count == 0): # Continue until user breaks
-      self.printToMBuf("Ctrl-C to break")
+      self.printToMBuf("Ctrl-Q to break")
       while True:
-        tryCap()
-    else:
-      self.printToMBuf("Ctrl-C to break")
-      for ii in xrange(0, count):
-        tryCap()
+        self.cap.captureAppend()
+#        if(curses.keyname(self.getch()) == '^Q'):
+#          end()
+#          return
 
-    self.refresh()
+    else:
+      self.printToMBuf("Ctrl-Q to break")
+      for ii in xrange(0, count):
+        self.cap.captureAppend()
+      end()
 
   # Wrapper for ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):

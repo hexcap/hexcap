@@ -40,7 +40,6 @@ class Capture:
 
       self.iface = dnet.eth(self.ifName)
 
-    self.filter = '' # Init our configured BPF capture filter
     self.read(f) # Read in and initialize capture
 
   # Reads a filehandle to a pcap file
@@ -220,16 +219,10 @@ class Capture:
       return "Error:One or more packets failed to send"
     else:
       return str(pktSent) + " packets egressed " + self.ifName
-    
-  # Captures a single packet and appends it to capture
-  # Returns a string on failure and None on success
-  def captureAppend(self):
 
-    # Appends a packet to our capture
-    def appendPacket(hdr, pkt):
-      p = packet.Packet(time.time(), pkt, len(self.packets))
-      self.packets.append(p)
-
+  # Initializes our pcap capture object
+  # Returns a string on failure and None on success 
+  def captureInit(self, filt):    
     if(os.getuid() or os.geteuid()):
       return "Error:Requires root access"
 
@@ -237,16 +230,26 @@ class Capture:
       return "Error:Bad interface " + self.ifName
 
     # ifCap = pcap.open_live(self.ifName, dnet.intf().get(self.ifName)['mtu'], True, 10)
-    ifCap = pcap.open_live(self.ifName, 65536, True, 10)
-    if(ifCap.datalink() != pcap.DLT_EN10MB):
+    self.ifCap = pcap.open_live(self.ifName, 65536, True, 10)
+    if(self.ifCap.datalink() != pcap.DLT_EN10MB):
       return "Error:Interface not Ethernet " + self.ifName
 
-    ifCap.setfilter(self.filter)
-    cfg.dbg("Blocking:" + str(ifCap.getnonblock()))
-    cfg.dbg("ifType:" + str(ifCap.datalink()))
+    cfg.dbg(filt)
+    self.ifCap.setfilter(filt)
+    cfg.dbg("Blocking:" + str(self.ifCap.getnonblock()))
+    cfg.dbg("ifType:" + str(self.ifCap.datalink()))
+    return None
+    
+  # Captures a single packet and appends it to capture
+  # Must first call captureInit()
+  def captureAppend(self):
+    cfg.dbg("f_captureAppend" + " len:" + str(len(self.packets)))
+    def appendPacket(hdr, pkt): # Appends a packet to our capture
+      p = packet.Packet(time.time(), pkt, len(self.packets))
+      self.packets.append(p)
 
-    # ifCap.loop(1, lambda hdr,pkt: cfg.dbg("hdr:" + repr(hdr) + "pkt:" + repr(pkt)))
-    return ifCap.loop(1, appendPacket)
+    # self.ifCap.loop(1, lambda hdr,pkt: cfg.dbg("hdr:" + repr(hdr) + "pkt:" + repr(pkt)))
+    return self.ifCap.loop(1, appendPacket)
 
   # get and set for minSize of every packet in capture
   def _get_minPktSize(self):
