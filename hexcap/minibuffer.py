@@ -54,8 +54,8 @@ class MiniBuffer:
     'send-all' : ['self.cap.sendRange(1,len(self.cap),)', [['i', '1-999', ' repeat:']]],
     'send-pkt' : ['self.cap.sendRange(self.ppadCY+1,self.ppadCY+1,)', [['i', '1-999', ' repeat:']]],
     'send-range' : ['self.cap.sendRange()', [['i', '1-999', ' first:'], ['i', '1-999', ' last:'], ['i', '1-999', ' repeat:']]],
-    'capture-all' : ['self.block(\'self.cap.capture()\',)', [['i', '1-999', ' count:']]],
-    'capture-filter' : ['self.block(\'self.cap.capture()\',)', [['i', '1-999', ' count:'], ['s', '^[\w. ]{0,}$', ' filter:']]]
+    'capture-all' : ['self.capture()', [['i', '0-999', ' count:']]],
+    'capture-filter' : ['self.capture()', [['i', '0-999', ' count:'], ['s', '^[\w. ]{0,}$', ' filter:']]]
 
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],

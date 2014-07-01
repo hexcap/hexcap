@@ -122,7 +122,6 @@ class HexScreen:
         self.toggleMBuf()
         self.stdscr.move(self.cY, self.cX)
         self.genericTry(eStr)
-        self.refresh()
       else:
         self.printToMBuf(self.mBuf.out())
         self.stdscr.move(self.maxY - 1, self.mBuf.cX)
@@ -656,30 +655,46 @@ class HexScreen:
       curses.endwin()
       raise
 
-  # Blocks until passed function returns or ESC is pressed
-  # Takes function and variable length args for that function
-  def block(self, f, *args):
-    if(len(args) > 0):
-      f = f.strip(')')
-      for a in args:
-        if(isinstance(a, basestring)):
-          f += '\'' + a + '\'' + ','
-        else:
-          f += str(a) + ','
+  # Captures packets by calling capture.captureAppend()
+  # Handles blocking/unblocking and keyboard Interrupt from user
+  # Redraws ppad after each captured packet
+  # Takes count of packets to capture, and BPF filter
+  # BPF filter can be NULL
+  def capture(self, count, *filt):
+    cfg.dbg("f_capture:" + str(count))
 
-      f = f.strip(',')
-      f += ')'
+    def tryCap():
+      capLen = len(self.cap)
+      try:
+        rv = self.cap.captureAppend()
+        if(rv != None):
+          self.printToMBuf(rv)
+          return
+      except KeyboardInterrupt:
+        return
+      if(capLen < len(self.cap)):
+        self.initPad(self.cap)
 
-    self.printToMBuf("Ctrl-C to break")
-    try:
-      cfg.dbg(f)
-      self.genericTry(f)
-      self.refresh()
-    except KeyboardInterrupt:
-      self.refresh()
+    if(count < 0): # This should never happen
       return
 
-  # Wrapper for packet ppad.addstr
+    if(len(filt) > 0):
+      self.cap.filter = filt
+    elif(len(filt) > 1): # This should not happen
+      return
+
+    if(count == 0): # Continue until user breaks
+      self.printToMBuf("Ctrl-C to break")
+      while True:
+        tryCap()
+    else:
+      self.printToMBuf("Ctrl-C to break")
+      for ii in xrange(0, count):
+        tryCap()
+
+    self.refresh()
+
+  # Wrapper for ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):
     if(atr):
       self.genericTry("self.ppad.addstr(" + str(y) + "," + str(x) + ",'" + s + "'," + str(atr) + ")")

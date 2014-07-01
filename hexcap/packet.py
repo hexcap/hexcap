@@ -21,6 +21,7 @@ class Packet:
     self.minSize = len(packet)
     self.maxSize = max(dpkt.ethernet.ETH_MTU, len(packet))
     self.initLayers(dpkt.ethernet.Ethernet(packet))
+    cfg.dbg("pkt Layers:" +str(len(self.layers)))
 
   # Is every layer of this packet writable
   # TODO:Add more checks in the future

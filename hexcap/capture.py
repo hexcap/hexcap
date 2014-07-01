@@ -9,7 +9,9 @@ import sys
 sys.path.insert(0, '../dpkt/')
 import dpkt
 import os
-from dnet import eth as deth
+import dnet
+import pcapy as pcap
+import time
 
 # hexcap specific imports
 import cfg
@@ -36,9 +38,10 @@ class Capture:
       else:
         self.ifName = "hme0" # Old skool Solaris
 
-      self.iface = deth(self.ifName)
+      self.iface = dnet.eth(self.ifName)
 
-    self.read(f)
+    self.filter = '' # Init our configured BPF capture filter
+    self.read(f) # Read in and initialize capture
 
   # Reads a filehandle to a pcap file
   def read(self, f):
@@ -152,7 +155,7 @@ class Capture:
       return "Error:Requires root access"
 
     try:
-      iface = deth(name)
+      iface = dnet.eth(name)
     except:
       return "Error:Interface does not exist"
 
@@ -162,7 +165,7 @@ class Capture:
       return "Error:Interface has no MAC"
 
     self.ifName = name
-    self.iface = deth(self.ifName)
+    self.iface = dnet.eth(self.ifName)
 
   # Private function for sending a single packet
   # Takes a packet object to send
@@ -217,12 +220,33 @@ class Capture:
       return "Error:One or more packets failed to send"
     else:
       return str(pktSent) + " packets egressed " + self.ifName
+    
+  # Captures a single packet and appends it to capture
+  # Returns a string on failure and None on success
+  def captureAppend(self):
 
-  # Captures packets on configured interface
-  # Takes number of packets to capture and a filter
-  # Filt can be NULL
-  def capture(self, count, *filt):
-    return "derp"
+    # Appends a packet to our capture
+    def appendPacket(hdr, pkt):
+      p = packet.Packet(time.time(), pkt, len(self.packets))
+      self.packets.append(p)
+
+    if(os.getuid() or os.geteuid()):
+      return "Error:Requires root access"
+
+    if(not self.ifName in pcap.findalldevs()):
+      return "Error:Bad interface " + self.ifName
+
+    # ifCap = pcap.open_live(self.ifName, dnet.intf().get(self.ifName)['mtu'], True, 10)
+    ifCap = pcap.open_live(self.ifName, 65536, True, 10)
+    if(ifCap.datalink() != pcap.DLT_EN10MB):
+      return "Error:Interface not Ethernet " + self.ifName
+
+    ifCap.setfilter(self.filter)
+    cfg.dbg("Blocking:" + str(ifCap.getnonblock()))
+    cfg.dbg("ifType:" + str(ifCap.datalink()))
+
+    # ifCap.loop(1, lambda hdr,pkt: cfg.dbg("hdr:" + repr(hdr) + "pkt:" + repr(pkt)))
+    return ifCap.loop(1, appendPacket)
 
   # get and set for minSize of every packet in capture
   def _get_minPktSize(self):
