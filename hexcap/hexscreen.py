@@ -661,41 +661,42 @@ class HexScreen:
   # Takes count of packets to capture, and BPF filter
   # BPF filter can be NULL
   def capture(self, count, *filt):
-    cfg.dbg("f_capture:" + str(count))
+    cfg.dbg("f_hexscreen.capture:" + str(count))
 
     def end(): # Called before we return
+      self.stdscr.nodelay(0) # Reblock character input
       self.initPad(self.cap)
       self.refresh()
 
-    if(count < 0): # This should never happen
+    if(count < 0):
+      cfg.dbg("Error in hexscreen.capture():1")
       return
 
-    if(len(filt) == 1):
-      rv = self.cap.captureInit(filt[0])
+    if(filt):
+      rv = self.cap.initCapture(filt[0])
       if(rv != None):
         self.printToMBuf(rv)
         return
     elif(len(filt) == 0):
-      rv = self.cap.captureInit('')
+      rv = self.cap.initCapture('')
       if(rv != None):
         self.printToMBuf(rv)
         return
-    else: # This should not happen
+    else:
+      cfg.dbg("Error in hexscreen.capture():2")
       return
 
-    if(count == 0): # Continue until user breaks
-      self.printToMBuf("Ctrl-Q to break")
-      while True:
-        self.cap.captureAppend()
-#        if(curses.keyname(self.getch()) == '^Q'):
-#          end()
-#          return
+    self.printToMBuf("Any key to break")
+    self.stdscr.nodelay(1) # Unblock character input
+    captured = 0
+    while(captured != count):
+      captured += self.cap.capture()
+      cfg.dbg("f_hexscreen.capture.captured:" + str(captured))
+      if(self.getch() != -1):
+        end()
+        return
 
-    else:
-      self.printToMBuf("Ctrl-Q to break")
-      for ii in xrange(0, count):
-        self.cap.captureAppend()
-      end()
+    end()
 
   # Wrapper for ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):

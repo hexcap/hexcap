@@ -63,6 +63,11 @@ class Capture:
   def __len__(self):
     return len(self.packets)
 
+  # Appends a packet to our capture
+  def __append__(self, hdr, pkt):
+    p = packet.Packet(time.time(), pkt, len(self.packets))
+    self.packets.append(p)
+
   # For debugging only
   def dump(self):
     rv = ""
@@ -222,34 +227,29 @@ class Capture:
 
   # Initializes our pcap capture object
   # Returns a string on failure and None on success 
-  def captureInit(self, filt):    
+  def initCapture(self, filt):    
     if(os.getuid() or os.geteuid()):
       return "Error:Requires root access"
 
     if(not self.ifName in pcap.findalldevs()):
       return "Error:Bad interface " + self.ifName
 
-    # ifCap = pcap.open_live(self.ifName, dnet.intf().get(self.ifName)['mtu'], True, 10)
     self.ifCap = pcap.open_live(self.ifName, 65536, True, 10)
     if(self.ifCap.datalink() != pcap.DLT_EN10MB):
       return "Error:Interface not Ethernet " + self.ifName
 
-    cfg.dbg(filt)
-    self.ifCap.setfilter(filt)
-    cfg.dbg("Blocking:" + str(self.ifCap.getnonblock()))
-    cfg.dbg("ifType:" + str(self.ifCap.datalink()))
+    try:
+      self.ifCap.setfilter(filt) 
+    except pcap.PcapError:
+      return "Error:Bad capture filter"
+
     return None
     
   # Captures a single packet and appends it to capture
-  # Must first call captureInit()
-  def captureAppend(self):
-    cfg.dbg("f_captureAppend" + " len:" + str(len(self.packets)))
-    def appendPacket(hdr, pkt): # Appends a packet to our capture
-      p = packet.Packet(time.time(), pkt, len(self.packets))
-      self.packets.append(p)
-
-    # self.ifCap.loop(1, lambda hdr,pkt: cfg.dbg("hdr:" + repr(hdr) + "pkt:" + repr(pkt)))
-    return self.ifCap.loop(1, appendPacket)
+  # Must first call initCapture()
+  def capture(self):
+    # self.ifCap.dispatch(1, lambda hdr,pkt: cfg.dbg("hdr:" + repr(hdr) + "pkt:" + repr(pkt)))
+    return self.ifCap.dispatch(1, self.__append__)
 
   # get and set for minSize of every packet in capture
   def _get_minPktSize(self):

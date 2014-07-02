@@ -18,6 +18,7 @@ class MiniBuffer:
     allowedChars.append(ord(str(x)))
   for x in xrange(97, 123): # lowercase alpha
     allowedChars.append(x)
+  allowedChars.append(32) #   whitespace(spacebar)
   allowedChars.append(33) # ! bang
   allowedChars.append(37) # % percent
   allowedChars.append(43) # + plus
