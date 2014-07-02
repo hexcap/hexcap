@@ -216,6 +216,9 @@ class MiniBuffer:
     if(len(arg) < 1):
       return
 
+    if(curses.keyname(c) == '^I'): # TAB
+      return
+
     argDef = self.cmdRef[len(self.args)]
     if(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
       if(argDef[0] == 'i'):

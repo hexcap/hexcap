@@ -65,7 +65,7 @@ class Capture:
 
   # Appends a packet to our capture
   def __append__(self, hdr, pkt):
-    p = packet.Packet(time.time(), pkt, len(self.packets))
+    p = packet.Packet(time.time(), pkt, len(self.packets) + 1)
     self.packets.append(p)
 
   # For debugging only

@@ -655,22 +655,16 @@ class HexScreen:
       curses.endwin()
       raise
 
-  # Captures packets by calling capture.captureAppend()
+  # Captures packets by calling capture.capture()
   # Handles blocking/unblocking and keyboard Interrupt from user
-  # Redraws ppad after each captured packet
+  # Redraws ppad after some captured packets
   # Takes count of packets to capture, and BPF filter
   # BPF filter can be NULL
   def capture(self, count, *filt):
-    cfg.dbg("f_hexscreen.capture:" + str(count))
-
     def end(): # Called before we return
       self.stdscr.nodelay(0) # Reblock character input
       self.initPad(self.cap)
       self.refresh()
-
-    if(count < 0):
-      cfg.dbg("Error in hexscreen.capture():1")
-      return
 
     if(filt):
       rv = self.cap.initCapture(filt[0])
@@ -683,18 +677,37 @@ class HexScreen:
         self.printToMBuf(rv)
         return
     else:
-      cfg.dbg("Error in hexscreen.capture():2")
+      cfg.dbg("Error in hexscreen.capture(): Bad filter")
       return
 
     self.printToMBuf("Any key to break")
     self.stdscr.nodelay(1) # Unblock character input
     captured = 0
-    while(captured != count):
-      captured += self.cap.capture()
-      cfg.dbg("f_hexscreen.capture.captured:" + str(captured))
-      if(self.getch() != -1):
-        end()
-        return
+    if(count == 0):
+      while True:
+        rv = self.cap.capture()
+        if(rv != 0): # We got a packet
+          captured += rv
+          if((captured % 10) == 0):
+            self.initPad(self.cap)
+            self.refresh()
+
+        if(self.getch() != -1):
+          end()
+          return
+
+    else:
+      while(captured != count):
+        rv = self.cap.capture()
+        if(rv != 0): # We got a packet
+          captured += rv
+          if((captured % 5) == 0):
+            self.initPad(self.cap)
+            self.refresh()
+
+        if(self.getch() != -1):
+          end()
+          return
 
     end()
 
