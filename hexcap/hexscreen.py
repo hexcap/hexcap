@@ -659,7 +659,6 @@ class HexScreen:
   # Handles blocking/unblocking and keyboard Interrupt from user
   # If repeat is zero then loop until broken by user
   def tx(self, first, last, repeat):
-    cfg.dbg("hexscreen.tx():" + " first:" + str(first) + " last:" + str(last) + " repeat:" + str(repeat))
     def end(): # Called before we return
       self.stdscr.nodelay(0) # Reblock character input
       if(fail):
@@ -721,7 +720,6 @@ class HexScreen:
             return
     end()
 
-
   # Receives packets by calling capture.rx()
   # Handles blocking/unblocking and keyboard Interrupt from user
   # Redraws ppad after some captured packets
@@ -780,6 +778,11 @@ class HexScreen:
           return
 
     end()
+
+  # Mini-buffer function generator
+  # Handles user input and adds a generator layer to a packet
+  def addGenerator(self, count, start, step):
+    pass
 
   # Wrapper for ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):
