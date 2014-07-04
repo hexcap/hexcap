@@ -52,12 +52,14 @@ class MiniBuffer:
     'interface' : ['self.cap.setInterface()', [['s', '^[\w]{2,}[0-9]{1,}$']]],
     'save-file' : ['self.cap.save()', []],
     'save-as-file' : ['self.cap.saveAs()', [['s', '^[\w.-_=+,!:%@]*$']]],
-    'send-all' : ['self.cap.sendRange(1,len(self.cap),)', [['i', '1-999', ' repeat:']]],
-    'send-pkt' : ['self.cap.sendRange(self.ppadCY+1,self.ppadCY+1,)', [['i', '1-999', ' repeat:']]],
-    'send-range' : ['self.cap.sendRange()', [['i', '1-999', ' first:'], ['i', '1-999', ' last:'], ['i', '1-999', ' repeat:']]],
-    'capture-all' : ['self.capture()', [['i', '0-999', ' count:']]],
-    'capture-filter' : ['self.capture()', [['i', '0-999', ' count:'], ['s', '^[\w. ]{0,}$', ' filter:']]]
 
+    'tx-all' : ['self.tx(1,len(self.cap),)', [['i', '0-999', ' repeat:']]],
+    'tx-pkt' : ['self.tx(self.ppadCY+1,self.ppadCY+1,)', [['i', '0-999', ' repeat:']]],
+    'tx-range' : ['self.tx()', [['i', '1-999', ' first:'], ['i', '1-999', ' last:'], ['i', '0-999', ' repeat:']]],
+    'rx-all' : ['self.rx()', [['i', '0-999', ' count:']]],
+    'rx-filter' : ['self.rx()', [['i', '0-999', ' count:'], ['s', '^[\w. ]{0,}$', ' filter:']]]
+
+    #    'generator' : ['self.addGenerator()', [['s', '^[\w. ]{0,}$', ' count:']], [['s', '^[\w. ]{0,}$', ' start:']] ] ]
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],
     #    'delete-layer' : ['self.cap.deleteLayer()', [['s', 'foo']]]
@@ -122,6 +124,7 @@ class MiniBuffer:
         return None
 
   # Top-level input
+  # Implement ^U(c == 21) to erase entire line and set x=0
   def input(self, c):
     if(curses.keyname(c) == '^?'): # Backspace
       if(len(self.buf) > len(self.argPrompt)):

@@ -174,60 +174,15 @@ class Capture:
   # Private function for sending a single packet
   # Takes a packet object to send
   # Returns True on success and false on failure
-  def _sendPkt(self, pkt):
+  def tx(self, pkt):
     if(self.iface.send(str(pkt.data())) == -1):
       return False
     else:
       return True
 
-  # Sends an inclusive range of packets
-  # Takes first pkt ID, last pkt ID and iterations to send it
-  # Passed pkt IDs are one's based from user's perspective
-  # Returns err msg on failure, num pkts sent msg on success
-  def sendRange(self, first, last, iterations):
-    if(os.getuid() or os.geteuid()):
-      return "Error:Requires root access"
-
-    fail = False
-    pktSent = 0
-
-    # Convert from user's 1-based numbering to our 0-based numbering, and handle bad user input
-    first -= 1
-    last -= 1
-
-    if(first <= last): # User wants normal ordering
-      if(first < 0):
-        first = 0
-      if(last > len(self.packets) - 1):
-        last =  len(self.packets) - 1
-      pkts = []
-      for jj in xrange(first, last+1):
-        pkts.append(jj)
-
-    else: # User wants reverse ordering
-      if(last < 0):
-        last = 0
-      if(first > len(self.packets) - 1):
-        first =  len(self.packets) - 1
-      pkts = []
-      for jj in xrange(first, last-1, -1):
-        pkts.append(jj)
-
-    for ii in xrange(iterations):
-      for jj in pkts:
-        if(self._sendPkt(self.packets[jj])):
-          pktSent += 1
-        else:
-          fail = True
-        
-    if(fail):
-      return "Error:One or more packets failed to send"
-    else:
-      return str(pktSent) + " packets egressed " + self.ifName
-
   # Initializes our pcap capture object
   # Returns a string on failure and None on success 
-  def initCapture(self, filt):    
+  def initRx(self, filt):    
     if(os.getuid() or os.geteuid()):
       return "Error:Requires root access"
 
@@ -245,9 +200,9 @@ class Capture:
 
     return None
     
-  # Captures a single packet and appends it to capture
-  # Must first call initCapture()
-  def capture(self):
+  # Receives a single packet and appends it to capture
+  # Must first call initRx()
+  def rx(self):
     # self.ifCap.dispatch(1, lambda hdr,pkt: cfg.dbg("hdr:" + repr(hdr) + "pkt:" + repr(pkt)))
     return self.ifCap.dispatch(1, self.__append__)
 
