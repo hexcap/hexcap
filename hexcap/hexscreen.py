@@ -55,8 +55,6 @@ class HexScreen:
     # Message to be printed to mBuf for one cycle and then cleared
     self.mBufMsg = ''
 
-    self.initCursor()
-
   def tearDown(self, dieStr=''):
     self.stdscr.keypad(0)
     curses.echo()
@@ -68,20 +66,20 @@ class HexScreen:
   # Initializes our ncurses pad
   # Takes a Capture object
   def initPad(self, cap):
-    self.initCursor()
     self.cap = cap
+    self.maxY, self.maxX = self.stdscr.getmaxyx()
     self.ppadTopY = self.headerHeight # Topmost ppad position on screen
     self.ppadBottomY = self.maxY - self.footerHeight # Bottommost ppad position on screen
     self.ppadRows = len(self.cap.packets) # Total number of lines in ppad 
     self.buildSections()
     self.drawPpads()
+    self.initCursor()
     self.refresh()
 
   # Initialize all cursor attributes
   def initCursor(self):
-    self.maxY, self.maxX = self.stdscr.getmaxyx()
     self.cY = self.headerHeight
-    self.cX = cfg.pktIDWidth + 1
+    self.cX = self.offLimitsWidth
     self.ppadCurY = 0 # Current topmost visible Y in ppad
     self.ppadCurX = 0 # Current leftmost visible X in ppad
 
@@ -116,7 +114,6 @@ class HexScreen:
 
     # Handle the mini-buffer
     if(self.mBufFocus):
-      cfg.dbg("refresh:mBufFocus")
       eStr = self.mBuf.exe()
       if(eStr):
         self.toggleMBuf()
@@ -192,6 +189,28 @@ class HexScreen:
       rv += s.width
     return max(1, rv)
   tableWidth = property(_get_tableWidth)
+
+ # Leftmost width that is off limits to cursor
+  def _get_offLimitsWidth(self):
+    rv = 0
+    for s in self.displayedSections:
+      if(s.RO):
+        rv += s.width
+      else:
+        return rv
+    return rv
+  offLimitsWidth = property(_get_offLimitsWidth)
+
+ # Leftmost sections that are off limits to cursor
+  def _get_offLimitsSections(self):
+    rv = 0
+    for s in self.displayedSections:
+      if(s.RO):
+        rv += 1
+      else:
+        return rv
+    return rv
+  offLimitsSections = property(_get_offLimitsSections)
 
   # Returns header section that cursor X value is currently in
   # Takes X value of cursor
@@ -395,7 +414,7 @@ class HexScreen:
 
     x += addElement("[" + self.cap.fName + "]")
 
-    txt = "[x:" + str(self.ppadCX - cfg.pktIDWidth).rjust(3)
+    txt = "[x:" + str(self.ppadCX - self.offLimitsWidth).rjust(3)
     txt += " p:" + str(self.ppadCY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
     x += addElement(txt)
 
@@ -446,7 +465,7 @@ class HexScreen:
   # Move cursor to first column after pktID
   def gotoLineBegin(self):
     self.ppadCurX = 0
-    self.cX = cfg.pktIDWidth + 1
+    self.cX = self.offLimitsWidth
 
   # Move cursor to end of line
   def gotoLineEnd(self):
@@ -491,7 +510,7 @@ class HexScreen:
               self.cX = self.columnLeft(ns.ID, None)
               self.shiftColumn(delta - 1)
           else:
-            if(ii < 2): # pid section is off limits
+            if(ii <= self.offLimitsSections): # Leftmost RO sections are off limits
               return
             else:
               ns = dSections[ii - 1]
@@ -521,7 +540,7 @@ class HexScreen:
                   self.shiftColumn(delta - 1)
               else:
                 if(cii == 0):
-                  if(sii < 2): # pid section is off limits
+                  if(sii <= self.offLimitsSections): # Leftmost RO sections are off limits
                     return
                   else:
                     ns = dSections[sii - 1]
@@ -562,11 +581,10 @@ class HexScreen:
               self.ppadCurX += 1
               self.cX -= dX
       else:
-        if(self.cX + dX > cfg.pktIDWidth):
+        if(self.cX + dX >= self.offLimitsWidth):
           self.cX += dX
-        else:
-          if(self.cX + dX > self.ppadCurX * -1 +  cfg.pktIDWidth):
-            self.ppadCurX -= 1
+        elif(self.cX + dX >= self.ppadCurX * -1 + self.offLimitsWidth):
+          self.ppadCurX -= 1
 
   def toggleExpose(self, s=None):
     if(not s):
