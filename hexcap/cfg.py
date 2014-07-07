@@ -25,6 +25,7 @@ def dbg(msg):
 pktIDWidth = 5
 
 # Allowed hexidecimal characters
+# Can't use string.hexdigits since it has caps
 hexChars = []
 for x in xrange(0,10):
   hexChars.append(ord(str(x)))

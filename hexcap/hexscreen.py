@@ -779,10 +779,63 @@ class HexScreen:
 
     end()
 
-  # Mini-buffer function generator
-  # Handles user input and adds a generator layer to a packet
-  def addGenerator(self, count, start, step):
-    pass
+  # Mini-buffer function for modifying a column
+  # Takes a command string and variable list of args
+  def modCol(self, f, *args):
+    def redraw(): # Redraws screen after modifying column
+      self.buildSections()
+      self.resetCursor()
+      self.drawPpads()
+      self.refresh()
+
+    s, cid = self.cursorColumn(self.cX)
+    sid = s.ID
+    if(not s.exposed):
+      return
+    if(s.RO):
+      self.printToMBuf("Error:Layer is read only")
+      return
+    if(not self.cap.packets[self.ppadCurY].hasLayer(sid)):
+      self.printToMBuf("Error:Internal")
+      return
+    
+    if(f == 'generator'):
+      if(len(args) != 2):
+        self.printToMBuf("Error:Internal")
+        return
+      else:
+        count = args[0]
+        step = args[1]
+
+      rv = self.cap.packets[self.ppadCurY].addGenerator(sid, cid, count, step)
+      if(rv):
+        self.printToMBuf(rv)
+        return
+      else:
+        redraw()
+
+    elif(f == 'mask'):
+      if(len(args) != 1):
+        self.printToMBuf("Error:Internal")
+        return
+      else:
+        mask = args[0]
+
+      if(len(mask) < 1):
+        self.printToMBuf("Error:Mask too short")
+        return
+
+      mask = mask.translate(None, ',:;<>/?|\{}[]-_=+').strip().lower()
+      if(len(mask.translate(None, ''.join(map(str, cfg.hexChars)))) != 0):
+        self.printToMBuf("Error:Mask must contain at least one hex digit")
+        return
+      else:
+        rv = self.cap.packets[self.ppadCurY].addMask(sid, cid, mask)
+        if(rv):
+          self.printToMBuf(rv)
+          return
+        else:
+          redraw()
 
   # Wrapper for ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):

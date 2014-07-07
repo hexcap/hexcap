@@ -118,6 +118,23 @@ class Packet:
       if(lay.ID == sid):
         lay.setColumn(col, val)
 
+  def addGenerator(self, sid, cid, count, step):
+    if(not self.hasLayer('g')):
+      self.layers.insert(1, layer.Generator())
+
+    for lay in self.layers:
+      if(lay.ID == sid):
+        return lay.addGenerator(cid, count, step)
+
+  # Adds a mask to a layer
+  def addMask(self, sid, cid, mask):
+    if(not self.hasLayer('g')):
+      self.layers.insert(1, layer.Generator())
+
+    for lay in self.layers:
+      if(lay.ID == sid):
+        return lay.addMask(cid, mask)
+
   # Convenience method
   # Returns PID of packet
   def getPID(self):

@@ -37,12 +37,10 @@ class MiniBuffer:
    If cmd.endswitch(")") then it is interpreted as a function call
    If cmd.endswitch("=") then it is interpreted as an attribute
    argList is a list of 3 string pairs [type, desc, helpText]
-   -Where type can be either s(string), i(decimal integer), or h(hex integer)
+   -Where type can be either s(string), i(decimal integer)
    --if type=='s' then desc is a regexp that must match
-   --if type=='i or h' then desc is a range given as 'min-max' inclusive
-   -Where desc is either regex for 's' OR a range for 'i or h'
-   -Where desc is lowercase '00-ff' for 'h' without leading '0x' grouped into octets
-   --Where user input matches the regex ^([0-9,a-f]{2})+$
+   --if type=='i' then desc is a range given as 'min_max' inclusive
+   -Where desc is either regex for 's' OR a range for 'i'
    -Where helpText is optional and shown when inputting, useful when multiple args present
 
    DO NOT make keys where (keyX.startswith(keyY) == True)
@@ -50,22 +48,21 @@ class MiniBuffer:
 
    '''
   cmds = {
-    'pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60-70']]], # Couldn't get property set to work here
-    'pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000-1500']]],
-    'pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60-70', ' min:'], ['i', '1000-1500', ' max:']]],
+    'pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60_70']]], # Couldn't get property set to work here
+    'pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000_1500']]],
+    'pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60_70', ' min:'], ['i', '1000_1500', ' max:']]],
     'interface' : ['self.cap.setInterface()', [['s', '^[\w]{2,}[0-9]{1,}$']]],
     'save-file' : ['self.cap.save()', []],
     'save-as-file' : ['self.cap.saveAs()', [['s', '^[\w.-_,:@]*$']]],
 
-    'tx-all' : ['self.tx(1,len(self.cap),)', [['i', '0-999', ' repeat:']]],
-    'tx-pkt' : ['self.tx(self.ppadCY+1,self.ppadCY+1,)', [['i', '0-999', ' repeat:']]],
-    'tx-range' : ['self.tx()', [['i', '1-999', ' first:'], ['i', '1-999', ' last:'], ['i', '0-999', ' repeat:']]],
-    'rx-all' : ['self.rx()', [['i', '0-999', ' count:']]],
-    'rx-filter' : ['self.rx()', [['i', '0-999', ' count:'], ['s', '^[\w. ]{0,}$', ' filter:']]],
+    'tx-all' : ['self.tx(1,len(self.cap),)', [['i', '0_999', ' repeat:']]],
+    'tx-pkt' : ['self.tx(self.ppadCY+1,self.ppadCY+1,)', [['i', '0_999', ' repeat:']]],
+    'tx-range' : ['self.tx()', [['i', '1_999', ' first:'], ['i', '1_999', ' last:'], ['i', '0_999', ' repeat:']]],
+    'rx-all' : ['self.rx()', [['i', '0_999', ' count:']]],
+    'rx-filter' : ['self.rx()', [['i', '0_999', ' count:'], ['s', '^[\w. ]{0,}$', ' filter:']]],
 
-    'generator' : ['self.addGenerator()', [['h', '01-ff', ' count:0x'], ['h', '01-ff', ' start:0x'], 
-                                           ['h', '01-0f', ' step:0x']]],
-    'mask' : ['self.addMask()', [['s', '^([0-9,a-f,.,:,-]+$', ' mask:']]]
+    'generator' : ['self.modCol(\'generator\',)', [['i', '1_255', ' count:'], ['i', '-16_16', ' step:']]],
+    'mask' : ['self.modCol(\'mask\',)', [['s', '^[0-9,a-f,x,X,.,:,-]+$', ' mask:']]]
 
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],
@@ -235,11 +232,17 @@ class MiniBuffer:
     argDef = self.cmdRef[len(self.args)]
     if(curses.keyname(c) == '^J' or curses.keyname(c) == '^M'): # Enter/Return \n
       if(argDef[0] == 'i'):
+        if(arg.startswith('-')):
+          argSign = -1
+          arg = arg[1:]
+        else:
+          argSign = 1
+
         if(arg.isdigit()):
-          rMin, rMax = argDef[1].split("-")
+          rMin, rMax = argDef[1].split("_")
           rMin = int(rMin)
           rMax = int(rMax)
-          arg = int(arg)
+          arg = int(arg) * argSign
           if((arg >= rMin) and (arg <= rMax)):
             self.args.append(str(arg))
           else:
@@ -249,30 +252,44 @@ class MiniBuffer:
           self.msg = self.buf + "   [Bad Input]"
           return
 
+      elif(argDef[0] == 's'):
+        if(re.search(argDef[1], arg)):
+          self.args.append("\'" + str(arg) + "\'")
+        else:
+          self.msg = self.buf + "   [Bad Input]"
+          return
+
+      # hex input doesn't really work
+      # Just keeping it incase I feel like fixing it, but it probably won't ever be used
       elif(argDef[0] == 'h'):
+        if(arg.startswith('-')):
+          argSign = -1
+          arg = arg[1:]
+        else:
+          argSign = 1
+
+        if(argDef[1].startswith('-')):
+          rMinSign = -1
+          argDef[1] = argDef[1][1:]
+        else:
+          rMinSign = 1
+        
         if(re.search("^[0-9,a-f]+$", arg)):
           if((len(arg) % 2) != 0):
             self.msg = self.buf + "   [Nibble Input:Expected full bytes]"
             return
 
           rMin, rMax = argDef[1].split("-")
-          rMin = int('0x' + rMin, 16)
+          rMin = int('0x' + rMin, 16) * rMinSign
           rMax = int('0x' + rMax, 16)
-          arg = int('0x' + arg, 16)
+          arg = int('0x' + arg, 16) * argSign
           if((arg >= rMin) and (arg <= rMax)):
-            self.args.append(str(hex(arg)[2:]))
+            self.args.append(str(arg))
           else:
             self.msg = self.buf + "   [Out of Range " + str(hex(rMin)) + "-" + str(hex(rMax)) + "]"
             return
         else:
           self.msg = self.buf + "   [Bad Input:Expected hex]"
-          return
-
-      elif(argDef[0] == 's'):
-        if(re.search(argDef[1], arg)):
-          self.args.append("\'" + str(arg) + "\'")
-        else:
-          self.msg = self.buf + "   [Bad Input]"
           return
 
     # Are we done collecting args?

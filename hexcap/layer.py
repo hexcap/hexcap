@@ -45,6 +45,7 @@ class Layer:
   def hexStrToPcap(self, s, delim, ln=2):
     rv = ""
     bytes = s.split(delim)
+
     if(ln != 2):
       if((ln % 2 != 0) or (ln < 2)):
         return False
@@ -58,6 +59,42 @@ class Layer:
     for b in bytes:
       rv += chr(int(b, 16))
     return rv
+
+  # Removes all characters in passed string not in cfg.hexChars
+  def cleanHexStr(self, s):
+    rv = ''
+    for c in s:
+      if(ord(c) in cfg.hexChars):
+        rv += c
+    return rv
+
+  # Adds a generator to a col
+  # Takes column to add it to; then count and step for the generator
+  def addGenerator(self, col, count, step):
+    if(not 'self.gen' in locals()):
+      self.gen = {}
+    
+    if(not col in self.gen):
+      self.gen[col] = {'count': count, 'step': step }
+    else:
+      self.gen[col]['count'] = count
+      self.gen[col]['step'] = step
+
+  # Adds a mask to a col
+  # Takes column to add it to, and mask to be added
+  def addMask(self, col, mask):
+    cfg.dbg("col:" + col + " val:" + self.vals[col])
+    cfg.dbg("str:" + self.cleanHexStr(self.vals[col]))
+    if(len(mask) > len(self.cleanHexStr(self.vals[col]))):
+      return "Error:Mask is too long"
+
+    if(not 'self.gen' in locals()):
+      self.gen = {}
+
+    if(not col in self.gen):
+      self.gen[col] = {}
+
+    self.gen[col]['mask'] = mask
 
   # Sets column to val
   def setColumn(self, col, val):
@@ -98,10 +135,26 @@ class PktID(Layer):
     else:
       self.vals[col] = str(val).rjust(cfg.pktIDWidth, "0")
 
+# Generator layer
+# If a packet has any generator, it MUST also have a generator layer
+class Generator(Layer):
+  ID = "g"
+  RO = True
+  position = 2
+
+  cols = OrderedDict()
+  cols['g'] = 3
+
+  def __init__(self):
+    cfg.dbg("Entered Generator.__init__()")
+    self.vals = dict()
+    self.vals['g'] = ' * '
+
+# Timestamp layer
 class TStamp(Layer):
   ID = "tstamp"
   RO = True
-  position = 1
+  position = 5
 
   cols = OrderedDict() 
   cols['tstamp'] = 13
