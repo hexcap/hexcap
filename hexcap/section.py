@@ -31,14 +31,15 @@ class Section:
     self.c[name] = w
     self._width += w + 1
 
-  # For debugging only
-  def dump(self):
-    rv = ''
-    rv += "\nID:" + self.ID
+  def __repr__(self):
+    rv = "\nID:" + self.ID
     rv += " exposed:" + str(self.exposed)
     rv += " width:" + str(self.width)
     rv += " visible:" + str(self.visible)
     rv += " RO:" + str(self.RO) + "\n"
     for k,v in self.c.iteritems():
-      rv += "col:" + k + " w:" + str(v) + " "
+      rv += "  col:" + k + " w:" + str(v) + " "
     return rv
+
+  def dump(self):
+    return self.__repr__()

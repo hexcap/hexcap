@@ -83,8 +83,6 @@ class Layer:
   # Adds a mask to a col
   # Takes column to add it to, and mask to be added
   def addMask(self, col, mask):
-    cfg.dbg("col:" + col + " val:" + self.vals[col])
-    cfg.dbg("str:" + self.cleanHexStr(self.vals[col]))
     if(len(mask) > len(self.cleanHexStr(self.vals[col]))):
       return "Error:Mask is too long"
 

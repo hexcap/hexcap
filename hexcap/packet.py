@@ -128,12 +128,14 @@ class Packet:
 
   # Adds a mask to a layer
   def addMask(self, sid, cid, mask):
-    if(not self.hasLayer('g')):
-      self.layers.insert(1, layer.Generator())
-
     for lay in self.layers:
       if(lay.ID == sid):
-        return lay.addMask(cid, mask)
+        rv = lay.addMask(cid, mask)
+        if(rv):
+          return rv
+        else:
+          if(not self.hasLayer('g')):
+            self.layers.insert(1, layer.Generator())
 
   # Convenience method
   # Returns PID of packet

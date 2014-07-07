@@ -106,17 +106,17 @@ class HexScreen:
     self.headPpad = curses.newpad(2, self.ppadWidth)
 
   def refresh(self):
+    #    cfg.dbg("hexscreen.py refresh tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " maxX:" + str(self.maxX))
     if(curses.is_term_resized(self.maxY, self.maxX)):
       cfg.dbg("Caught resize event. Consider using immedok()")
       self.tearDown()
 
     self.drawHeader()
-    #    cfg.dbg("hexscreen.py refresh tw:" + str(self.tableWidth) + " ppadCurX:" + str(self.ppadCurX) + " maxX:" + str(self.maxX))
-    self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.drawFooter()
 
     # Handle the mini-buffer
     if(self.mBufFocus):
+      cfg.dbg("refresh:mBufFocus")
       eStr = self.mBuf.exe()
       if(eStr):
         self.toggleMBuf()
@@ -131,6 +131,7 @@ class HexScreen:
       self.stdscr.move(self.cY, self.cX)
 
     self.refreshBoldPacket()
+    self.headPpad.refresh(0, self.ppadCurX, 0, 0, self.headerHeight, self.maxX - 1)
     self.ppad.refresh(self.ppadCurY, self.ppadCurX, self.ppadTopY, 0, self.ppadBottomY, self.maxX - 1)
     self.stdscr.refresh()
     curses.doupdate()
@@ -731,7 +732,7 @@ class HexScreen:
       self.initPad(self.cap)
       self.refresh()
 
-    def refresh(): # Called when we need to refresh during capture
+    def redraw(): # Called when we need to refresh during capture
       self.initPad(self.cap)
       self.refresh()
       self.printToMBuf("Any key to break")
@@ -759,7 +760,7 @@ class HexScreen:
         if(rv != 0): # We got a packet
           captured += rv
           if((captured % 10) == 0):
-            refresh()
+            redraw()
 
         if(self.getch() != -1):
           end()
@@ -771,7 +772,7 @@ class HexScreen:
         if(rv != 0): # We got a packet
           captured += rv
           if((captured % 5) == 0):
-            refresh()
+            redraw()
 
         if(self.getch() != -1):
           end()
@@ -784,9 +785,9 @@ class HexScreen:
   def modCol(self, f, *args):
     def redraw(): # Redraws screen after modifying column
       self.buildSections()
-      self.resetCursor()
       self.drawPpads()
       self.refresh()
+      self.resetCursor()
 
     s, cid = self.cursorColumn(self.cX)
     sid = s.ID
@@ -795,7 +796,7 @@ class HexScreen:
     if(s.RO):
       self.printToMBuf("Error:Layer is read only")
       return
-    if(not self.cap.packets[self.ppadCurY].hasLayer(sid)):
+    if(not self.cap.packets[self.ppadCY].hasLayer(sid)):
       self.printToMBuf("Error:Internal")
       return
     
@@ -807,7 +808,7 @@ class HexScreen:
         count = args[0]
         step = args[1]
 
-      rv = self.cap.packets[self.ppadCurY].addGenerator(sid, cid, count, step)
+      rv = self.cap.packets[self.ppadCY].addGenerator(sid, cid, count, step)
       if(rv):
         self.printToMBuf(rv)
         return
@@ -826,11 +827,11 @@ class HexScreen:
         return
 
       mask = mask.translate(None, ',:;<>/?|\{}[]-_=+').strip().lower()
-      if(len(mask.translate(None, ''.join(map(str, cfg.hexChars)))) != 0):
-        self.printToMBuf("Error:Mask must contain at least one hex digit")
+      if(len(mask.translate(None, 'x' + ''.join(map(chr, cfg.hexChars)))) != 0):
+        self.printToMBuf("Error:Mask may only contain hex digits and \'x\'")
         return
       else:
-        rv = self.cap.packets[self.ppadCurY].addMask(sid, cid, mask)
+        rv = self.cap.packets[self.ppadCY].addMask(sid, cid, mask)
         if(rv):
           self.printToMBuf(rv)
           return
