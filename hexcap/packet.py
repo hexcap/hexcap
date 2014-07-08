@@ -118,6 +118,7 @@ class Packet:
       if(lay.ID == sid):
         lay.setColumn(col, val)
 
+  # Adds a generator to a layer
   def addGenerator(self, sid, cid, count, step):
     if(not self.hasLayer('g')):
       self.layers.insert(1, layer.Generator())
@@ -136,6 +137,19 @@ class Packet:
         else:
           if(not self.hasLayer('g')):
             self.layers.insert(1, layer.Generator())
+
+  # Returns list of all layers with generators
+  # Returns False if packet has no generators
+  def _get_genLayers(self):
+    if(not self.hasLayer('g')):
+      return False
+    else:
+      rv = []
+      for lay in self.layers:
+        if(hasattr(lay, 'gen')):
+          rv.append(lay)
+      return rv
+  genLayers = property(_get_genLayers)
 
   # Convenience method
   # Returns PID of packet

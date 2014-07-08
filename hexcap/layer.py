@@ -20,6 +20,10 @@ class Layer:
   exposed = True # Is this layer exposed
   exposable = True # Can the exposed boolean be toggled?
 
+  def __init__(self):
+    self.vals = {} # Holds values for each column
+    self.gen = {} # Holds generators for each column
+
   # Convert int to hex without leading 0x
   def intToHexStr(self, num):
     x,rv = hex(num).split("0x")
@@ -71,11 +75,8 @@ class Layer:
   # Adds a generator to a col
   # Takes column to add it to; then count and step for the generator
   def addGenerator(self, col, count, step):
-    if(not 'self.gen' in locals()):
-      self.gen = {}
-    
     if(not col in self.gen):
-      self.gen[col] = {'count': count, 'step': step }
+      self.gen[col] = {'count': count, 'step': step, 'mask': ''.join('0' * len(self.cleanHexStr(self.vals[col])))}
     else:
       self.gen[col]['count'] = count
       self.gen[col]['step'] = step
@@ -83,16 +84,16 @@ class Layer:
   # Adds a mask to a col
   # Takes column to add it to, and mask to be added
   def addMask(self, col, mask):
-    if(len(mask) > len(self.cleanHexStr(self.vals[col]))):
+    maskLen =  len(self.cleanHexStr(self.vals[col]))
+    if(len(mask) > maskLen):
       return "Error:Mask is too long"
-
-    if(not 'self.gen' in locals()):
-      self.gen = {}
+    else:
+      mask = mask.ljust(maskLen, '0')
 
     if(not col in self.gen):
-      self.gen[col] = {}
-
-    self.gen[col]['mask'] = mask
+      self.gen[col] = {'count': 0, 'step': 0, 'mask': mask}
+    else:
+      self.gen[col]['mask'] = mask
 
   # Sets column to val
   def setColumn(self, col, val):
@@ -120,10 +121,10 @@ class PktID(Layer):
   cols['pid'] = cfg.pktIDWidth
 
   def __init__(self, pid):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['pid'] = str(pid).rjust(cfg.pktIDWidth, "0")
 
-  # Overloading virtual since we're picky about pid
+  # Overriding virtual since we're picky about pid
   def setColumn(self, col, val):
     # Fill PID with ?'s if we get passed -1
     if(val == -1):
@@ -145,7 +146,7 @@ class Generator(Layer):
 
   def __init__(self):
     cfg.dbg("Entered Generator.__init__()")
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['g'] = ' * '
 
 # Timestamp layer
@@ -158,7 +159,7 @@ class TStamp(Layer):
   cols['tstamp'] = 13
     
   def __init__(self, ts):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['tstamp'] = "{:.2f}".format(ts)
 
   def toPcap(self):
@@ -176,8 +177,8 @@ class Leftovers(Layer):
   cols['udefined'] = uWidth
 
   def __init__(self, data):
+    Layer.__init__(self)
     self.data = data # We store the actual data here
-    self.vals = dict()
 
     s = self.pcapToHexStr(data.pack(), ":", len(data.pack()))
     if(s > self.uWidth):
@@ -200,7 +201,7 @@ class Ethernet(Layer):
   cols['eth-src'] = 17
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['eth-dst'] = self.pcapToHexStr(data.dst, ":")
     self.vals['eth-src'] = self.pcapToHexStr(data.src, ":")
 
@@ -298,7 +299,7 @@ class Dot1q(Layer):
   cols['etype'] = 5
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['tag'] = self.intToHexStr(data.tag).rjust(4, "0")
     self.vals['1p'] = self.intToHexStr(data.pcp).rjust(1, "0")
     self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
@@ -329,7 +330,7 @@ class CDP(Layer):
   cols['ttl'] = 3
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['ver'] = self.intToHexStr(data.version).rjust(2, "0")
     self.vals['ttl'] = self.intToHexStr(data.ttl).rjust(2, "0")
     self.vals['data'] = data.data
@@ -353,7 +354,7 @@ class EDP(Layer):
   cols['mac'] = 17
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['ver'] = self.intToHexStr(data.v).rjust(2, "0")
     self.vals['len'] = self.intToHexStr(data.hlen).rjust(4, "0")
     self.vals['seq'] = self.intToHexStr(data.seq).rjust(4, "0")
@@ -389,7 +390,7 @@ class STP(Layer):
   cols['delay'] = 5
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['root'] = self.pcapToHexStr(data.root_id, ":")
     self.vals['bridge'] = self.pcapToHexStr(data.bridge_id, ":")
     self.vals['port'] = self.intToHexStr(data.port_id).rjust(4, "0")
@@ -437,7 +438,7 @@ class ARP(Layer):
   cols['tpa'] = 11 # Target IP
   
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['oper'] = self.intToHexStr(data.op).rjust(4, "0")
     self.vals['sha'] = self.pcapToHexStr(data.sha, ":")
     self.vals['tha'] = self.pcapToHexStr(data.tha, ":")
@@ -465,7 +466,7 @@ class IPv4(Layer):
   cols['proto'] = 5
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['dst'] = self.pcapToHexStr(data.dst, ".")
     self.vals['src'] = self.pcapToHexStr(data.src, ".")
     self.vals['proto'] = self.intToHexStr(data.p).rjust(2, "0")
@@ -505,7 +506,7 @@ class IPv6(Layer):
   cols['proto'] = 5
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['dst'] = self.pcapToHexStr(data.dst, ":", 4)
     self.vals['src'] = self.pcapToHexStr(data.src, ":", 4)
     self.vals['proto'] = self.intToHexStr(data.nxt).rjust(2, "0")
@@ -545,7 +546,7 @@ class IGMP(Layer):
   cols['group'] = 11
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['type'] = self.intToHexStr(data.type).rjust(2, "0")
     self.vals['maxresp'] = self.intToHexStr(data.maxresp).rjust(2, "0")
     self.vals['group'] = self.pcapToHexStr(data.group, ".")
@@ -569,7 +570,7 @@ class ICMP(Layer):
   cols['seq'] = 3
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['type'] = self.intToHexStr(data.type)
     self.vals['id'] = self.intToHexStr(data.data.id)
     self.vals['seq'] = self.intToHexStr(data.data.seq)
@@ -595,7 +596,7 @@ class UDP(Layer):
   cols['ulen'] = 4
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['dport'] = self.intToHexStr(data.dport)
     self.vals['sport'] = self.intToHexStr(data.sport)
     self.vals['ulen'] = self.intToHexStr(data.ulen)
@@ -622,7 +623,7 @@ class TCP(Layer):
   cols['win'] = 4
 
   def __init__(self, data):
-    self.vals = dict()
+    Layer.__init__(self)
     self.vals['dport'] = self.intToHexStr(data.dport)
     self.vals['sport'] = self.intToHexStr(data.sport)
     self.vals['win'] = self.intToHexStr(data.win)

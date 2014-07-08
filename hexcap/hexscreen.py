@@ -403,41 +403,53 @@ class HexScreen:
         
   # Draws our footer
   def drawFooter(self):
+    s,c = self.cursorColumn(self.cX)
     y = self.maxY - self.footerHeight
     x = 0
-    divider = 3
+    divider = 2
 
     def addElement(sf):
+      sf = "[" + sf + "]"
       self.stdscr.hline(y, x, "-", divider)
       self.stdscr.addstr(y, x + divider, sf)
       return divider + len(sf)
 
-    x += addElement("[" + self.cap.fName + "]")
+    x += addElement(self.cap.fName)
 
-    txt = "[x:" + str(self.ppadCX - self.offLimitsWidth).rjust(3)
-    txt += " p:" + str(self.ppadCY + 1).rjust(3) + "/" + str(len(self.cap.packets)) + "]"
+    txt = str(self.ppadCY + 1) + "/" + str(len(self.cap.packets))
     x += addElement(txt)
 
     if(self.mark):
-      txt = "[MRK]"
+      txt = "MRK"
     elif(self.insert):
-      txt = "[INS]"
+      txt = "INS"
     else:
-      txt = "[NAV]"
+      txt = "NAV"
     x += addElement(txt)
 
-    s,c = self.cursorColumn(self.cX)
     if(s.exposed):
       if(s.RO):
-        txt = "[" + s.ID + "/" + c + "/RO]"
+        txt = s.ID + "/" + c + "/RO"
       else:
-        txt = "[" + s.ID + "/" + c + "/RW]"
+        txt = s.ID + "/" + c + "/RW"
     else:
-      txt = "[" + s.ID + "/-/-]"
+      txt = s.ID + "/-/-"
     x += addElement(txt)
 
     if(self.cap.ifName):
-      x += addElement("[" + self.cap.ifName + "]")
+      x += addElement(self.cap.ifName)
+
+    # Show generators if present
+    if(self.cap.packets[self.ppadCY].hasLayer('g')):
+      for lay in self.cap.packets[self.ppadCY].genLayers:
+        for col in lay.gen:
+          cfg.dbg("col:" + repr(col) + " c:" + repr(c))
+          if(col == c):
+            txt = "cnt:" + str(lay.gen[col]['count'])
+            txt += " stp:" + str(lay.gen[col]['step'])
+            txt += " msk:" + lay.gen[col]['mask']
+            x += addElement(txt)
+            break
 
     # Claim remaining space
     if(self.tableWidth > x):
@@ -845,8 +857,8 @@ class HexScreen:
         return
 
       mask = mask.translate(None, ',:;<>/?|\{}[]-_=+').strip().lower()
-      if(len(mask.translate(None, 'x' + ''.join(map(chr, cfg.hexChars)))) != 0):
-        self.printToMBuf("Error:Mask may only contain hex digits and \'x\'")
+      if(len(mask.translate(None, ''.join(map(chr, cfg.hexChars)))) != 0):
+        self.printToMBuf("Error:Mask may only contain hex digits")
         return
       else:
         rv = self.cap.packets[self.ppadCY].addMask(sid, cid, mask)
