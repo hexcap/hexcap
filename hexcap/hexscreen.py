@@ -927,18 +927,22 @@ class HexScreen:
 
   # Called after an action MAY cause cY,cX,ppadCurY,ppadCurX to be in illegal position(s)
   # Returns them to legal position(s)
+  # Need to call refresh() to actually move the cursor
   def resetCursor(self):
     # Handle X
     if(self.ppadCurX >= self.tableWidth - self.maxX):
       self.ppadCurX = self.tableWidth - self.maxX - 2
     self.ppadCurX = max(0, self.ppadCurX)
 
+    # Too far right
     if(self.cX > self.maxX - 1):
       self.cX = self.maxX - 1
     elif(self.cX > self.tableWidth - self.ppadCurX - 2):
       self.cX = self.tableWidth - self.ppadCurX - 2
-    elif(self.cX < 0):
-      self.cX = 0
+
+    # Too far left
+    if(self.cX < self.offLimitsWidth - self.ppadCurX):
+      self.cX = self.offLimitsWidth
 
     # Handle Y
     if(self.ppadCurY >= len(self.cap.packets) - self.maxY):
@@ -956,6 +960,9 @@ class HexScreen:
 
     elif(self.ppadCY >= len(self.cap.packets)):
       self.cY = self.ppadTopY + len(self.cap.packets) - 1
+
+    # Actually move the cursor
+    self.stdscr.move(self.cY, self.cX)
 
   #    cfg.dbg("Hexscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + \
   #    " ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark)))
