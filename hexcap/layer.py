@@ -14,6 +14,7 @@ import sys
 sys.path.insert(0, '../dpkt/')
 import dpkt
 from collections import OrderedDict
+import math
 
 class Layer:
   RO = False # Is this layer read-only?
@@ -56,7 +57,7 @@ class Layer:
       else:
         newbytes = []
         for b in bytes:
-          for ii in xrange(0, ln, 2):
+           for ii in xrange(0, ln, 2):
             newbytes.append(b[ii:ii+2])
         bytes = newbytes
 
@@ -66,29 +67,41 @@ class Layer:
 
   # Removes all characters in passed string not in cfg.hexChars
   def cleanHexStr(self, s):
-    rv = ''
+    rv = ""
     for c in s:
       if(ord(c) in cfg.hexChars):
         rv += c
     return rv
 
+  # Delimites passed string s with delimiter delim with ln characters between each delim
+  # May also pass a prepending string rv
+  # Returns delimited string
+  def delimStr(self, s, delim, ln=2, rv=''):
+    for ii in xrange(0, len(s), ln):
+      rv += s[ii:ii+ln] + delim
+    return rv.strip(delim)
+
   # Adds a generator to a col
   # Takes column to add it to; then count and step for the generator
   def addGenerator(self, col, count, step):
     if(not col in self.gen):
-      self.gen[col] = {'count': count, 'step': step, 'mask': ''.join('0' * len(self.cleanHexStr(self.vals[col])))}
+      self.gen[col] = {'count': count, 'step': step, 'mask': ''.join('0' * (len(self.cleanHexStr(self.vals[col])) * 4))}
     else:
       self.gen[col]['count'] = count
       self.gen[col]['step'] = step
 
   # Adds a mask to a col
-  # Takes column to add it to, and mask to be added
+  # Takes column to add it to, and binary mask to be added
+  # Mask is always stored as binary 
   def addMask(self, col, mask):
-    maskLen =  len(self.cleanHexStr(self.vals[col]))
-    if(len(mask) > maskLen):
+    colLen =  len(self.cleanHexStr(self.vals[col])) * 4
+    if(len(mask) > colLen):
       return "Error:Mask is too long"
-    else:
-      mask = mask.ljust(maskLen, '0')
+    else: # Pad our mask with either 0s or 1s to fill entire column
+      if(mask.endswith('0')):
+        mask = mask.ljust(colLen, '0')
+      else:
+        mask = mask.ljust(colLen, '1')
 
     if(not col in self.gen):
       self.gen[col] = {'count': 0, 'step': 0, 'mask': mask}
@@ -98,6 +111,37 @@ class Layer:
   # Sets column to val
   def setColumn(self, col, val):
     self.vals[col] = val
+
+  # Increment passed column by x respecting any set mask
+  # x can be any positive or negative integer
+  # **Must be overridden for any layer, with any column, with any delimiter**
+  def incColumn(self, col, x):
+    cfg.dbg("incColumn() col:" + col + " x:" + str(x))
+    startBinVal = binVal = cfg.hexStrToBinStr(self.cleanHexStr(self.vals[col]))
+    startPos = self.gen[col]['mask'].rindex('0')
+    endPos = self.gen[col]['mask'].index('0')
+
+    cfg.dbg("incColumn() val:" + self.cleanHexStr(self.vals[col]))
+    cfg.dbg("incColumn() startBinVal:" + startBinVal)
+    cfg.dbg("incColumn() mask:       " + self.gen[col]['mask'])
+    cfg.dbg("incColumn() startPos:" + str(startPos) + " endPos:" + str(endPos))
+
+    if(x > 0):
+      for ii in xrange(x):
+        for jj in xrange(startPos, endPos, -1):
+          if(binVal[jj] == '0'):
+            binVal = binVal[:jj] + '1' + binVal[jj+1:]
+            break
+          elif(binVal[jj] == '1'):
+            binVal = binVal[:jj] + '0' + binVal[jj+1:]
+          elif(jj == endPos):
+            binVal = startBinVal
+    elif(x < 0):
+      for ii in xrange(x, -1):
+        pass
+  
+    cfg.dbg("incColumn() rv binVal:  " + binVal + " val:" + cfg.binStrToHexStr(binVal))
+    self.vals[col] = cfg.binStrToHexStr(binVal)
 
   # A layer must override this once it becomes RWable
   def toPcap(self):
@@ -145,7 +189,6 @@ class Generator(Layer):
   cols['g'] = 3
 
   def __init__(self):
-    cfg.dbg("Entered Generator.__init__()")
     Layer.__init__(self)
     self.vals['g'] = ' * '
 
@@ -210,6 +253,11 @@ class Ethernet(Layer):
     rv.dst = self.hexStrToPcap(self.vals['eth-dst'], ":")
     rv.src = self.hexStrToPcap(self.vals['eth-src'], ":")
     return rv
+
+  def incColumn(self, col, x):
+    Layer.incColumn(self, col, x)
+    if(col == 'eth-dst' or col == 'eth-src'):
+      self.vals[col] = self.delimStr(self.vals[col], ":")
 
 # IEEE 802.3 Ethernet II
 class EthernetII(Ethernet):
@@ -494,6 +542,11 @@ class IPv4(Layer):
     rv.opts = self.vals['opts']
     return rv
 
+  def incColumn(self, col, x):
+    Layer.incColumn(self, col, x)
+    if(col == 'dst' or col == 'src'):
+      self.vals[col] = self.delimStr(self.vals[col], ".")
+
 # Internet Protocol Version 6
 class IPv6(Layer):
   ID = "ipv6"
@@ -533,6 +586,11 @@ class IPv6(Layer):
       rv.extension_hdrs[hdr] = None
 
     return rv
+
+  def incColumn(self, col, x):
+    Layer.incColumn(self, col, x)
+    if(col == 'dst' or col == 'src'):
+      self.vals[col] = self.delimStr(self.vals[col], ":", 4)
 
 # Internet Group Management Protocol v1/v2
 # We do not currently support v3

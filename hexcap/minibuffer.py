@@ -25,6 +25,7 @@ class MiniBuffer:
   allowedChars.append(45) # - dash
   allowedChars.append(46) # . dot
   allowedChars.append(47) # / forward slash
+  allowedChars.append(58) # : colon
   allowedChars.append(61) # = equals
   allowedChars.append(64) # @ at
   allowedChars.append(95) # _ underscore
@@ -48,8 +49,8 @@ class MiniBuffer:
 
    '''
   cmds = {
-    'pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60_70']]], # Couldn't get property set to work here
-    'pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000_1500']]],
+    'pkt-min-size' : ['self.cap._set_minPktSize()', [['i', '60_100']]], # Couldn't get property set to work here
+    'pkt-max-size' : ['self.cap._set_maxPktSize()', [['i', '1000_8000']]],
     'pkt-size-range' : ['self.cap.setPktSizeRange()', [['i', '60_70', ' min:'], ['i', '1000_1500', ' max:']]],
     'interface' : ['self.cap.setInterface()', [['s', '^[\w]{2,}[0-9]{1,}$']]],
     'save-file' : ['self.cap.save()', []],
@@ -222,7 +223,7 @@ class MiniBuffer:
 
   # Handles gathering of arguments for chosen function
   def inputArgs(self, c):
-    arg = self.buf[len(self.argPrompt):]
+    arg = self.buf[len(self.argPrompt):].strip()
     if(len(arg) < 1):
       return
 

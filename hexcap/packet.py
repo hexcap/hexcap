@@ -18,9 +18,18 @@ class Packet:
     self.layers.append(layer.TStamp(ts))
 
     self.leftovers = None
+
     self.minSize = len(packet)
     self.maxSize = max(dpkt.ethernet.ETH_MTU, len(packet))
     self.initLayers(dpkt.ethernet.Ethernet(packet))
+
+  # Convenience method
+  # Append a new layer to this packet
+  def append(self, lay):
+    if(not isinstance(lay, layer.Layer)):
+      raise PacketError
+    else:
+      self.layers.append(lay)
 
   # Is every layer of this packet writable
   # TODO:Add more checks in the future
@@ -120,12 +129,15 @@ class Packet:
 
   # Adds a generator to a layer
   def addGenerator(self, sid, cid, count, step):
-    if(not self.hasLayer('g')):
-      self.layers.insert(1, layer.Generator())
-
     for lay in self.layers:
       if(lay.ID == sid):
-        return lay.addGenerator(cid, count, step)
+        rv =  lay.addGenerator(cid, count, step)
+        if(rv):
+          return rv
+        else:
+          if(not self.hasLayer('g')):
+            self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
+            self.layers.insert(1, layer.Generator())
 
   # Adds a mask to a layer
   def addMask(self, sid, cid, mask):
@@ -136,6 +148,7 @@ class Packet:
           return rv
         else:
           if(not self.hasLayer('g')):
+            self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
             self.layers.insert(1, layer.Generator())
 
   # Returns list of all layers with generators
@@ -179,13 +192,12 @@ class Packet:
   # Returns False if pcap data cannot be constructed
   def data(self):
     for lay in self.layers:
-      if(lay.ID == 'pid' or lay.ID == 'tstamp'):
+      if(lay.ID == 'pid' or lay.ID == 'tstamp' or lay.ID == 'g'):
         continue
       elif(isinstance(lay, layer.Ethernet)):
         rv = lay.toPcap()
       else:
         rv = self.pushDpktLayer(rv, lay.toPcap())
-
     return self.sizePkt(rv)
 
   # Totally unpythonic but don't care

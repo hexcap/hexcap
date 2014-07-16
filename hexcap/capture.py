@@ -12,6 +12,7 @@ import os
 import dnet
 import pcapy as pcap
 import time
+import copy
 
 # hexcap specific imports
 import cfg
@@ -21,6 +22,7 @@ import layer
 class Capture:
   # Takes a filehandle to a pcap file
   def __init__(self, f, name=''):
+    self.minSize = self.maxSize = False # These remain False until set
     self.clipboard = [] # Our buffer for yanking and pasting
     if(len(name) > 0):
       self.fName = name
@@ -64,7 +66,7 @@ class Capture:
     return len(self.packets)
 
   # Appends a packet to our capture
-  def __append__(self, hdr, pkt):
+  def append(self, hdr, pkt):
     p = packet.Packet(time.time(), pkt, len(self.packets) + 1)
     self.packets.append(p)
 
@@ -81,7 +83,11 @@ class Capture:
   def __write(self, f):
     out = dpkt.pcap.Writer(f)
     for pkt in self.packets:
-      out.writepkt(dpkt.ethernet.Ethernet.pack(pkt.data()))
+      if(pkt.hasLayer('g')):
+        for g in self.expandGenerators(pkt):
+          out.writepkt(dpkt.ethernet.Ethernet.pack(g.data()))
+      else:
+        out.writepkt(dpkt.ethernet.Ethernet.pack(pkt.data()))
 
   # Saves our capture file
   # Raises IOError if problems
@@ -101,7 +107,7 @@ class Capture:
     name = name.strip()
 
     # Check that directory exists
-    if(name.split("/")):
+    if(len(name.split("/")) > 1):
       if(not os.path.isdir(os.path.split(name)[0])):
         return "Error:Directory does not exist"
 
@@ -146,11 +152,6 @@ class Capture:
         if(lay.ID == 'pid'):
           lay.setColumn('pid', ii + 1)
 
-  # Sets both min and max pkt size
-  def setPktSizeRange(self, pktMin, pktMax):
-    self.minPktSize = pktMin
-    self.maxPktSize = pktMax
-
   # Sets the interface for sending and capturing
   def setInterface(self, name):
     name = name.strip()
@@ -171,14 +172,55 @@ class Capture:
     self.ifName = name
     self.iface = dnet.eth(self.ifName)
 
-  # Private function for sending a single packet
+  # Takes a packet obj with generator
+  # Returns list of packets with all generators expanded
+  # Returns False on failure
+  def expandGenerators(self, gPkt):
+    if(not gPkt.hasLayer('g')):
+      return False
+    else:
+      numPkts = 0
+      for lay in gPkt.genLayers: # Determine how many packets to generate
+        for col in lay.gen:
+          numPkts = max(numPkts, lay.gen[col]['count'])
+
+      if(numPkts == 0 or numPkts == 1):
+        return gPkt
+      else:
+        rv = []
+        for ii in xrange(numPkts):
+          pkt = copy.deepcopy(gPkt)
+          pkt.layers.pop(1)
+          for lay in pkt.layers[0:]: # Ignore pktID
+            for col,gDef in lay.gen.iteritems():
+              cfg.dbg("expandGenerators() col:" + repr(col))
+              cfg.dbg("expandGenerators() step:" + str(gDef['step']))
+              cfg.dbg("expandGenerators() vals[col]:" + lay.vals[col])
+              lay.incColumn(col, ii * gDef['step'])
+              del lay.gen[col]['count']
+              del lay.gen[col]['step']
+              del lay.gen[col]['mask']
+          
+          rv.append(pkt)
+
+        cfg.dbg("expandGenerators() returning " + str(len(rv)) + " packets")
+        #        cfg.dbg(repr(rv[5]))
+        return rv
+
+  # Function for sending a single packet
   # Takes a packet object to send
   # Returns True on success and false on failure
   def tx(self, pkt):
-    if(self.iface.send(str(pkt.data())) == -1):
-      return False
+    if(pkt.hasLayer('g')): # It has a generator
+      for p in self.expandGenerators(pkt):
+        if(not self.tx(p)):
+          return False
     else:
-      return True
+      if(self.iface.send(str(pkt.data())) == -1):
+        return False
+      else:
+        return True
+    return True
 
   # Initializes our pcap capture object
   # Returns a string on failure and None on success 
@@ -206,6 +248,11 @@ class Capture:
     # self.ifCap.dispatch(1, lambda hdr,pkt: cfg.dbg("hdr:" + repr(hdr) + "pkt:" + repr(pkt)))
     return self.ifCap.dispatch(1, self.__append__)
 
+  # Sets both min and max pkt size
+  def setPktSizeRange(self, pktMin, pktMax):
+    self.minPktSize = pktMin
+    self.maxPktSize = pktMax
+
   # get and set for minSize of every packet in capture
   def _get_minPktSize(self):
     rv = self.packets[0].minSize
@@ -215,6 +262,7 @@ class Capture:
     return rv
 
   def _set_minPktSize(self, s):
+    self.minSize = s
     for pkt in self.packets:
       pkt.minSize = s
   minPktSize = property(_get_minPktSize, _set_minPktSize)
@@ -228,6 +276,7 @@ class Capture:
     return rv
 
   def _set_maxPktSize(self, s):
+    self.maxSize = s
     for pkt in self.packets:
       pkt.maxSize = s
   maxPktSize = property(_get_maxPktSize, _set_maxPktSize)

@@ -198,7 +198,7 @@ class HexScreen:
         rv += s.width
       else:
         return rv
-    return rv
+    return False
   offLimitsWidth = property(_get_offLimitsWidth)
 
  # Leftmost sections that are off limits to cursor
@@ -443,11 +443,10 @@ class HexScreen:
     if(self.cap.packets[self.ppadCY].hasLayer('g')):
       for lay in self.cap.packets[self.ppadCY].genLayers:
         for col in lay.gen:
-          cfg.dbg("col:" + repr(col) + " c:" + repr(c))
           if(col == c):
             txt = "cnt:" + str(lay.gen[col]['count'])
             txt += " stp:" + str(lay.gen[col]['step'])
-            txt += " msk:" + lay.gen[col]['mask']
+            txt += " msk:" + cfg.binStrToHexStr(lay.gen[col]['mask'])
             x += addElement(txt)
             break
 
@@ -815,10 +814,10 @@ class HexScreen:
   def modCol(self, f, *args):
     def redraw(): # Redraws screen after modifying column
       self.buildSections()
+      self.resetCursor()
       self.drawPpads()
       self.refresh()
-      self.resetCursor()
-
+        
     s, cid = self.cursorColumn(self.cX)
     sid = s.ID
     if(not s.exposed):
@@ -856,17 +855,37 @@ class HexScreen:
         self.printToMBuf("Error:Mask too short")
         return
 
-      mask = mask.translate(None, ',:;<>/?|\{}[]-_=+').strip().lower()
+      # Mask can only contain hexChars
+      mask = mask.translate(None, '.,:').strip().lower()
       if(len(mask.translate(None, ''.join(map(chr, cfg.hexChars)))) != 0):
         self.printToMBuf("Error:Mask may only contain hex digits")
         return
-      else:
-        rv = self.cap.packets[self.ppadCY].addMask(sid, cid, mask)
-        if(rv):
-          self.printToMBuf(rv)
+
+      # binMask must contain at least 1 zero
+      # binMask cannot have more than one grouping of zeros    
+      # Valid masks: 110011, 1, 1100, 0011, 10
+      # Invalid masks: 00101, 110010, 0101
+      cfg.dbg("mask:" + mask)
+      binMask = cfg.hexStrToBinStr(mask)
+      cfg.dbg("binMask:" + binMask)
+      if(binMask.find('0') == -1):
+        self.printToMBuf("Error:Invalid mask")
+        return
+      if(binMask.startswith('0')):
+        if(binMask.lstrip('0').find('0') != -1):
+          self.printToMBuf("Error:Invalid mask")
           return
-        else:
-          redraw()
+      else:
+        if(binMask.lstrip('1').lstrip('0').find('0') != -1):
+          self.printToMBuf("Error:Invalid mask")
+          return
+
+      rv = self.cap.packets[self.ppadCY].addMask(sid, cid, binMask)
+      if(rv):
+        self.printToMBuf(rv)
+        return
+      else:
+        redraw()
 
   # Wrapper for ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):
@@ -939,7 +958,6 @@ class HexScreen:
 
   # Called after an action MAY cause cY,cX,ppadCurY,ppadCurX to be in illegal position(s)
   # Returns them to legal position(s)
-  # Need to call refresh() to actually move the cursor
   def resetCursor(self):
     # Handle X
     if(self.ppadCurX >= self.tableWidth - self.maxX):
