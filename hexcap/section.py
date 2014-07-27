@@ -14,11 +14,8 @@ class Section:
     self.position = pos # Our relative position in the ordering of columns
 
     self.c = Assoc() # Assoc of columns
-    self.exposed = False # Is this section showing?
-    self.exposable = True # Can the exposed boolean be toggled?
     self._width = 0 # Width of complete section
     self.visible = True # Is this section currently visible?
-    self.RO = False # Is this section ReadOnly? Can it be modified by the user
 
   def _get_width(self):
     if(self.exposed):

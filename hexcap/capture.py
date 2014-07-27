@@ -193,34 +193,31 @@ class Capture:
           pkt.layers.pop(1)
           for lay in pkt.layers[0:]: # Ignore pktID
             for col,gDef in lay.gen.iteritems():
-              cfg.dbg("expandGenerators() col:" + repr(col))
-              cfg.dbg("expandGenerators() step:" + str(gDef['step']))
-              cfg.dbg("expandGenerators() vals[col]:" + lay.vals[col])
               lay.incColumn(col, ii * gDef['step'])
               del lay.gen[col]['count']
               del lay.gen[col]['step']
               del lay.gen[col]['mask']
           
           rv.append(pkt)
-
-        cfg.dbg("expandGenerators() returning " + str(len(rv)) + " packets")
-        #        cfg.dbg(repr(rv[5]))
         return rv
 
   # Function for sending a single packet
   # Takes a packet object to send
-  # Returns True on success and false on failure
+  # Returns number of packets sent on success and False on failure
   def tx(self, pkt):
+    sentPkts = 0
     if(pkt.hasLayer('g')): # It has a generator
       for p in self.expandGenerators(pkt):
-        if(not self.tx(p)):
+        if(self.iface.send(str(p.data())) == -1):
           return False
+        else:
+          sentPkts += 1
     else:
       if(self.iface.send(str(pkt.data())) == -1):
         return False
       else:
-        return True
-    return True
+        return 1
+    return sentPkts
 
   # Initializes our pcap capture object
   # Returns a string on failure and None on success 

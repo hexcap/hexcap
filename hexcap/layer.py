@@ -114,17 +114,11 @@ class Layer:
 
   # Increment passed column by x respecting any set mask
   # x can be any positive or negative integer
-  # **Must be overridden for any layer, with any column, with any delimiter**
+  # Must be overridden for any layer, with any column, with any delimiter
   def incColumn(self, col, x):
-    cfg.dbg("incColumn() col:" + col + " x:" + str(x))
     startBinVal = binVal = cfg.hexStrToBinStr(self.cleanHexStr(self.vals[col]))
     startPos = self.gen[col]['mask'].rindex('0')
     endPos = self.gen[col]['mask'].index('0')
-
-    cfg.dbg("incColumn() val:" + self.cleanHexStr(self.vals[col]))
-    cfg.dbg("incColumn() startBinVal:" + startBinVal)
-    cfg.dbg("incColumn() mask:       " + self.gen[col]['mask'])
-    cfg.dbg("incColumn() startPos:" + str(startPos) + " endPos:" + str(endPos))
 
     if(x > 0):
       for ii in xrange(x):
@@ -138,9 +132,7 @@ class Layer:
             binVal = startBinVal
     elif(x < 0):
       for ii in xrange(x, -1):
-        pass
-  
-    cfg.dbg("incColumn() rv binVal:  " + binVal + " val:" + cfg.binStrToHexStr(binVal))
+        pass  
     self.vals[col] = cfg.binStrToHexStr(binVal)
 
   # A layer must override this once it becomes RWable

@@ -41,13 +41,7 @@ def hexStrToBinStr(s):
     else:
       leadZeros += 4 - len(bin(int('0x' + c, 16)).split('0b')[1])
       break
-
-  dbg("leadZeros:" + str(leadZeros))
   return ''.join('0' * leadZeros) + bin(int('0x' + s, 16)).split('0b')[1]
-
-#    leadZeros += (len(s) - len(s.lstrip('0'))) * 4
-#    leadZeros = 4 - len(bin(int('0x' + s[0], 16)).split('0b')[1])
-
 
 # We can't count past 99,999
 pktIDWidth = 5
@@ -63,3 +57,6 @@ hexChars.append(ord('c'))
 hexChars.append(ord('d'))
 hexChars.append(ord('e'))
 hexChars.append(ord('f'))
+
+# mini-buffer CLI history
+mBufHistory = []

@@ -76,6 +76,8 @@ class MiniBuffer:
     self.args = []
     self.resetPrompt()
     self.tabOptions = 5 # How many options to display with tab completion?
+    self.history = cfg.mBufHistory # Our CLI history
+    self.historyPtr = len(self.history) # Pointer to current history item 
 
   def __del__(self):
     pass
@@ -114,6 +116,7 @@ class MiniBuffer:
       return None
     else:
       if(len(self.args) == len(self.cmds[self.func][1])):
+        cfg.mBufHistory.append([self.func, self.args])
         if(len(self.cmds[self.func][1]) == 0):
           return self.cmds[self.func][0]
         else:
@@ -142,6 +145,18 @@ class MiniBuffer:
     elif(c == curses.KEY_LEFT):
       if(self.cX > 0):
         self.cX -= 1
+
+    elif(c == curses.KEY_UP):
+      if(self.historyPtr > 0):
+        self.historyPtr -= 1
+      self.buf = self.history[self.historyPtr][0]
+      self.cX = len(self.buf)
+
+    elif(c == curses.KEY_DOWN):
+      if(self.historyPtr < len(self.history) - 1):
+        self.historyPtr += 1
+      self.buf = self.history[self.historyPtr][0]
+      self.cX = len(self.buf)
 
     elif(curses.keyname(c) == '^A'): # Goto beginning of line
       self.cX = len(self.argPrompt)

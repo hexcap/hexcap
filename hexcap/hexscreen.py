@@ -135,6 +135,13 @@ class HexScreen:
 
   # Determines the correct order of sections to display based on capture
   def buildSections(self):
+    # Remember which sections are exposed before clobbering self.sections
+    hiddenSections = []
+    if(hasattr(self, 'sections')):
+      for s in self.sections:
+        if(not s.exposed):
+          hiddenSections.append(s.ID)
+
     self.sections = []
     IDs = [] # Holds temp list of sections we've added to self.sections
     for pkt in self.cap.packets:
@@ -147,9 +154,12 @@ class HexScreen:
           for col,width in lay.cols.iteritems():
             s.append(col, width)
           # non-default values for layers need to be handled here
-          s.RO = lay.RO
-          s.exposed = lay.exposed
+          if(s.ID in hiddenSections): 
+            s.exposed = False
+          else:
+            s.exposed = lay.exposed
           s.exposable = lay.exposable
+          s.RO = lay.RO
 
           # append/insert our new section
           if(len(self.sections) <= 1):
@@ -728,8 +738,9 @@ class HexScreen:
     if(repeat == 0):
       while True:
         for jj in pkts:
-          if(self.cap.tx(self.cap.packets[jj])):
-            pktSent += 1
+          rv = self.cap.tx(self.cap.packets[jj])
+          if(rv):
+            pktSent += rv
           else:
             fail = True
 
@@ -740,8 +751,9 @@ class HexScreen:
     else:
       for ii in xrange(repeat):
         for jj in pkts:
-          if(self.cap.tx(self.cap.packets[jj])):
-            pktSent += 1
+          rv = self.cap.tx(self.cap.packets[jj])
+          if(rv):
+            pktSent += rv
           else:
             fail = True
 
@@ -821,6 +833,7 @@ class HexScreen:
     s, cid = self.cursorColumn(self.cX)
     sid = s.ID
     if(not s.exposed):
+      self.printToMBuf("Error:Cannot modify hidden section")
       return
     if(s.RO):
       self.printToMBuf("Error:Layer is read only")
@@ -865,9 +878,7 @@ class HexScreen:
       # binMask cannot have more than one grouping of zeros    
       # Valid masks: 110011, 1, 1100, 0011, 10
       # Invalid masks: 00101, 110010, 0101
-      cfg.dbg("mask:" + mask)
       binMask = cfg.hexStrToBinStr(mask)
-      cfg.dbg("binMask:" + binMask)
       if(binMask.find('0') == -1):
         self.printToMBuf("Error:Invalid mask")
         return
