@@ -18,7 +18,7 @@ import capture
 def usage(s):
   print "FATAL ERROR: " + s
   print ""
-  print "USAGE: " + sys.argv[0] + " FILE"
+  print "USAGE: " + sys.argv[0] + " [ FILE ]"
   print "FILE must be a valid pcap file"
   sys.exit(1)
 
@@ -38,18 +38,24 @@ cfg.dbg('Start')
 repeatKeyStamp = int(round(time.time() * 100))
 repeatKeyDelay = 40 # In hundreths of a second
 
-# Check for bad args
-if(len(sys.argv) != 2): usage("Insufficient Arguments")
-if(not os.path.exists(sys.argv[1])): usage("Bad Filename")
-fName = sys.argv[1]
+# Check for args
+if(len(sys.argv) < 2):
+  pc = capture.Capture()
 
-# Initialize
-try:
-  f = open(fName, 'rb')
-except:
-  usage("Unable to open file for reading >> " + fName)
-pc = capture.Capture(f, fName)
-f.close()
+elif(len(sys.argv) > 2):
+  usage("Too many arguments")
+
+else:
+  if(not os.path.exists(sys.argv[1])): usage("Bad Filename")
+  fName = sys.argv[1]
+
+  # Initialize
+  try:
+    f = open(fName, 'rb')
+  except:
+    usage("Unable to open file for reading >> " + fName)
+  pc = capture.Capture(f, fName)
+  f.close()
 
 mainScr = hexscreen.HexScreen()
 mainScr.initPad(pc)

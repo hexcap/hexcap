@@ -19,13 +19,16 @@ import cfg
 import packet
 import layer
 
+# A good default packet to start with
+defaultPacket = '\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x01\x86\xdd\x00\x00\x00\x00\x00(\x06\x40\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xcd\xd3\x00\x16\xffP\xd7\x13\x00\x00\x00\x00\xa0\x02\xff\xffg\xd3\x00\x00\x02\x04\x05\xa0\x01\x03\x03\x00\x01\x01\x08\n}\x18:a\x00\x00\x00\x00'
+
 class Capture:
   # Takes a filehandle to a pcap file
-  def __init__(self, f, name=''):
+  def __init__(self, f=None, name=''):
     self.minSize = self.maxSize = False # These remain False until set
     self.clipboard = [] # Our buffer for yanking and pasting
-    if(len(name) > 0):
-      self.fName = name
+    self.packets = [] # Our list of packets
+    self.fName = name
 
     # Set our default ethernet device
     # TODO: Need more OS's here
@@ -42,11 +45,13 @@ class Capture:
 
       self.iface = dnet.eth(self.ifName)
 
-    self.read(f) # Read in and initialize capture
-
+    if(f):
+      self.read(f) # Read in and initialize capture
+    else:
+      self.packets.append(packet.Packet(time.time(), defaultPacket, 1))
+      
   # Reads a filehandle to a pcap file
   def read(self, f):
-    self.packets = []
     pid = 1
     cap = dpkt.pcap.Reader(f)
     for ts, pkt in cap:
