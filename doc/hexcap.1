@@ -1,0 +1,134 @@
+.\" Manpage for hexcap.
+.\" Copyright (c) 2014, Andrew McConachie <smutt@depht.com>
+.\" All rights reserved.
+.TH man 1 "02 Aug 2014" "0.2" "hexcap man page"
+
+.SH NAME
+hexcap \- An hex editor for libpcap files.
+
+.SH SYNOPSIS
+hexcap 
+.I
+[filename]
+
+.SH DESCRIPTION
+hexcap is an interactive libpcap hex editor, packet generator and capturing tool for Ethernet. It can be used to edit libpcap files, transmit parts of libpcap files, capture packets on Ethernet interfaces, or generate packets from scratch. hexcap supports two modes in its main editor, and a mini-buffer for more complex commands.
+.SH OPTIONS
+hexcap can be invoked with no options, or a single filename. Where filename is a libpcap capture file.
+.SH MODES
+hexcap supports Navigate and Insert modes, and launches in Navigate mode.In Navigate mode the user cannot modify packet values. In Insert mode the keys [1-9,a-f] change values.
+.SH MAIN EDITOR
+.TP 12
+Ctrl-A
+Goto beginning of line
+.TP
+Ctrl-B
+Page Up
+.TP
+Ctrl-F
+Page Down
+.TP
+Ctrl-E
+Goto end of line
+.TP
+Ctrl-K
+Yank single packet
+.TP
+Ctrl-N
+Toggle Navigate/Insert modes. See the MODES section for an explanation of modes.
+.TP
+Ctrl-Q
+Quit
+.TP
+Ctrl-R
+Reread file from disk.
+.TP
+Ctrl-S
+Save file
+.TP
+Ctrl-W
+Yank packet(s)
+.TP
+Ctrl-X
+Toggle mini-buffer focus. See the MINI-BUFFER section for a full list of supported commands.
+.TP
+Ctrl-Y
+Paste packet(s)
+.TP
+Ctrl-Z
+Show/Hide the current column
+.TP
+Ctrl-_
+Set mark
+.TP
+<
+Move left one column.
+.TP
+>
+Move right one column.
+.TP
+Arrows
+Do what you expect(up, down, left, right)
+.SH MINI-BUFFER
+The mini-buffer allows invocation of more complex editing commands.
+It supports tab completion, and basic history.
+.TP
+Ctrl-X
+Toggle mini-buffer focus.
+.TP
+ESC
+Escape mini-buffer focus.
+.TP
+pkt-min-size
+Set minTU. All packets saved or transmitted will be padded to meet minTU.
+.TP
+pkt-max-size
+Set maxTU aka MTU. All packets saved or transmitted will be truncated to meet minTU.
+.TP
+pkt-size-range
+Set both minTU and maxTU. All saved or transmitted packets will be padded or truncated so that (minTU < packet < maxTU).
+.TP
+save-as-file
+Save to a new file and continue working on new file.
+.TP
+save-file
+Save current file.
+.TP
+interface
+Set ethernet interface for transmitting and capturing. [ex. eth0, em1, etc]
+.TP
+tx-all     
+Transmit entire buffer. 
+.TP
+tx-pkt
+Transmit single selected packet.
+.TP
+tx-range
+Transmit an inclusive range of packets.
+.TP
+rx-all
+Capture every packet ingressing or egressing the selected interface.
+.TP
+rx-filter
+Capture every packet ingressing or egressing the selected interface that matches the filter given. Filter must be given in Berkeley Packet Filter(BPF) syntax.
+.TP
+generator
+Add a generator to the current section and column. Takes a 'count' and 'step'. 'count' is a positive integer between [1-255]. 'step' is an integer between [-16-16] 
+.TP
+mask
+Add a generator to the current section and column. Takes a single hex 'mask' value. Every zero bit of the mask will iterated over by the generator. A mask cannot contain non-consecutive zero bits.
+.SH Tansmitting
+Hexcap can transmit packets on the selected ethernet interface. All tx commands take a 'repeat' argument, where 'repeat' must be between 0-999. If 'repeat' is 0, then transmission will continue until interrupted by the user. hexcap requires superuser access to transmit.
+.SH Capturing
+Hexcap can capture packets on the selected ethernet interface. Both rx commands take a 'count' argument, where 'count' must be between 0-999. If 'count' is 0, then capturing will continue until interrupted by the user, or MAX_PACKETS is reached. Currently MAX_PACKETS is set at 9999. hexcap require superuser access to capture.
+.SH Generators and Masks
+Hexcap supports the generation of packets using iterators, akin to 'for loops' in imperative programming. Packets are generated at transmission and save time. hexcap allows the setting of masks to place iterators at user defined offsets within headers.
+.SH SEE ALSO
+tcpdump(8), tcpreplay(1), wireshark(1), pcap(3), 
+.SH SUPPORT
+hexcap supports the following network protocols:
+Ethernet(802.2, 802.3, Ethernet II, SNAP), 802.1q, Cisco Discovery Protocol(CDP), Extreme Networks Discovery Protocol(EDP), Spanning Tree Protocol, ARP, IPv4, IPv6, IGMPv1, IGMPv2, ICMP, UDP, and TCP. hexcap does not support libpcapng.
+.SH BUGS
+Probably lots.
+.SH AUTHOR
+Andrew McConachie (andrewm@ischool.berkeley.edu)
