@@ -1024,8 +1024,10 @@ class HexScreen:
 
   # Yanks a single packet to clipboard
   def yankPacket(self):
-    self.cap.yank(self.ppadCY, self.ppadCY)
-    
+    if(not (len(self.cap.packets) > 1)):
+      return
+
+    self.cap.yank(self.ppadCY, self.ppadCY)    
     self.resetCursor()
     self.drawPpads()
     self.refresh()

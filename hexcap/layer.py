@@ -11,7 +11,7 @@ All rights reserved.
 
 import cfg
 import sys
-sys.path.insert(0, '../dpkt/')
+sys.path.insert(0, sys.path[0] + '/../dpkt/')
 import dpkt
 from collections import OrderedDict
 import math

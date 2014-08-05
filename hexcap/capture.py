@@ -6,7 +6,7 @@ All rights reserved.
 '''
 
 import sys
-sys.path.insert(0, '../dpkt/')
+sys.path.insert(0, sys.path[0] + '/../dpkt/')
 import dpkt
 import os
 import dnet
@@ -248,7 +248,7 @@ class Capture:
   # Must first call initRx()
   def rx(self):
     # self.ifCap.dispatch(1, lambda hdr,pkt: cfg.dbg("hdr:" + repr(hdr) + "pkt:" + repr(pkt)))
-    return self.ifCap.dispatch(1, self.__append__)
+    return self.ifCap.dispatch(1, self.append)
 
   # Sets both min and max pkt size
   def setPktSizeRange(self, pktMin, pktMax):

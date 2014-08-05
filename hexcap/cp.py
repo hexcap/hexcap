@@ -6,7 +6,7 @@ All rights reserved.
 '''
 
 import sys
-sys.path.insert(0, '../dpkt/')
+sys.path.insert(0, sys.path[0] + '/../dpkt/')
 import dpkt
 from inspect import getmembers
 from pprint import pprint
