@@ -4,6 +4,7 @@ All rights reserved.
 '''
 
 import datetime
+import sys
 
 ######################
 # Global definitions #
@@ -13,7 +14,7 @@ import datetime
 debug = True
 
 if(debug):
-  dbgF = open('hexcap.log', 'a', 0)
+  dbgF = open(sys.path[0] + '/hexcap.log', 'a', 0)
 
 def dbg(msg):
   if(debug):
