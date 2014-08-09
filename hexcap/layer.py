@@ -107,6 +107,7 @@ class Layer:
       self.gen[col] = {'count': 0, 'step': 0, 'mask': mask}
     else:
       self.gen[col]['mask'] = mask
+    cfg.dbg("addMask mask:" + mask)
 
   # Sets column to val
   def setColumn(self, col, val):
@@ -133,6 +134,7 @@ class Layer:
     elif(x < 0):
       for ii in xrange(x, -1):
         pass  
+        # TODO: Implement negative step iteration
     self.vals[col] = cfg.binStrToHexStr(binVal)
 
   # A layer must override this once it becomes RWable
@@ -414,6 +416,11 @@ class EDP(Layer):
     rv.data = self.vals['data']
     return rv
 
+  def incColumn(self, col, x):
+    Layer.incColumn(self, col, x)
+    if(col == 'mac'):
+      self.vals[col] = self.delimStr(self.vals[col], ":")
+
 # Spanning Tree Protocol
 class STP(Layer):
   ID = "stp"
@@ -462,6 +469,11 @@ class STP(Layer):
     rv.data = self.vals['data']
     return rv
 
+  def incColumn(self, col, x):
+    Layer.incColumn(self, col, x)
+    if(col == 'root' or col == 'bridge'):
+      self.vals[col] = self.delimStr(self.vals[col], ":")
+
 # Adress Resolution Protocol for IPv4
 # Assumptions
 # HTYPE == 1(Ethernet)
@@ -493,6 +505,13 @@ class ARP(Layer):
     rv.spa = self.hexStrToPcap(self.vals['spa'], ".")
     rv.tpa = self.hexStrToPcap(self.vals['tpa'], ".")
     return rv
+
+  def incColumn(self, col, x):
+    Layer.incColumn(self, col, x)
+    if(col == 'sha' or col == 'tha'):
+      self.vals[col] = self.delimStr(self.vals[col], ":")
+    elif(col == 'spa' or col == 'tpa'):
+      self.vals[col] = self.delimStr(self.vals[col], ".")
 
 # Internet Protocol version 4
 class IPv4(Layer):
@@ -607,6 +626,11 @@ class IGMP(Layer):
     rv.maxresp = int(self.vals['maxresp'], 16)
     rv.group = self.hexStrToPcap(self.vals['group'], ".")
     return rv
+
+  def incColumn(self, col, x):
+    Layer.incColumn(self, col, x)
+    if(col == 'group'):
+      self.vals[col] = self.delimStr(self.vals[col], ".")
 
 # Internet Control Message Protocol
 # Assumes ICMP type is either 0 or 8(echo or echo_reply)

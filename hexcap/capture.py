@@ -37,7 +37,7 @@ class Capture:
     else:
       osType = os.uname()[0].lower()
       if(osType == "openbsd"):
-        self.ifName = "em1"
+        self.ifName = "em0"
       elif(osType == "linux"):
         self.ifName = "eth0"
       else:
@@ -181,30 +181,27 @@ class Capture:
   # Returns list of packets with all generators expanded
   # Returns False on failure
   def expandGenerators(self, gPkt):
-    if(not gPkt.hasLayer('g')):
-      return False
-    else:
-      numPkts = 0
-      for lay in gPkt.genLayers: # Determine how many packets to generate
-        for col in lay.gen:
-          numPkts = max(numPkts, lay.gen[col]['count'])
+    numPkts = 0
+    for lay in gPkt.genLayers: # Determine how many packets to generate
+      for col in lay.gen:
+        numPkts = max(numPkts, lay.gen[col]['count'])
 
-      if(numPkts == 0 or numPkts == 1):
-        return gPkt
-      else:
-        rv = []
-        for ii in xrange(numPkts):
-          pkt = copy.deepcopy(gPkt)
-          pkt.layers.pop(1)
-          for lay in pkt.layers[0:]: # Ignore pktID
-            for col,gDef in lay.gen.iteritems():
-              lay.incColumn(col, ii * gDef['step'])
-              del lay.gen[col]['count']
-              del lay.gen[col]['step']
-              del lay.gen[col]['mask']
+    if(numPkts == 0 or numPkts == 1):
+      return [gPkt]
+    else:
+      rv = []
+      for ii in xrange(numPkts):
+        pkt = copy.deepcopy(gPkt)
+        pkt.layers.pop(1) # Remove the generator layer
+        for lay in pkt.layers[0:]: # Ignore pktID
+          for col,gDef in lay.gen.iteritems():
+            lay.incColumn(col, ii * gDef['step'])
+            del lay.gen[col]['count']
+            del lay.gen[col]['step']
+            del lay.gen[col]['mask']
           
-          rv.append(pkt)
-        return rv
+        rv.append(pkt)
+      return rv
 
   # Function for sending a single packet
   # Takes a packet object to send
