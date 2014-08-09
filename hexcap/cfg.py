@@ -27,10 +27,10 @@ def dbg(msg):
 def binStrToHexStr(s):
   leadZeros = (len(s) - len(s.lstrip('0')))
   if(leadZeros < 4):
-    return hex(int('0b' + s, 2)).split('0x')[1]
+    return hex(int('0b' + s, 2)).split('0x')[1].rstrip("L")
   else:
     leadZeros = (leadZeros // 4) + (leadZeros % 4)
-    return ''.join('0' * leadZeros) + hex(int('0b' + s, 2)).split('0x')[1]
+    return ''.join('0' * leadZeros) + hex(int('0b' + s, 2)).split('0x')[1].rstrip("L")
 
 # Converts a hex string to a binary string
 # Takes hex string and returns binary string
