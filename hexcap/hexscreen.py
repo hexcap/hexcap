@@ -572,40 +572,85 @@ class HexScreen:
                   self.cX = self.columnLeft(s.ID, s.c.getStrKey(cii -1))
                   self.shiftColumn(delta + 1)
 
-  # Moves our cursor, takes deltaY and deltaX, one delta value MUST be 0 and the other MUST NOT be 0
+  # Moves our cursor, takes deltaY and deltaX
+  # Either deltaY or deltaX MUST be 0
   def move(self, dY, dX):
+    cfg.dbg("move cX:" + str(self.cX) + " dY:" + str(dY) + " dX:" + str(dX) + " ppadCurX:" + str(self.ppadCurX))
+
+    # Finds the next valid X position for cursor
+    # Returns False if no such position exists
+    def findValidX(diffX):
+#      cfg.dbg("diffX:" + str(diffX) + " ppadCX:" + str(self.ppadCX) + " ppadWidth:" + str(self.ppadWidth) + " offLimitsWidth:" + str(self.offLimitsWidth))
+      if((self.ppadCX + diffX >= self.ppadWidth - 1) or (self.ppadCX + diffX < self.offLimitsWidth)):
+        return False
+      else:
+        validChars = cfg.hexChars
+        validChars.append(ord('.')) # For the undefined layer
+        if(ord(self.inch(self.ppadCY, self.ppadCX + diffX)[1]) in validChars):
+          return diffX
+        else:
+          if(diffX > 0):
+            return findValidX(diffX + 1)
+          else:
+            return findValidX(diffX - 1)
+
+    if(dY == 0 and dX == 0):
+      return 
+
     if(dY != 0):
       if(dY > 0):
-        if(self.cY + dY < self.ppadBottomY): # Are we at the bottom of the screen
-          if(self.ppadCY < len(self.cap.packets) - 1):
-            self.cY += dY
+        if(self.cY + 1 < self.ppadBottomY): # Are we not at the bottom of the screen
+          if(self.ppadCY + 1 < len(self.cap.packets)): # Are we not at the end of the ppad
+            self.cY += 1
         else:
           if(self.ppadCurY + self.ppadBottomY - self.ppadTopY < self.ppadRows):
             self.ppadCurY += 1
       else:
-        if(self.cY + dY >= self.ppadTopY):
-          self.cY += dY
-        elif(self.cY + dY == self.ppadTopY - 1):
+        if(self.cY - 1 >= self.ppadTopY):
+          self.cY -= 1
+          self.move(dY+1 ,0)
+        elif(self.cY - 1 == self.ppadTopY - 1):
           if(self.ppadCurY > 0):
             self.ppadCurY -= 1
 
     elif(dX != 0):
       if(dX > 0):
-        if(self.cX + dX < self.tableWidth - self.ppadCurX - 1):
-          if(self.cX + dX < self.maxX):
-            self.cX += dX
+        vX = findValidX(1)
+        cfg.dbg("vX:" + str(vX))
+        if(not vX):
+          return
+        if(self.cX + vX < self.tableWidth - self.ppadCurX - 1):
+          if(self.cX + vX < self.maxX):
+            self.cX += vX
           else:
-            self.ppadCurX += dX
+            self.ppadCurX += vX
         else:
-          if(self.cX + dX == self.tableWidth - self.ppadCurX - 1):
-            if(self.cX + dX == self.maxX):
-              self.ppadCurX += 1
-              self.cX -= dX
+          if(self.cX == self.tableWidth - self.ppadCurX):
+            if(self.cX + vX == self.maxX):
+              self.ppadCurX += vX
+              self.cX -= vX
       else:
-        if(self.cX + dX >= self.offLimitsWidth):
-          self.cX += dX
-        elif(self.cX + dX >= self.ppadCurX * -1 + self.offLimitsWidth):
-          self.ppadCurX -= 1
+        vX = findValidX(-1)
+        cfg.dbg("vX:" + str(vX))
+        if(not vX):
+          return
+        if(self.cX + vX > max(0, self.offLimitsWidth - self.ppadCurX - 1)):
+          self.cX += vX
+        else:
+          self.ppadCurX = max(0, self.ppadCurX + vX)
+
+        if(self.ppadCurX > 0 and self.ppadCurX < self.offLimitsWidth): # Reset screen to far left
+          self.cX += self.offLimitsWidth
+          self.ppadCurX = 0
+
+    if(dY > 0):
+      self.move(dY-1, 0)
+    elif(dY < 0):
+      self.move(dY+1, 0)
+    elif(dX > 0):
+      self.move(0, dX-1)
+    elif(dX < 0):
+      self.move(0, dX+1)
 
   def toggleExpose(self, s=None):
     if(not s):
@@ -680,8 +725,9 @@ class HexScreen:
   # Takes ppad relative y,x coordinates
   # Returns list((int)attributes, (chr)character) at that location on our ppad
   def inch(self, y, x):
-    inpt = hex(self.ppad.inch(y, x))
-    return list((int(inpt[2:4], 16), chr(int(inpt[4:], 16))))
+    # curses.inch() returns 3 bytes; left byte is attributes, right 2 bytes are the character
+    inpt = hex(self.ppad.inch(y, x))[2:].zfill(6) 
+    return list((int(inpt[:2], 16), chr(int(inpt[2:], 16))))
 
   # Executes passed string in try/except
   # Properly exits if exception raised
