@@ -585,6 +585,7 @@ class HexScreen:
         return False
       else:
         validChars = cfg.hexChars
+        validChars.append(ord('-')) # For hidden sections
         validChars.append(ord('.')) # For the undefined layer
         if(ord(self.inch(self.ppadCY, self.ppadCX + diffX)[1]) in validChars):
           return diffX
@@ -595,7 +596,7 @@ class HexScreen:
             return findValidX(diffX - 1)
 
     if(dY == 0 and dX == 0):
-      return 
+      return
 
     if(dY != 0):
       if(dY > 0):
@@ -619,16 +620,11 @@ class HexScreen:
         cfg.dbg("vX:" + str(vX))
         if(not vX):
           return
-        if(self.cX + vX < self.tableWidth - self.ppadCurX - 1):
+        if(self.cX + vX < self.tableWidth - self.ppadCurX):
           if(self.cX + vX < self.maxX):
             self.cX += vX
           else:
             self.ppadCurX += vX
-        else:
-          if(self.cX == self.tableWidth - self.ppadCurX):
-            if(self.cX + vX == self.maxX):
-              self.ppadCurX += vX
-              self.cX -= vX
       else:
         vX = findValidX(-1)
         cfg.dbg("vX:" + str(vX))
@@ -639,8 +635,8 @@ class HexScreen:
         else:
           self.ppadCurX = max(0, self.ppadCurX + vX)
 
-        if(self.ppadCurX > 0 and self.ppadCurX < self.offLimitsWidth): # Reset screen to far left
-          self.cX += self.offLimitsWidth
+        if(self.ppadCurX > 0 and self.ppadCurX <= self.offLimitsWidth and self.cX <= self.offLimitsWidth): # Reset screen to far left
+          self.cX = self.offLimitsWidth
           self.ppadCurX = 0
 
     if(dY > 0):
