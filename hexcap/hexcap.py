@@ -16,10 +16,8 @@ import cfg
 import capture
 
 def usage(s):
-  print "FATAL ERROR: " + s
-  print ""
-  print "USAGE: " + sys.argv[0] + " [ FILE ]"
-  print "FILE must be a valid pcap file"
+  print "ERROR: " + s
+  print "USAGE: hexcap.py [ FILE ]"
   sys.exit(1)
 
 # Is inter-key time gap greater than repeatKey

@@ -17,6 +17,13 @@ from collections import OrderedDict
 import math
 
 class Layer:
+  # cols holds width in displayed characters for each column, inclusive any delimiters
+  cols = OrderedDict()
+
+  # delim holds lists of columns which require delimiters
+  # Format of list is [delimter, field_width]
+  delim = {}
+
   RO = False # Is this layer read-only?
   exposed = True # Is this layer exposed
   exposable = True # Can the exposed boolean be toggled?
@@ -234,23 +241,27 @@ class Ethernet(Layer):
   position = 10
 
   cols = OrderedDict() 
-  cols['eth-dst'] = 17
-  cols['eth-src'] = 17
+  cols['dst'] = 17
+  cols['src'] = 17
+
+  delim = {}
+  delim['dst'] = [':', 2]
+  delim['src'] = [':', 2]
 
   def __init__(self, data):
     Layer.__init__(self)
-    self.vals['eth-dst'] = self.pcapToHexStr(data.dst, ":")
-    self.vals['eth-src'] = self.pcapToHexStr(data.src, ":")
+    self.vals['dst'] = self.pcapToHexStr(data.dst, ":")
+    self.vals['src'] = self.pcapToHexStr(data.src, ":")
 
   def toPcap(self):
     rv = dpkt.ethernet.Ethernet()
-    rv.dst = self.hexStrToPcap(self.vals['eth-dst'], ":")
-    rv.src = self.hexStrToPcap(self.vals['eth-src'], ":")
+    rv.dst = self.hexStrToPcap(self.vals['dst'], ":")
+    rv.src = self.hexStrToPcap(self.vals['src'], ":")
     return rv
 
   def incColumn(self, col, x):
     Layer.incColumn(self, col, x)
-    if(col == 'eth-dst' or col == 'eth-src'):
+    if(col == 'dst' or col == 'src'):
       self.vals[col] = self.delimStr(self.vals[col], ":")
 
 # IEEE 802.3 Ethernet II
@@ -258,8 +269,8 @@ class EthernetII(Ethernet):
   ID = "ethernet II"
 
   cols = OrderedDict() 
-  cols['eth-dst'] = 17
-  cols['eth-src'] = 17
+  cols['dst'] = 17
+  cols['src'] = 17
   cols['etype'] = 5
 
   def __init__(self, data):
@@ -277,8 +288,8 @@ class EthernetDot2(Ethernet):
   ID = "ethernet 802.3"
 
   cols = OrderedDict() 
-  cols['eth-dst'] = 17
-  cols['eth-src'] = 17
+  cols['dst'] = 17
+  cols['src'] = 17
   cols['len'] = 4
   cols['dsap'] = 4
   cols['ssap'] = 4
@@ -304,8 +315,8 @@ class EthernetSNAP(Ethernet):
   ID = "ethernet SNAP"
 
   cols = OrderedDict() 
-  cols['eth-dst'] = 17
-  cols['eth-src'] = 17
+  cols['dst'] = 17
+  cols['src'] = 17
   cols['dsap'] = 4
   cols['ssap'] = 4
   cols['pid'] = 4
@@ -389,6 +400,9 @@ class EDP(Layer):
   ID = "edp"
   position = 20
 
+  delim = {}
+  delim['mac'] = [':', 2]
+
   cols = OrderedDict()
   cols['ver'] = 3
   cols['len'] = 4
@@ -435,6 +449,10 @@ class STP(Layer):
   cols['max'] = 3
   cols['hello'] = 5
   cols['delay'] = 5
+
+  delim = {}
+  delim['root'] = [':', 2]
+  delim['bridge'] = [':', 2]
 
   def __init__(self, data):
     Layer.__init__(self)
@@ -489,6 +507,10 @@ class ARP(Layer):
   cols['spa'] = 11 # Sender IP
   cols['tpa'] = 11 # Target IP
   
+  delim = {}
+  delim['sha'] = [':', 2]
+  delim['tha'] = [':', 2]
+
   def __init__(self, data):
     Layer.__init__(self)
     self.vals['oper'] = self.intToHexStr(data.op).rjust(4, "0")
@@ -523,6 +545,10 @@ class IPv4(Layer):
   cols['src'] = 11
   cols['ttl'] = 4
   cols['proto'] = 5
+
+  delim = {}
+  delim['dst'] = ['.', 2]
+  delim['src'] = ['.', 2]
 
   def __init__(self, data):
     Layer.__init__(self)
@@ -569,6 +595,10 @@ class IPv6(Layer):
   cols['ttl'] = 4
   cols['proto'] = 5
 
+  delim = {}
+  delim['dst'] = [':', 4]
+  delim['src'] = [':', 4]
+
   def __init__(self, data):
     Layer.__init__(self)
     self.vals['dst'] = self.pcapToHexStr(data.dst, ":", 4)
@@ -613,6 +643,9 @@ class IGMP(Layer):
   cols['type'] = 5
   cols['maxresp'] = 7
   cols['group'] = 11
+
+  delim = {}
+  delim['group'] = ['.', 2]
 
   def __init__(self, data):
     Layer.__init__(self)
