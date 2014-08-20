@@ -348,7 +348,7 @@ class Dot1q(Layer):
       if(0 <= int(val, 16) <= 7):
         self.vals[col] = val
     else:
-      self.vals[col] = val
+      Layer.setColumn(self, col, val)
 
 # Cisco Discovery Protocol
 class CDP(Layer):
@@ -503,6 +503,8 @@ class IPv4(Layer):
   cols = OrderedDict() 
   cols['dst'] = 11
   cols['src'] = 11
+  cols['tos'] = 4
+  cols['df'] = 4
   cols['ttl'] = 4
   cols['proto'] = 5
 
@@ -516,12 +518,16 @@ class IPv4(Layer):
     self.vals['src'] = self.pcapToHexStr(data.src, ".")
     self.vals['proto'] = self.intToHexStr(data.p).rjust(2, "0")
     self.vals['ttl'] = self.intToHexStr(data.ttl).rjust(2, "0")
-    self.vals['hl'] = data.hl
-    self.vals['v'] = data.v
-    self.vals['off'] = data.off
-    self.vals['tos'] = data.tos
-    self.vals['len'] = data.len
-    self.vals['id'] = data.id
+    self.vals['tos'] = self.intToHexStr(data.tos).rjust(2, "0")
+
+    # Dpkt just gives 'off', so we must determine 'df' ourselves
+    self.vals['off'] = self.intToHexStr(data.off & 8191).rjust(2, "0")
+    self.vals['df'] = self.intToHexStr(data.off >> 13)
+
+    self.vals['hl'] = self.intToHexStr(data.hl)
+    self.vals['v'] = self.intToHexStr(data.v)
+    self.vals['len'] = self.intToHexStr(data.len)
+    self.vals['id'] = self.intToHexStr(data.id)
     self.vals['opts'] = data.opts
 
   def toPcap(self):
@@ -530,14 +536,22 @@ class IPv4(Layer):
     rv.src = self.hexStrToPcap(self.vals['src'], ".")
     rv.p = int(self.vals['proto'], 16)
     rv.ttl = int(self.vals['ttl'], 16)
-    rv.hl =  self.vals['hl']
-    rv.v =  self.vals['v']
-    rv.off = self.vals['off']
-    rv.tos = self.vals['tos']
-    rv.len = self.vals['len']
-    rv.id = self.vals['id']
+    rv.tos = int(self.vals['tos'], 16)
+    rv.off = (int(self.vals['df'], 16) << 13) | int(self.vals['off'], 16)
+
+    rv.hl = int(self.vals['hl'], 16)
+    rv.v = int(self.vals['v'], 16)
+    rv.len = int(self.vals['len'], 16)
+    rv.id = int(self.vals['id'], 16)
     rv.opts = self.vals['opts']
     return rv
+
+  def setColumn(self, col, val):
+    if(col == 'df'):
+      if(0 <= int(val, 16) <= 7):
+        self.vals[col] = val
+    else:
+      Layer.setColumn(self, col, val)
 
 # Internet Protocol Version 6
 class IPv6(Layer):
@@ -547,6 +561,8 @@ class IPv6(Layer):
   cols = OrderedDict() 
   cols['dst'] = 39
   cols['src'] = 39
+  cols['tc'] = 4
+  cols['flow'] = 5
   cols['ttl'] = 4
   cols['proto'] = 5
 
@@ -560,9 +576,9 @@ class IPv6(Layer):
     self.vals['src'] = self.pcapToHexStr(data.src, ":", 4)
     self.vals['proto'] = self.intToHexStr(data.nxt).rjust(2, "0")
     self.vals['ttl'] = self.intToHexStr(data.hlim).rjust(2, "0")
+    self.vals['tc'] = self.intToHexStr(data.fc).rjust(2, "0")
+    self.vals['flow'] = self.intToHexStr(data.flow).rjust(5, "0")
     self.vals['v'] = data.v
-    self.vals['fc'] = data.fc
-    self.vals['flow'] = data.flow
     self.vals['len'] = data.plen
 
   def toPcap(self):
@@ -571,16 +587,15 @@ class IPv6(Layer):
     rv.src = self.hexStrToPcap(self.vals['src'], ":", 4)
     rv.nxt = int(self.vals['proto'], 16)
     rv.hlim = int(self.vals['ttl'], 16)
+    rv.fc = int(self.vals['tc'], 16)
+    rv.flow = int(self.vals['flow'], 16)
     rv.v =  self.vals['v']
-    rv.fc = self.vals['fc']
-    rv.flow = self.vals['flow']
     rv.plen = self.vals['len']
 
     # See dpkt ip6.py for explanation
     rv.extension_hdrs = dict()
     for hdr in dpkt.ip6.ext_hdrs:
       rv.extension_hdrs[hdr] = None
-
     return rv
 
 # Internet Group Management Protocol v1/v2

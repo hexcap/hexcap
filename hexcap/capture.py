@@ -194,7 +194,7 @@ class Capture:
         pkt.layers.pop(1) # Remove the generator layer
         for lay in pkt.layers[0:]: # Ignore pktID
           for col,gDef in lay.gen.iteritems():
-            lay.incColumn(col, ii * gDef['step'])
+            lay.incColumn(col, (ii % gDef['count']) * gDef['step'])
             del lay.gen[col]['count']
             del lay.gen[col]['step']
             del lay.gen[col]['mask']
