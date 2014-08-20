@@ -179,7 +179,6 @@ class Capture:
 
   # Takes a packet obj with generator
   # Returns list of packets with all generators expanded
-  # Returns False on failure
   def expandGenerators(self, gPkt):
     numPkts = 0
     for lay in gPkt.genLayers: # Determine how many packets to generate

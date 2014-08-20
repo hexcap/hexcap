@@ -72,14 +72,6 @@ class Layer:
       rv += chr(int(b, 16))
     return rv
 
-  # Removes all characters in passed string not in cfg.hexChars
-  def cleanHexStr(self, s):
-    rv = ""
-    for c in s:
-      if(ord(c) in cfg.hexChars):
-        rv += c
-    return rv
-
   # Delimites passed string s with delimiter delim with ln characters between each delim
   # May also pass a prepending string rv
   # Returns delimited string
@@ -88,20 +80,29 @@ class Layer:
       rv += s[ii:ii+ln] + delim
     return rv.strip(delim)
 
+  # Delimites value based on existence of delim key
+  # Takes a string to be delimited and a column to use for the delim key
+  # Returns delimited column value as string
+  def delimCol(self, s, col):
+    if(not (col in self.delim)):
+      return s
+    else:
+      return self.delimStr(s, self.delim[col][0], self.delim[col][1])
+
   # Adds a generator to a col
   # Takes column to add it to; then count and step for the generator
   def addGenerator(self, col, count, step):
     if(not col in self.gen):
-      self.gen[col] = {'count': count, 'step': step, 'mask': ''.join('0' * (len(self.cleanHexStr(self.vals[col])) * 4))}
+      self.gen[col] = {'count': count, 'step': step, 'mask': self.delimCol(''.join('0' * (len(cfg.cleanHexStr(self.vals[col])))), col)}
     else:
       self.gen[col]['count'] = count
       self.gen[col]['step'] = step
 
   # Adds a mask to a col
   # Takes column to add it to, and binary mask to be added
-  # Mask is always stored as binary 
+  # Mask is always stored as delimted hexStr
   def addMask(self, col, mask):
-    colLen =  len(self.cleanHexStr(self.vals[col])) * 4
+    colLen = len(cfg.cleanHexStr(self.vals[col])) * 4
     if(len(mask) > colLen):
       return "Error:Mask is too long"
     else: # Pad our mask with either 0s or 1s to fill entire column
@@ -110,11 +111,11 @@ class Layer:
       else:
         mask = mask.ljust(colLen, '1')
 
+    mask = self.delimCol(cfg.binStrToHexStr(mask), col)
     if(not col in self.gen):
       self.gen[col] = {'count': 0, 'step': 0, 'mask': mask}
     else:
       self.gen[col]['mask'] = mask
-    cfg.dbg("addMask mask:" + mask)
 
   # Sets column to val
   def setColumn(self, col, val):
@@ -122,27 +123,8 @@ class Layer:
 
   # Increment passed column by x respecting any set mask
   # x can be any positive or negative integer
-  # Must be overridden for any layer, with any column, with any delimiter
   def incColumn(self, col, x):
-    startBinVal = binVal = cfg.hexStrToBinStr(self.cleanHexStr(self.vals[col]))
-    startPos = self.gen[col]['mask'].rindex('0')
-    endPos = self.gen[col]['mask'].index('0')
-
-    if(x > 0):
-      for ii in xrange(x):
-        for jj in xrange(startPos, endPos, -1):
-          if(binVal[jj] == '0'):
-            binVal = binVal[:jj] + '1' + binVal[jj+1:]
-            break
-          elif(binVal[jj] == '1'):
-            binVal = binVal[:jj] + '0' + binVal[jj+1:]
-          elif(jj == endPos):
-            binVal = startBinVal
-    elif(x < 0):
-      for ii in xrange(x, -1):
-        pass  
-        # TODO: Implement negative step iteration
-    self.vals[col] = cfg.binStrToHexStr(binVal)
+    self.vals[col] = cfg.incHexStr(self.vals[col], self.gen[col]['mask'], x)
 
   # A layer must override this once it becomes RWable
   def toPcap(self):
@@ -258,11 +240,6 @@ class Ethernet(Layer):
     rv.dst = self.hexStrToPcap(self.vals['dst'], ":")
     rv.src = self.hexStrToPcap(self.vals['src'], ":")
     return rv
-
-  def incColumn(self, col, x):
-    Layer.incColumn(self, col, x)
-    if(col == 'dst' or col == 'src'):
-      self.vals[col] = self.delimStr(self.vals[col], ":")
 
 # IEEE 802.3 Ethernet II
 class EthernetII(Ethernet):
@@ -430,11 +407,6 @@ class EDP(Layer):
     rv.data = self.vals['data']
     return rv
 
-  def incColumn(self, col, x):
-    Layer.incColumn(self, col, x)
-    if(col == 'mac'):
-      self.vals[col] = self.delimStr(self.vals[col], ":")
-
 # Spanning Tree Protocol
 class STP(Layer):
   ID = "stp"
@@ -487,11 +459,6 @@ class STP(Layer):
     rv.data = self.vals['data']
     return rv
 
-  def incColumn(self, col, x):
-    Layer.incColumn(self, col, x)
-    if(col == 'root' or col == 'bridge'):
-      self.vals[col] = self.delimStr(self.vals[col], ":")
-
 # Adress Resolution Protocol for IPv4
 # Assumptions
 # HTYPE == 1(Ethernet)
@@ -527,13 +494,6 @@ class ARP(Layer):
     rv.spa = self.hexStrToPcap(self.vals['spa'], ".")
     rv.tpa = self.hexStrToPcap(self.vals['tpa'], ".")
     return rv
-
-  def incColumn(self, col, x):
-    Layer.incColumn(self, col, x)
-    if(col == 'sha' or col == 'tha'):
-      self.vals[col] = self.delimStr(self.vals[col], ":")
-    elif(col == 'spa' or col == 'tpa'):
-      self.vals[col] = self.delimStr(self.vals[col], ".")
 
 # Internet Protocol version 4
 class IPv4(Layer):
@@ -579,11 +539,6 @@ class IPv4(Layer):
     rv.opts = self.vals['opts']
     return rv
 
-  def incColumn(self, col, x):
-    Layer.incColumn(self, col, x)
-    if(col == 'dst' or col == 'src'):
-      self.vals[col] = self.delimStr(self.vals[col], ".")
-
 # Internet Protocol Version 6
 class IPv6(Layer):
   ID = "ipv6"
@@ -628,11 +583,6 @@ class IPv6(Layer):
 
     return rv
 
-  def incColumn(self, col, x):
-    Layer.incColumn(self, col, x)
-    if(col == 'dst' or col == 'src'):
-      self.vals[col] = self.delimStr(self.vals[col], ":", 4)
-
 # Internet Group Management Protocol v1/v2
 # We do not currently support v3
 class IGMP(Layer):
@@ -659,11 +609,6 @@ class IGMP(Layer):
     rv.maxresp = int(self.vals['maxresp'], 16)
     rv.group = self.hexStrToPcap(self.vals['group'], ".")
     return rv
-
-  def incColumn(self, col, x):
-    Layer.incColumn(self, col, x)
-    if(col == 'group'):
-      self.vals[col] = self.delimStr(self.vals[col], ".")
 
 # Internet Control Message Protocol
 # Assumes ICMP type is either 0 or 8(echo or echo_reply)

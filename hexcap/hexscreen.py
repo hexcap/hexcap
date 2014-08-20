@@ -10,6 +10,7 @@ import math
 import curses
 import locale
 import sys
+import copy
 
 # hexcap specific imports
 import cfg
@@ -452,13 +453,14 @@ class HexScreen:
     # Show generators if present
     if(self.cap.packets[self.ppadCY].hasLayer('g')):
       for lay in self.cap.packets[self.ppadCY].genLayers:
-        for col in lay.gen:
-          if(col == c):
-            txt = "cnt:" + str(lay.gen[col]['count'])
-            txt += " stp:" + str(lay.gen[col]['step'])
-            txt += " msk:" + cfg.binStrToHexStr(lay.gen[col]['mask'])
-            x += addElement(txt)
-            break
+        if(lay.ID == s.ID):
+          for col in lay.gen:
+            if(col == c):
+              txt = "cnt:" + str(lay.gen[col]['count'])
+              txt += " stp:" + str(lay.gen[col]['step'])
+              txt += " msk:" + lay.gen[col]['mask']
+              x += addElement(txt)
+              break
 
     # Claim remaining space
     if(self.tableWidth > x):
@@ -575,16 +577,15 @@ class HexScreen:
   # Moves our cursor, takes deltaY and deltaX
   # Either deltaY or deltaX MUST be 0
   def move(self, dY, dX):
-    cfg.dbg("move cX:" + str(self.cX) + " dY:" + str(dY) + " dX:" + str(dX) + " ppadCurX:" + str(self.ppadCurX))
+    #    cfg.dbg("move cX:" + str(self.cX) + " dY:" + str(dY) + " dX:" + str(dX) + " ppadCurX:" + str(self.ppadCurX))
 
     # Finds the next valid X position for cursor
     # Returns False if no such position exists
     def findValidX(diffX):
-#      cfg.dbg("diffX:" + str(diffX) + " ppadCX:" + str(self.ppadCX) + " ppadWidth:" + str(self.ppadWidth) + " offLimitsWidth:" + str(self.offLimitsWidth))
       if((self.ppadCX + diffX >= self.ppadWidth - 1) or (self.ppadCX + diffX < self.offLimitsWidth)):
         return False
       else:
-        validChars = cfg.hexChars
+        validChars = copy.deepcopy(cfg.hexChars)
         validChars.append(ord('-')) # For hidden sections
         validChars.append(ord('.')) # For the undefined layer
         if(ord(self.inch(self.ppadCY, self.ppadCX + diffX)[1]) in validChars):
@@ -617,7 +618,6 @@ class HexScreen:
     elif(dX != 0):
       if(dX > 0):
         vX = findValidX(1)
-        cfg.dbg("vX:" + str(vX))
         if(not vX):
           return
         if(self.cX + vX < self.tableWidth - self.ppadCurX):
@@ -627,7 +627,6 @@ class HexScreen:
             self.ppadCurX += vX
       else:
         vX = findValidX(-1)
-        cfg.dbg("vX:" + str(vX))
         if(not vX):
           return
         if(self.cX + vX > max(0, self.offLimitsWidth - self.ppadCurX - 1)):
@@ -933,12 +932,8 @@ class HexScreen:
           self.printToMBuf("Error:Invalid mask")
           return
 
-      rv = self.cap.packets[self.ppadCY].addMask(sid, cid, binMask)
-      if(rv):
-        self.printToMBuf(rv)
-        return
-      else:
-        redraw()
+      self.cap.packets[self.ppadCY].addMask(sid, cid, binMask)
+      redraw()
 
   # Wrapper for ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):

@@ -143,13 +143,11 @@ class Packet:
   def addMask(self, sid, cid, mask):
     for lay in self.layers:
       if(lay.ID == sid):
-        rv = lay.addMask(cid, mask)
-        if(rv):
-          return rv
-        else:
-          if(not self.hasLayer('g')):
-            self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
-            self.layers.insert(1, layer.Generator())
+        lay.addMask(cid, mask)
+        if(not self.hasLayer('g')):
+          self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
+          self.layers.insert(1, layer.Generator())
+        break
 
   # Returns list of all layers with generators
   # Returns False if packet has no generators
