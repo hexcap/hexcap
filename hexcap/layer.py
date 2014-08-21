@@ -318,6 +318,49 @@ class EthernetSNAP(Ethernet):
     rv.plen = self.vals['plen']
     return rv
 
+# IEEE 802.11 WLAN
+# Very basic
+class Dot11(Layer):
+  ID = "802.11"
+  position = 10
+
+  cols = OrderedDict() 
+  cols['ver'] = 4
+  cols['type'] = 4
+  cols['subt'] = 4
+  cols['to'] = 4
+  cols['from'] = 4
+  cols['wep'] = 4
+
+  def __init__(self, data):
+    Layer.__init__(self)
+    self.vals['ver'] = self.intToHexStr(data.version)
+    self.vals['type'] = self.intToHexStr(data.type)
+    self.vals['subt'] = self.intToHexStr(data.subtype)
+    self.vals['to'] = self.intToHexStr(data.to_ds)
+    self.vals['from'] = self.intToHexStr(data.from_ds)
+    self.vals['more_frag'] = self.intToHexStr(data.more_frag)
+    self.vals['retry'] = self.intToHexStr(data.retry)
+    self.vals['pwr'] = self.intToHexStr(data.pwr_mgt)
+    self.vals['more_data'] = self.intToHexStr(data.more_data)
+    self.vals['wep'] = self.intToHexStr(data.wep)
+    self.vals['order'] = self.intToHexStr(data.order)
+
+  def toPcap(self):
+    rv = dpkt.ieee80211.IEEE80211()()
+    rv.version = int(self.vals['ver'], 16)
+    rv.type = int(self.vals['type'], 16)
+    rv.subtype = int(self.vals['subt'], 16)
+    rv.to_ds = int(self.vals['to'], 16)
+    rv.from_ds = int(self.vals['from'], 16)
+    rv.more_frag = int(self.vals['more_frag'], 16)
+    rv.retry = int(self.vals['retry'], 16)
+    rv.pwr_mgt = int(self.vals['pwr'], 16)
+    rv.more_data = int(self.vals['more_data'], 16)
+    rv.wep = int(self.vals['wep'], 16)
+    rv.order = int(self.vals['order'], 16)
+    return rv
+
 # IEEE 802.1q
 class Dot1q(Layer):
   ID = "802.1q"

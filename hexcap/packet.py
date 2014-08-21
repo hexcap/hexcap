@@ -12,7 +12,7 @@ import dpkt
 import layer
 
 class Packet:
-  def __init__(self, ts, packet, pid):
+  def __init__(self, dlt, ts, packet, pid):
     self.layers = []
     self.layers.append(layer.PktID(pid))
     self.layers.append(layer.TStamp(ts))
@@ -21,7 +21,16 @@ class Packet:
 
     self.minSize = len(packet)
     self.maxSize = max(dpkt.ethernet.ETH_MTU, len(packet))
-    self.initLayers(dpkt.ethernet.Ethernet(packet))
+
+    # http://www.tcpdump.org/linktypes.html
+    if(dlt == 1): # Ethernet
+      self.initLayers(dpkt.ethernet.Ethernet(packet))
+    elif(dlt == 105): # IEEE802_11
+      self.initLayers(dpkt.ieee80211.IEEE80211(packet))
+    elif(dlt == 192): # PPI
+      self.initLayers(dpkt.ppp.PPP(packet)) # Not quite sure if this is correct
+    else:
+      raise PacketError("Unknown Linktype")
 
   # Convenience method
   # Append a new layer to this packet
@@ -62,6 +71,10 @@ class Packet:
       else:
         self.unsupport(d)
         return
+
+    elif(isinstance(d, dpkt.ieee80211.IEEE80211)):
+      self.layers.append(layer.Dot11(d))
+      self.initLayers(d.data)
 
     elif(isinstance(d, dpkt.cdp.CDP)):
       self.layers.append(layer.CDP(d))

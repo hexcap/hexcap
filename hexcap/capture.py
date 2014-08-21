@@ -54,8 +54,9 @@ class Capture:
   def read(self, f):
     pid = 1
     cap = dpkt.pcap.Reader(f)
+    self.dataLink = cap.datalink() # http://www.tcpdump.org/linktypes.html
     for ts, pkt in cap:
-      p = packet.Packet(ts, pkt, pid)
+      p = packet.Packet(self.dataLink, ts, pkt, pid)
       self.packets.append(p)
       pid += 1
 
