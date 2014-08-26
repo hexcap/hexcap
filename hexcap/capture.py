@@ -207,6 +207,9 @@ class Capture:
   # Takes a packet object to send
   # Returns number of packets sent on success and False on failure
   def tx(self, pkt):
+    if(self.dataLink != pcap.DLT_EN10MB):
+      return False
+
     sentPkts = 0
     if(pkt.hasLayer('g')): # It has a generator
       for p in self.expandGenerators(pkt):
