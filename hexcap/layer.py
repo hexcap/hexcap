@@ -270,7 +270,7 @@ class EthernetDot2(Ethernet):
   cols['len'] = 4
   cols['dsap'] = 4
   cols['ssap'] = 4
-#  cols['ctl'] = 3
+  cols['ctl'] = 3
 
   def __init__(self, data):
     Ethernet.__init__(self, data)
@@ -285,6 +285,7 @@ class EthernetDot2(Ethernet):
     rv.dsap = int(self.vals['dsap'], 16)
     rv.ssap = int(self.vals['ssap'], 16)
     rv.ctl = int(self.vals['ctl'], 16)
+    rv.org = True
     return rv
 
 # IEEE 802.3 SNAP 

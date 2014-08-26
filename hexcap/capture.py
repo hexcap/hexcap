@@ -29,6 +29,7 @@ class Capture:
     self.clipboard = [] # Our buffer for yanking and pasting
     self.packets = [] # Our list of packets
     self.fName = name
+    self.dataLink = pcap.DLT_EN10MB # Our default datalink
 
     # Set our default ethernet device
     # TODO: Need more OS's here
@@ -48,7 +49,7 @@ class Capture:
     if(f):
       self.read(f) # Read in and initialize capture
     else:
-      self.packets.append(packet.Packet(time.time(), defaultPacket, 1))
+      self.packets.append(packet.Packet(self.dataLink, time.time(), defaultPacket, 1))
       
   # Reads a filehandle to a pcap file
   def read(self, f):
@@ -71,11 +72,10 @@ class Capture:
   def __len__(self):
     return len(self.packets)
 
-  # Appends a packet to our capture
+  # Appends a packet to our capture with now as timestamp
   def append(self, hdr, pkt):
-    p = packet.Packet(time.time(), pkt, len(self.packets) + 1)
-    self.packets.append(p)
-
+    self.packets.append(packet.Packet(self.dataLink, time.time(), pkt, len(self.packets) + 1))
+    
   # For debugging only
   def dump(self):
     rv = ""
@@ -234,6 +234,9 @@ class Capture:
     if(self.ifCap.datalink() != pcap.DLT_EN10MB):
       return "Error:Interface not Ethernet " + self.ifName
 
+    if(self.dataLink != pcap.DLT_EN10MB):
+      return "Error:Buffer not Ethernet"
+
     try:
       self.ifCap.setfilter(filt) 
     except pcap.PcapError:
@@ -244,7 +247,6 @@ class Capture:
   # Receives a single packet and appends it to capture
   # Must first call initRx()
   def rx(self):
-    # self.ifCap.dispatch(1, lambda hdr,pkt: cfg.dbg("hdr:" + repr(hdr) + "pkt:" + repr(pkt)))
     return self.ifCap.dispatch(1, self.append)
 
   # Sets both min and max pkt size

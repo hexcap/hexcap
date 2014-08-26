@@ -107,10 +107,8 @@ class Ethernet(dpkt.Packet):
     def pack_hdr(self):
         try:
             if hasattr(self, 'org'):
-                PID = self.type
-                self.type = self.plen
                 return dpkt.Packet.pack_hdr(self) + struct.pack('BB', self.dsap, self.ssap) + \
-                    struct.pack('>I',  (self.ctl << 24) | self.org ) + struct.pack('>H', PID)
+                    struct.pack('>b', self.ctl)
             return dpkt.Packet.pack_hdr(self)
         except struct.error, e:
             raise dpkt.PackError(str(e))
