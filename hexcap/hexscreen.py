@@ -1043,16 +1043,18 @@ class HexScreen:
     self.stdscr.move(self.cY, self.cX)
 
   #    cfg.dbg("Hexscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + \
-  #    " ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark)))
+  #              " ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
   def yank(self):
     if(not self.mark):
       return
 
-    if(self.ppadCY <= self.mark - 1):
-      self.cap.yank(self.ppadCY, self.mark - 1)
-    else:
-      self.cap.yank(self.mark - 1, self.ppadCY)
-      self.cY -= len(self.cap.clipboard) - 1
+    # We can't yank the whole buffer
+    if(not ((self.mark == 1 and self.ppadCY == len(self.cap.packets) - 1) or (self.mark == len(self.cap.packets) and self.ppadCY == 0))):
+      if(self.ppadCY <= self.mark - 1):
+        self.cap.yank(self.ppadCY, self.mark - 1)
+      else:
+        self.cap.yank(self.mark - 1, self.ppadCY)
+        self.cY -= len(self.cap.clipboard) - 1
 
     self.mark = 0
     self.resetCursor()
