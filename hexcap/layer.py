@@ -153,8 +153,7 @@ class PktID(Layer):
 
   # Overriding virtual since we're picky about pid
   def setColumn(self, col, val):
-    # Fill PID with ?'s if we get passed -1
-    if(val == -1):
+    if(val == -1): # Fill PID with ?'s if we get passed -1
       self.vals[col] = ''
       for ii in xrange(0, cfg.pktIDWidth):
         self.vals[col] += "?"

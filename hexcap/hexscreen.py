@@ -46,8 +46,10 @@ class HexScreen:
     # Are we in insert mode?
     self.insert = False
 
-    # Packet ID of marked packet. One based.
-    # Zero means no marked packet
+    # Is the mark set?
+    self.markSet = False
+
+    # Packet ID of marked packet. Zero based.
     self.mark = 0
 
     # Flag is True if mini-buffer has focus
@@ -302,38 +304,36 @@ class HexScreen:
           return self.sectionLeft(sid) + s.width - 1
 
   # Handle regular refreshing of packet lines
-  #    cfg.dbg("refreshBoldPacket ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
+  # cfg.dbg("refreshBoldPacket markSet:" + str(self.markSet) + " mark:" + str(self.mark) + " ppadCY:" + str(self.ppadCY) + " pkts:" + str(len(self.cap.packets)))
   def refreshBoldPacket(self):
-    if(len(self.cap.packets) == 0):
-      return
-    elif(len(self.cap.packets) == 1):
-      if(self.mark == 1):
+    if(len(self.cap.packets) == 1):
+      if(self.markSet):
         self.drawPktLine(0, self.cap.packets[0].out(), True, True)
       else:
         self.drawPktLine(0, self.cap.packets[0].out(), True, False)
       return
 
-    if(self.mark):
+    if(self.markSet):
       self.drawPktLine(self.ppadCY, self.cap.packets[self.ppadCY].out(), False, True)
 
-      if(self.ppadCY < self.mark - 1): # Cursor is above mark
+      if(self.ppadCY < self.mark): # Cursor is above mark
         if(self.ppadCY > 0):
           self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out())
-        for pkt in xrange(self.mark - 1, self.ppadCY + 1, -1):
+        for pkt in xrange(self.mark, self.ppadCY + 1, -1):
           self.drawPktLine(pkt, self.cap.packets[pkt].out(), False, True)
-        if(self.mark <= len(self.cap.packets) - 1):
-          self.drawPktLine(self.mark, self.cap.packets[self.mark].out())
+        if(self.mark < len(self.cap.packets) - 1):
+          self.drawPktLine(self.mark + 1, self.cap.packets[self.mark + 1].out())
 
-      elif(self.ppadCY == self.mark - 1): # Cursor is on mark
-        if(self.mark > 1):
+      elif(self.ppadCY == self.mark): # Cursor is on mark
+        if(self.mark > 0):
           self.drawPktLine(self.ppadCY - 1, self.cap.packets[self.ppadCY - 1].out()) 
-        if(self.mark <= len(self.cap.packets) - 1):
-          self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
+        if(self.mark < len(self.cap.packets) - 1):
+          self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out()) ##
 
-      elif(self.ppadCY > self.mark - 1): # Cursor is below mark
-        if(self.mark > 1):
-          self.drawPktLine(self.mark - 2, self.cap.packets[self.mark - 2].out()) 
-        for pkt in xrange(self.mark - 1, self.ppadCY + 1):
+      elif(self.ppadCY > self.mark): # Cursor is below mark
+        if(self.mark > 0):
+          self.drawPktLine(self.mark - 1, self.cap.packets[self.mark - 1].out()) 
+        for pkt in xrange(self.mark, self.ppadCY + 1):
           self.drawPktLine(pkt, self.cap.packets[pkt].out(), False, True)
         if(self.ppadCY < len(self.cap.packets) - 1):
             self.drawPktLine(self.ppadCY + 1, self.cap.packets[self.ppadCY + 1].out())
@@ -430,7 +430,7 @@ class HexScreen:
     txt = str(self.ppadCY + 1) + "/" + str(len(self.cap.packets))
     x += addElement(txt)
 
-    if(self.mark):
+    if(self.markSet):
       txt = "MRK"
     elif(self.insert):
       txt = "INS"
@@ -682,7 +682,7 @@ class HexScreen:
         self.toggleExpose(s)
 
   def toggleInsert(self):
-    if(self.mark): # Cannot enter insert mode with mark set
+    if(self.markSet): # Cannot enter insert mode with mark set
       return
 
     if(self.insert):
@@ -997,12 +997,13 @@ class HexScreen:
     if(self.insert): # Cannot set mark in insert mode
       return
 
-    if(self.mark):
-      self.mark = 0
+    if(self.markSet):
+      self.markSet = False
       self.drawPpads()
       self.refresh()
     else:
-      self.mark = self.ppadCY + 1
+      self.markSet = True
+      self.mark = self.ppadCY
 
   # Called after an action MAY cause cY,cX,ppadCurY,ppadCurX to be in illegal position(s)
   # Returns them to legal position(s)
@@ -1045,18 +1046,18 @@ class HexScreen:
   #    cfg.dbg("Hexscreen_yank len_packets:" + str(len(self.cap.packets)) + " len_clipboard:" + str(len(self.cap.clipboard)) + \
   #              " ppadCY:" + str(self.ppadCY) + " mark:" + str(self.mark))
   def yank(self):
-    if(not self.mark):
+    if(not self.markSet):
       return
 
     # We can't yank the whole buffer
-    if(not ((self.mark == 1 and self.ppadCY == len(self.cap.packets) - 1) or (self.mark == len(self.cap.packets) and self.ppadCY == 0))):
-      if(self.ppadCY <= self.mark - 1):
-        self.cap.yank(self.ppadCY, self.mark - 1)
+    if(not ((self.mark == 0 and self.ppadCY == len(self.cap.packets) - 1) or (self.mark == len(self.cap.packets) - 1 and self.ppadCY == 0))):
+      if(self.ppadCY <= self.mark):
+        self.cap.yank(self.ppadCY, self.mark)
       else:
-        self.cap.yank(self.mark - 1, self.ppadCY)
+        self.cap.yank(self.mark, self.ppadCY)
         self.cY -= len(self.cap.clipboard) - 1
 
-    self.mark = 0
+    self.markSet = False
     self.resetCursor()
     self.drawPpads()
     self.refresh()

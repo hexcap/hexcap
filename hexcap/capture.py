@@ -147,16 +147,14 @@ class Capture:
   # Takes the packet at the paste point as an integer(zero based)
   def paste(self, first):
     for ii in xrange(0, len(self.clipboard)):
-      self.packets.insert(first + ii, self.clipboard[ii])  
+      self.packets.insert(first + ii, copy.deepcopy(self.clipboard[ii]))
     self.resetPIDs(first)
 
-  # Resets pktIDs from first to end
+  # Resets pktIDs from first
   # Takes starting packet as integer
   def resetPIDs(self, first):
     for ii in xrange(first, len(self.packets)):
-      for lay in self.packets[ii].layers:
-        if(lay.ID == 'pid'):
-          lay.setColumn('pid', ii + 1)
+      self.packets[ii].layers[0].setColumn('pid', ii + 1)
 
   # Sets the interface for sending and capturing
   def setInterface(self, name):
