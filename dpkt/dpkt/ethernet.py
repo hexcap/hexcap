@@ -1,46 +1,49 @@
 # $Id: ethernet.py 65 2010-03-26 02:53:51Z dugsong $
-
+# -*- coding: utf-8 -*-
 """Ethernet II, LLC (802.3+802.2), LLC/SNAP, and Novell raw 802.3,
 with automatic 802.1q, MPLS, PPPoE, and Cisco ISL decapsulation."""
 
 import struct
-import dpkt, stp
-import sys
+import dpkt
+import stp
 
-ETH_CRC_LEN	= 4
-ETH_HDR_LEN	= 14
+ETH_CRC_LEN = 4
+ETH_HDR_LEN = 14
 
-ETH_LEN_MIN	= 64		# minimum frame length with CRC
-ETH_LEN_MAX	= 1518		# maximum frame length with CRC
+ETH_LEN_MIN = 64		# minimum frame length with CRC
+ETH_LEN_MAX = 1518		# maximum frame length with CRC
 
-ETH_MTU		= (ETH_LEN_MAX - ETH_HDR_LEN - ETH_CRC_LEN)
-ETH_MIN		= (ETH_LEN_MIN - ETH_HDR_LEN - ETH_CRC_LEN)
+ETH_MTU	= (ETH_LEN_MAX - ETH_HDR_LEN - ETH_CRC_LEN)
+ETH_MIN	= (ETH_LEN_MIN - ETH_HDR_LEN - ETH_CRC_LEN)
 
 # Ethernet payload types - http://standards.ieee.org/regauth/ethertype
-ETH_TYPE_PUP	= 0x0200		# PUP protocol
-ETH_TYPE_IP	= 0x0800		# IP protocol
-ETH_TYPE_ARP	= 0x0806		# address resolution protocol
-ETH_TYPE_CDP	= 0x2000		# Cisco Discovery Protocol
-ETH_TYPE_EDP    = 0x00bb                # Extreme Networks Discovery Protocol
-ETH_TYPE_DTP	= 0x2004		# Cisco Dynamic Trunking Protocol
+ETH_TYPE_PUP = 0x0200		# PUP protocol
+ETH_TYPE_IP = 0x0800		# IP protocol
+ETH_TYPE_ARP = 0x0806		# address resolution protocol
+ETH_TYPE_AOE = 0x88a2  # AoE protocol
+ETH_TYPE_CDP = 0x2000		# Cisco Discovery Protocol
+ETH_TYPE_EDP = 0x00bb                # Extreme Networks Discovery Protocol
+ETH_TYPE_DTP = 0x2004		# Cisco Dynamic Trunking Protocol
 ETH_TYPE_REVARP	= 0x8035		# reverse addr resolution protocol
-ETH_TYPE_DOT1Q	= 0x8100		# IEEE 802.1Q VLAN tagging
-ETH_TYPE_IPX	= 0x8137		# Internetwork Packet Exchange
-ETH_TYPE_IP6	= 0x86DD		# IPv6 protocol
-ETH_TYPE_PPP	= 0x880B		# PPP
-ETH_TYPE_MPLS	= 0x8847		# MPLS
-ETH_TYPE_MPLS_MCAST	= 0x8848	# MPLS Multicast
-ETH_TYPE_PPPoE_DISC	= 0x8863	# PPP Over Ethernet Discovery Stage
-ETH_TYPE_PPPoE		= 0x8864	# PPP Over Ethernet Session Stage
+ETH_TYPE_DOT1Q = 0x8100		# IEEE 802.1Q VLAN tagging
+ETH_TYPE_IPX = 0x8137		# Internetwork Packet Exchange
+ETH_TYPE_IP6 = 0x86DD		# IPv6 protocol
+ETH_TYPE_PPP = 0x880B		# PPP
+ETH_TYPE_MPLS = 0x8847		# MPLS
+ETH_TYPE_MPLS_MCAST = 0x8848	# MPLS Multicast
+ETH_TYPE_PPPoE_DISC = 0x8863	# PPP Over Ethernet Discovery Stage
+ETH_TYPE_PPPoE = 0x8864	# PPP Over Ethernet Session Stage
+ETH_TYPE_LLDP = 0x88CC  # Link Layer Discovery Protocol
 
 # MPLS label stack fields
 MPLS_LABEL_MASK	= 0xfffff000
 MPLS_QOS_MASK	= 0x00000e00
 MPLS_TTL_MASK	= 0x000000ff
-MPLS_LABEL_SHIFT= 12
+MPLS_LABEL_SHIFT = 12
 MPLS_QOS_SHIFT	= 9
 MPLS_TTL_SHIFT	= 0
-MPLS_STACK_BOTTOM=0x0100
+MPLS_STACK_BOTTOM = 0x0100
+
 
 class Ethernet(dpkt.Packet):
     __hdr__ = (
@@ -127,13 +130,14 @@ class Ethernet(dpkt.Packet):
             return dpkt.Packet.__len__(self) + 5
         return dpkt.Packet.__len__(self)
 
+    @classmethod
     def set_type(cls, t, pktclass):
         cls._typesw[t] = pktclass
-    set_type = classmethod(set_type)
 
+    @classmethod
     def get_type(cls, t):
         return cls._typesw[t]
-    get_type = classmethod(get_type)
+
 
 # XXX - auto-load Ethernet dispatch table from ETH_TYPE_* definitions
 def __load_types():
@@ -143,20 +147,26 @@ def __load_types():
             name = k[9:]
             modname = name.lower()
             try:
-                mod = __import__(modname, g)
-            except ImportError:
+                mod = __import__(modname, g, level=1)
+                Ethernet.set_type(v, getattr(mod, name))
+            except (ImportError, AttributeError):
                 continue
-            Ethernet.set_type(v, getattr(mod, name))
+
 
 if not Ethernet._typesw:
     __load_types()
 
+
+def test_eth():  # TODO recheck this test
+    s = ('\x00\xb0\xd0\xe1\x80\x72\x00\x11\x24\x8c\x11\xde\x86\xdd\x60\x00\x00\x00'
+         '\x00\x28\x06\x40\xfe\x80\x00\x00\x00\x00\x00\x00\x02\x11\x24\xff\xfe\x8c'
+         '\x11\xde\xfe\x80\x00\x00\x00\x00\x00\x00\x02\xb0\xd0\xff\xfe\xe1\x80\x72'
+         '\xcd\xd3\x00\x16\xff\x50\xd7\x13\x00\x00\x00\x00\xa0\x02\xff\xff\x67\xd3'
+         '\x00\x00\x02\x04\x05\xa0\x01\x03\x03\x00\x01\x01\x08\x0a\x7d\x18\x3a\x61'
+         '\x00\x00\x00\x00')
+    assert Ethernet(s)
+
+
 if __name__ == '__main__':
-    import unittest
-
-    class EthTestCase(unittest.TestCase):
-        def test_eth(self):
-            s = '\x00\xb0\xd0\xe1\x80r\x00\x11$\x8c\x11\xde\x86\xdd`\x00\x00\x00\x00(\x06@\xfe\x80\x00\x00\x00\x00\x00\x00\x02\x11$\xff\xfe\x8c\x11\xde\xfe\x80\x00\x00\x00\x00\x00\x00\x02\xb0\xd0\xff\xfe\xe1\x80r\xcd\xd3\x00\x16\xffP\xd7\x13\x00\x00\x00\x00\xa0\x02\xff\xffg\xd3\x00\x00\x02\x04\x05\xa0\x01\x03\x03\x00\x01\x01\x08\n}\x18:a\x00\x00\x00\x00'
-            eth = Ethernet(s)
-
-    unittest.main()
+    test_eth()
+    print 'Tests Successful...'

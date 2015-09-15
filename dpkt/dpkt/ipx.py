@@ -1,10 +1,11 @@
 # $Id: ipx.py 23 2006-11-08 15:45:33Z dugsong $
-
+# -*- coding: utf-8 -*-
 """Internetwork Packet Exchange."""
 
 import dpkt
 
 IPX_HDR_LEN = 30
+
 
 class IPX(dpkt.Packet):
     __hdr__ = (
@@ -14,4 +15,4 @@ class IPX(dpkt.Packet):
         ('pt', 'B', 0),
         ('dst', '12s', ''),
         ('src', '12s', '')
-        )
+    )

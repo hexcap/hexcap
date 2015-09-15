@@ -1,8 +1,9 @@
 # $Id: igmp.py 23 2006-11-08 15:45:33Z dugsong $
-
+# -*- coding: utf-8 -*-
 """Internet Group Management Protocol."""
 
 import dpkt
+
 
 class IGMP(dpkt.Packet):
     __hdr__ = (
@@ -10,7 +11,7 @@ class IGMP(dpkt.Packet):
         ('maxresp', 'B', 0),
         ('sum', 'H', 0),
         ('group', '4s', '\x00' * 4)
-        )
+    )
 
     def __str__(self):
         if not self.sum:

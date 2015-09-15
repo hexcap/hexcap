@@ -1,16 +1,15 @@
-# $Id: __init__.py 82 2011-01-10 03:43:38Z timur.alperovich@gmail.com $
-
 """fast, simple packet creation and parsing."""
 
-__author__ = 'Dug Song <dugsong@monkey.org>'
-__copyright__ = 'Copyright (c) 2004 Dug Song'
+__author__ = 'Dug Song'
+__author_email__ = 'dugsong@monkey.org'
 __license__ = 'BSD'
 __url__ = 'http://dpkt.googlecode.com/'
-__version__ = '1.7'
+__version__ = '1.8.6.2'
 
 from dpkt import *
 
 import ah
+import aoe
 import aim
 import arp
 import asn1
