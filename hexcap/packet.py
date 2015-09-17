@@ -58,7 +58,7 @@ class Packet:
       return
 
     if(isinstance(d, dpkt.ethernet.Ethernet)):
-      if(d.type == 0x0800 or d.type == 0x8100 or d.type == 0x86dd):
+      if(d.type == 0x0800 or d.type == 0x0806 or d.type == 0x8100 or d.type == 0x86dd):
         self.layers.append(layer.EthernetII(d)) # Ethernet II
         self.initLayers(d.data)
       elif(hasattr(d, 'dsap')):
@@ -125,6 +125,7 @@ class Packet:
       self.initLayers(d.data)
 
     else:
+      cfg.dbg(d)
       self.unsupport(d)
       return
 
