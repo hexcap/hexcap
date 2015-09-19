@@ -57,6 +57,7 @@ class Packet:
     if(not isinstance(d, dpkt.Packet)):
       return
 
+    # TODO: There has to be a better way to do this, but right now this must suffice
     if(isinstance(d, dpkt.ethernet.Ethernet)):
       if(d.type == 0x0800 or d.type == 0x0806 or d.type == 0x8100 or d.type == 0x86dd):
         self.layers.append(layer.EthernetII(d)) # Ethernet II
@@ -149,7 +150,7 @@ class Packet:
         if(rv):
           return rv
         else:
-          if(not self.hasLayer('g')):
+          if(not self.hasLayer('c')):
             self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
             self.layers.insert(1, layer.Generator())
 
@@ -158,7 +159,7 @@ class Packet:
     for lay in self.layers:
       if(lay.ID == sid):
         lay.addMask(cid, mask)
-        if(not self.hasLayer('g')):
+        if(not self.hasLayer('c')):
           self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
           self.layers.insert(1, layer.Generator())
         break
@@ -166,7 +167,7 @@ class Packet:
   # Returns list of all layers with generators
   # Returns False if packet has no generators
   def _get_genLayers(self):
-    if(not self.hasLayer('g')):
+    if(not self.hasLayer('c')):
       return False
     else:
       rv = []
@@ -204,7 +205,7 @@ class Packet:
   # Returns False if pcap data cannot be constructed
   def data(self):
     for lay in self.layers:
-      if(lay.ID == 'pid' or lay.ID == 'tstamp' or lay.ID == 'g'):
+      if(lay.ID == 'pid' or lay.ID == 'tstamp' or lay.ID == 'c'):
         continue
       elif(isinstance(lay, layer.Ethernet)):
         rv = lay.toPcap()

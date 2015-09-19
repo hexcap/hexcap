@@ -63,7 +63,9 @@ class MiniBuffer:
     'rx-filter' : ['self.rx()', [['i', '0_999', ' count:'], ['s', '^[\w. ]{0,}$', ' filter:']]],
 
     'generator' : ['self.modCol(\'generator\',)', [['i', '1_255', ' count:'], ['i', '-16_16', ' step:']]],
-    'mask' : ['self.modCol(\'mask\',)', [['s', '^[0-9,a-f,.,:,-]+$', ' mask:']]]
+    'mask' : ['self.modCol(\'mask\',)', [['s', '^[0-9,a-f,.,:,-]+$', ' mask:']]],
+    'sleep' : ['self.modCol(\'sleep\',)', [['i', '1_255', ' seconds:']]],
+    'jump' : ['self.modCol(\'jump\',)', [['i', '1_255', ' pid:']]]
 
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],

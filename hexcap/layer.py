@@ -160,19 +160,38 @@ class PktID(Layer):
     else:
       self.vals[col] = str(val).rjust(cfg.pktIDWidth, "0")
 
-# Generator layer
-# If a packet has any generator, it MUST also have a generator layer
-class Generator(Layer):
-  ID = "g"
+# Generic/Container class for control syntax elements
+class Control(Layer):
+  ID = "c"
   RO = True
   position = 2
 
   cols = OrderedDict()
-  cols['g'] = 3
+  cols['c'] = 3
 
   def __init__(self):
     Layer.__init__(self)
-    self.vals['g'] = ' * '
+
+# Generator layer
+# If a packet has any generator, it MUST also have a generator layer
+class Generator(Control):  
+  def __init__(self):
+    Control.__init__(self)
+    self.vals['c'] = ' g '
+
+# Sleep layer
+# Sleep layers denote a packet as being only for sleeping
+class Sleep(Control):
+  def __init__(self):
+    Control.__init__(self)
+    self.vals['c'] = ' s '
+
+# Jump layer
+# Jump layers denote a packet as being only for jumping
+class Jump(Control):
+  def __init__(self):
+    Control.__init__(self)
+    self.vals['c'] = ' j '
 
 # Timestamp layer
 class TStamp(Layer):

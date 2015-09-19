@@ -935,6 +935,11 @@ class HexScreen:
       self.cap.packets[self.ppadCY].addMask(sid, cid, binMask)
       redraw()
 
+    elif(f == 'sleep'):
+      return
+    elif(f == 'jump'):
+      return
+
   # Wrapper for ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):
     if(atr):
