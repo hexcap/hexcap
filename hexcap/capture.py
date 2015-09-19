@@ -89,7 +89,7 @@ class Capture:
   def __write(self, f):
     out = dpkt.pcap.Writer(f)
     for pkt in self.packets:
-      if(pkt.hasLayer('g')):
+      if(pkt.hasLayer('c') and pkt.control == 'g'):
         for g in self.expandGenerators(pkt):
           out.writepkt(dpkt.ethernet.Ethernet.pack(g.data()))
       else:
@@ -209,7 +209,7 @@ class Capture:
       return False
 
     sentPkts = 0
-    if(pkt.hasLayer('g')): # It has a generator
+    if(pkt.hasLayer('c') and pkt.control == 'g'): # It has a generator
       for p in self.expandGenerators(pkt):
         if(self.iface.send(str(p.data())) == -1):
           return False

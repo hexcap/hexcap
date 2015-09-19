@@ -152,7 +152,7 @@ class Packet:
         else:
           if(not self.hasLayer('c')):
             self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
-            self.layers.insert(1, layer.Generator())
+            self.layers.insert(1, layer.Control('g'))
 
   # Adds a mask to a layer
   def addMask(self, sid, cid, mask):
@@ -161,21 +161,28 @@ class Packet:
         lay.addMask(cid, mask)
         if(not self.hasLayer('c')):
           self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
-          self.layers.insert(1, layer.Generator())
+          self.layers.insert(1, layer.Control('g'))
         break
 
   # Returns list of all layers with generators
   # Returns False if packet has no generators
   def _get_genLayers(self):
-    if(not self.hasLayer('c')):
-      return False
-    else:
+    if(self.hasLayer('c') and self.control == 'g'):
       rv = []
       for lay in self.layers:
         if(hasattr(lay, 'gen')):
           rv.append(lay)
       return rv
+    return False
   genLayers = property(_get_genLayers)
+
+  # Returns the type of control statement this packet is; 'g', 's', OR 'j'
+  # If it's a normal packet returns false
+  def _get_control(self):
+    if(self.hasLayer('c')):
+      return self.layers[1].vals['c'].strip()
+    return False
+  control = property(_get_control)
 
   # Convenience method
   # Returns PID of packet
@@ -192,7 +199,7 @@ class Packet:
         return lay.vals['tstamp']
 
   # Convenience method
-  # Return True if passed sid corresponds with layer in pkt
+  # Return True if passed sid corresponds with existing layer in pkt
   # Else returns False
   def hasLayer(self, sid):
     for lay in self.layers:

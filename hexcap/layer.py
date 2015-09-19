@@ -161,37 +161,20 @@ class PktID(Layer):
       self.vals[col] = str(val).rjust(cfg.pktIDWidth, "0")
 
 # Generic/Container class for control syntax elements
+# The Control layer holds the type of the syntax element contained within the packet
+# If a packet has any generator, sleep or jump; it MUST have a Control layer
+# The value of column 'c' MUST be either 'g', 's', or 'j'
 class Control(Layer):
   ID = "c"
   RO = True
-  position = 2
+  position = 1 # If this layer exists it MUST be in position 1, we assume this in many places
 
   cols = OrderedDict()
   cols['c'] = 3
 
-  def __init__(self):
+  def __init__(self, t):
     Layer.__init__(self)
-
-# Generator layer
-# If a packet has any generator, it MUST also have a generator layer
-class Generator(Control):  
-  def __init__(self):
-    Control.__init__(self)
-    self.vals['c'] = ' g '
-
-# Sleep layer
-# Sleep layers denote a packet as being only for sleeping
-class Sleep(Control):
-  def __init__(self):
-    Control.__init__(self)
-    self.vals['c'] = ' s '
-
-# Jump layer
-# Jump layers denote a packet as being only for jumping
-class Jump(Control):
-  def __init__(self):
-    Control.__init__(self)
-    self.vals['c'] = ' j '
+    self.vals['c'] = format(t, '^' + str(self.cols['c']))
 
 # Timestamp layer
 class TStamp(Layer):

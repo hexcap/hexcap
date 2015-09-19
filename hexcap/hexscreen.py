@@ -450,17 +450,18 @@ class HexScreen:
     if(self.cap.ifName):
       x += addElement(self.cap.ifName)
 
-    # Show generators if present
-    if(self.cap.packets[self.ppadCY].hasLayer('g')):
-      for lay in self.cap.packets[self.ppadCY].genLayers:
-        if(lay.ID == s.ID):
-          for col in lay.gen:
-            if(col == c):
-              txt = "cnt:" + str(lay.gen[col]['count'])
-              txt += " stp:" + str(lay.gen[col]['step'])
-              txt += " msk:" + lay.gen[col]['mask']
-              x += addElement(txt)
-              break
+    # Show control elements if present
+    if(self.cap.packets[self.ppadCY].hasLayer('c')):
+      if(self.cap.packets[self.ppadCY].control == 'g'):
+        for lay in self.cap.packets[self.ppadCY].genLayers:
+          if(lay.ID == s.ID):
+            for col in lay.gen:
+              if(col == c):
+                txt = "cnt:" + str(lay.gen[col]['count'])
+                txt += " stp:" + str(lay.gen[col]['step'])
+                txt += " msk:" + lay.gen[col]['mask']
+                x += addElement(txt)
+                break
 
     # Claim remaining space
     if(self.tableWidth > x):
@@ -892,11 +893,6 @@ class HexScreen:
         step = args[1]
 
       rv = self.cap.packets[self.ppadCY].addGenerator(sid, cid, count, step)
-      if(rv):
-        self.printToMBuf(rv)
-        return
-      else:
-        redraw()
 
     elif(f == 'mask'):
       if(len(args) != 1):
@@ -932,13 +928,33 @@ class HexScreen:
           self.printToMBuf("Error:Invalid mask")
           return
 
-      self.cap.packets[self.ppadCY].addMask(sid, cid, binMask)
-      redraw()
+      rv = self.cap.packets[self.ppadCY].addMask(sid, cid, binMask)
 
     elif(f == 'sleep'):
-      return
+      if(len(args) != 1):
+        self.printToMBuf("Error:Internal")
+        return
+
+      seconds = args[0]
+      rv = self.cap.packets[self.ppadCY].addSleep(sid, cid, seconds)
+
     elif(f == 'jump'):
+      if(len(args) != 1):
+        self.printToMBuf("Error:Internal")
+        return
+
+      pid = args[0]
+      if((pid < 1) or (pid > len(self.cap.packets) + 1)):
+        self.printToMBuf("Error:pid outside of range")
+        return
+      rv = self.cap.packets[self.ppadCY].addJump(sid, cid, pid)
+
+    # Should check return values for all packet modifying functions
+    if(rv):
+      self.printToMBuf(rv)
       return
+    else:
+      redraw()
 
   # Wrapper for ppad.addstr
   def ppadAddStr(self, y, x, s, atr=None):
