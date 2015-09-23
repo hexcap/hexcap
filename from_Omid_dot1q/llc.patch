@@ -1,0 +1,11 @@
+--- dpkt/llc.py	2013-03-05 11:55:21.000000000 -0700
++++ llc.py	2013-07-22 00:28:02.000000000 -0700
+@@ -5,7 +5,7 @@
+     _typesw = {}
+     
+     def _unpack_data(self, buf):
+-        if self.type == ethernet.ETH_TYPE_8021Q:
++        if self.type == ethernet.ETH_TYPE_IEEE8021Q:
+             self.tag, self.type = struct.unpack('>HH', buf[:4])
+             buf = buf[4:]
+         elif self.type == ethernet.ETH_TYPE_MPLS or \
