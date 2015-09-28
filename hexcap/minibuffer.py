@@ -62,10 +62,12 @@ class MiniBuffer:
     'rx-all' : ['self.rx()', [['i', '0_999', ' count:']]],
     'rx-filter' : ['self.rx()', [['i', '0_999', ' count:'], ['s', '^[\w. ]{0,}$', ' filter:']]],
 
-    'generator' : ['self.modCol(\'generator\',)', [['i', '1_255', ' count:'], ['i', '-16_16', ' step:']]],
-    'mask' : ['self.modCol(\'mask\',)', [['s', '^[0-9,a-f,.,:,-]+$', ' mask:']]],
-    'sleep' : ['self.modCol(\'sleep\',)', [['i', '1_255', ' seconds:']]],
-    'jump' : ['self.modCol(\'jump\',)', [['i', '1_255', ' pid:']]]
+    'generator' : ['self.modPkt(\'generator\',)', [['i', '1_255', ' count:'], ['i', '-16_16', ' step:']]],
+    'mask' : ['self.modPkt(\'mask\',)', [['s', '^[0-9,a-f,.,:,-]+$', ' mask:']]],
+    'sleep' : ['self.modPkt(\'sleep\',)', [['i', '1_' + str((10 ** cfg.pktIDWidth) - 1), ' seconds:']]],
+    'jump' : ['self.modPkt(\'jump\',)', [['i', '1_' + str((10 ** cfg.pktIDWidth) - 1), ' pid:']]],
+    'insert-sleep' : ['self.modPkt(\'insert-sleep\',)', [['i', '1_' + str((10 ** cfg.pktIDWidth) - 1), ' seconds:']]],
+    'insert-jump' : ['self.modPkt(\'insert-jump\',)', [['i', '1_' + str((10 ** cfg.pktIDWidth) - 1), ' pid:']]]
 
     #    'append-layer' : ['self.cap.appendLayer()', [['s', '[0-9]2funk']]],
     #    'insert-layer' : ['self.cap.insertLayer()', [['s', '^bar$']]],

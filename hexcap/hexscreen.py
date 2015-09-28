@@ -451,7 +451,7 @@ class HexScreen:
       x += addElement(self.cap.ifName)
 
     # Show control elements if present
-    if(self.cap.packets[self.ppadCY].hasLayer('c')):
+    if(self.cap.packets[self.ppadCY].control):
       if(self.cap.packets[self.ppadCY].control == 'g'):
         for lay in self.cap.packets[self.ppadCY].genLayers:
           if(lay.ID == s.ID):
@@ -863,91 +863,95 @@ class HexScreen:
 
     end()
 
-  # Mini-buffer function for modifying a column
+  # Mini-buffer wrapper function for modifying a packet
   # Takes a command string and variable list of args
-  def modCol(self, f, *args):
+  def modPkt(self, f, *args):
     def redraw(): # Redraws screen after modifying column
       self.buildSections()
       self.resetCursor()
       self.drawPpads()
       self.refresh()
-        
-    s, cid = self.cursorColumn(self.cX)
-    sid = s.ID
-    if(not s.exposed):
-      self.printToMBuf("Error:Cannot modify hidden section")
-      return
-    if(s.RO):
-      self.printToMBuf("Error:Layer is read only")
-      return
-    if(not self.cap.packets[self.ppadCY].hasLayer(sid)):
-      self.printToMBuf("Error:Internal")
-      return
-    
-    if(f == 'generator'):
-      if(len(args) != 2):
-        self.printToMBuf("Error:Internal")
+
+    # Modify a single column in a single packet
+    # Takes a command string and variable list of args
+    def modCol(f, *args):        
+      s, cid = self.cursorColumn(self.cX)
+      sid = s.ID
+      if(not s.exposed):
+        self.printToMBuf("Error:Cannot modify hidden section")
         return
-      else:
+      if(s.RO):
+        self.printToMBuf("Error:Layer is read only")
+        return
+      if(not self.cap.packets[self.ppadCY].hasLayer(sid)):
+        self.printToMBuf("Error:Internal layer does not exist")
+        return
+    
+      if(f == 'generator'):
         count = args[0]
         step = args[1]
+        return self.cap.packets[self.ppadCY].addGenerator(sid, cid, count, step)
 
-      rv = self.cap.packets[self.ppadCY].addGenerator(sid, cid, count, step)
-
-    elif(f == 'mask'):
-      if(len(args) != 1):
-        self.printToMBuf("Error:Internal")
-        return
-      else:
+      elif(f == 'mask'):
         mask = args[0]
-
-      if(len(mask) < 1):
-        self.printToMBuf("Error:Mask too short")
-        return
-
-      # Mask can only contain hexChars
-      mask = mask.translate(None, '.,:').strip().lower()
-      if(len(mask.translate(None, ''.join(map(chr, cfg.hexChars)))) != 0):
-        self.printToMBuf("Error:Mask may only contain hex digits")
-        return
-
-      # binMask must contain at least 1 zero
-      # binMask cannot have more than one grouping of zeros    
-      # Valid masks: 110011, 1, 1100, 0011, 10
-      # Invalid masks: 00101, 110010, 0101
-      binMask = cfg.hexStrToBinStr(mask)
-      if(binMask.find('0') == -1):
-        self.printToMBuf("Error:Invalid mask")
-        return
-      if(binMask.startswith('0')):
-        if(binMask.lstrip('0').find('0') != -1):
-          self.printToMBuf("Error:Invalid mask")
-          return
-      else:
-        if(binMask.lstrip('1').lstrip('0').find('0') != -1):
-          self.printToMBuf("Error:Invalid mask")
+        if(len(mask) < 1):
+          self.printToMBuf("Error:Mask too short")
           return
 
-      rv = self.cap.packets[self.ppadCY].addMask(sid, cid, binMask)
+        # Mask can only contain hexChars
+        mask = mask.translate(None, '.,:').strip().lower()
+        if(len(mask.translate(None, ''.join(map(chr, cfg.hexChars)))) != 0):
+          self.printToMBuf("Error:Mask may only contain hex digits")
+          return
 
-    elif(f == 'sleep'):
+        # binMask must contain at least 1 zero
+        # binMask cannot have more than one grouping of zeros    
+        # Valid masks: 110011, 1, 1100, 0011, 10
+        # Invalid masks: 00101, 110010, 0101
+        binMask = cfg.hexStrToBinStr(mask)
+        if(binMask.find('0') == -1):
+          self.printToMBuf("Error:Invalid mask")
+          return
+        if(binMask.startswith('0')):
+          if(binMask.lstrip('0').find('0') != -1):
+            self.printToMBuf("Error:Invalid mask")
+            return
+        else:
+          if(binMask.lstrip('1').lstrip('0').find('0') != -1):
+            self.printToMBuf("Error:Invalid mask")
+            return
+        return self.cap.packets[self.ppadCY].addMask(sid, cid, binMask)
+
+    if(f == 'generator'):
+      if(len(args) != 2):
+        self.printToMBuf("Error:Internal bad arg count")
+        return
+      rv = modCol('generator', *args)
+    else:
       if(len(args) != 1):
-        self.printToMBuf("Error:Internal")
+        self.printToMBuf("Error:Internal bad arg count")
         return
 
-      seconds = args[0]
-      rv = self.cap.packets[self.ppadCY].addSleep(sid, cid, seconds)
-
-    elif(f == 'jump'):
-      if(len(args) != 1):
-        self.printToMBuf("Error:Internal")
-        return
-
-      pid = args[0]
-      if((pid < 1) or (pid > len(self.cap.packets) + 1)):
-        self.printToMBuf("Error:pid outside of range")
-        return
-      rv = self.cap.packets[self.ppadCY].addJump(sid, cid, pid)
+      cfg.dbg("modPkt ppadCY:" + str(self.ppadCY))
+  
+      if(f == 'mask'):
+        rv = modCol('mask', *args)
+      elif(f == 'sleep'):
+        rv = self.cap.packets[self.ppadCY].makeSleep(args[0])
+      elif(f == 'insert-sleep'):
+        rv = self.cap.insert('sleep', self.ppadCY, args[0])
+      elif(f == 'jump'):
+        jmpPid = args[0]
+        if((jmpPid < 1) or (jmpPid > len(self.cap.packets))):
+          self.printToMBuf("Error:pid outside of range")
+          return
+        rv = self.cap.packets[self.ppadCY].makeJump(jmpPid)
+      elif(f == 'insert-jump'):
+        jmpPid = args[0]
+        if((jmpPid < 1) or (jmpPid > len(self.cap.packets))):
+          self.printToMBuf("Error:pid outside of range")
+          return
+        rv = self.cap.insert('jump', self.ppadCY, jmpPid)
 
     # Should check return values for all packet modifying functions
     if(rv):

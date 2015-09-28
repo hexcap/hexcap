@@ -162,19 +162,24 @@ class PktID(Layer):
 
 # Generic/Container class for control syntax elements
 # The Control layer holds the type of the syntax element contained within the packet
+# It also holds the argument for that control statement
 # If a packet has any generator, sleep or jump; it MUST have a Control layer
 # The value of column 'c' MUST be either 'g', 's', or 'j'
 class Control(Layer):
-  ID = "c"
+  ID = "cntrl"
   RO = True
   position = 1 # If this layer exists it MUST be in position 1, we assume this in many places
 
   cols = OrderedDict()
   cols['c'] = 3
+  cols['arg'] = cfg.pktIDWidth
 
-  def __init__(self, t):
+  def __init__(self, t, arg=''):
+    cfg.dbg("layer.py Control.init t:" + t + " arg:" + str(arg))
+
     Layer.__init__(self)
     self.vals['c'] = format(t, '^' + str(self.cols['c']))
+    self.vals['arg'] = format(str(arg), '^' + str(self.cols['arg']))
 
 # Timestamp layer
 class TStamp(Layer):

@@ -142,6 +142,16 @@ class Packet:
       if(lay.ID == sid):
         lay.setColumn(col, val)
 
+  # Transforms a packet into a sleep statement
+  def makeSleep(self, seconds):
+    self.layers = self.layers[0:2]
+    self.layers.append(layer.Control('s', seconds))
+
+  # Transforms a packet into a jump statement
+  def makeJump(self, jmpPid):
+    self.layers = self.layers[0:2]
+    self.layers.append(layer.Control('j', jmpPid))
+
   # Adds a generator to a layer
   def addGenerator(self, sid, cid, count, step):
     for lay in self.layers:
@@ -150,7 +160,7 @@ class Packet:
         if(rv):
           return rv
         else:
-          if(not self.hasLayer('c')):
+          if(not self.control):
             self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
             self.layers.insert(1, layer.Control('g'))
 
@@ -159,7 +169,7 @@ class Packet:
     for lay in self.layers:
       if(lay.ID == sid):
         lay.addMask(cid, mask)
-        if(not self.hasLayer('c')):
+        if(not self.control):
           self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
           self.layers.insert(1, layer.Control('g'))
         break
@@ -167,7 +177,7 @@ class Packet:
   # Returns list of all layers with generators
   # Returns False if packet has no generators
   def _get_genLayers(self):
-    if(self.hasLayer('c') and self.control == 'g'):
+    if(self.control == 'g'):
       rv = []
       for lay in self.layers:
         if(hasattr(lay, 'gen')):
@@ -179,8 +189,9 @@ class Packet:
   # Returns the type of control statement this packet is; 'g', 's', OR 'j'
   # If it's a normal packet returns false
   def _get_control(self):
-    if(self.hasLayer('c')):
-      return self.layers[1].vals['c'].strip()
+    for lay in self.layers:
+      if(isinstance(lay, layer.Control)):
+        return lay.vals['c'].strip()
     return False
   control = property(_get_control)
 

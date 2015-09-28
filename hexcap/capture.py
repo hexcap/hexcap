@@ -89,9 +89,10 @@ class Capture:
   def __write(self, f):
     out = dpkt.pcap.Writer(f)
     for pkt in self.packets:
-      if(pkt.hasLayer('c') and pkt.control == 'g'):
-        for g in self.expandGenerators(pkt):
-          out.writepkt(dpkt.ethernet.Ethernet.pack(g.data()))
+      if(pkt.control): # Skip control packets unless they are generators
+        if(pkt.control == 'g'):
+          for g in self.expandGenerators(pkt):
+            out.writepkt(dpkt.ethernet.Ethernet.pack(g.data()))
       else:
         out.writepkt(dpkt.ethernet.Ethernet.pack(pkt.data()))
 
@@ -142,6 +143,19 @@ class Capture:
       for lay in pkt.layers:
         if(lay.ID == 'pid'):
           lay.setColumn('pid', -1)
+
+  # Inserts control packets into the capture
+  # Can only insert control statement packets
+  # Takes a packet type, zero based integer insert point, and single argument dependent on pktType
+  def insert(self, pktType, first, arg):
+    cfg.dbg("capture.py_insert first:" + str(first))
+
+    self.packets.insert(first, copy.deepcopy(self.packets[first]))
+    if(pktType == 'sleep'):
+      self.packets[first + 1].makeSleep(arg)
+    elif(pktType == 'jump'):
+      self.packets[first + 1].makeJump(arg)
+    self.resetPIDs(first)
 
   # Pastes packets from our clipboard to our main capture
   # Takes the packet at the paste point as an integer(zero based)
@@ -203,18 +217,22 @@ class Capture:
 
   # Function for sending a single packet
   # Takes a packet object to send
-  # Returns number of packets sent on success and False on failure
+  # Returns number of actual packets sent on success and False on failure
   def tx(self, pkt):
     if(self.dataLink != pcap.DLT_EN10MB):
       return False
 
     sentPkts = 0
-    if(pkt.hasLayer('c') and pkt.control == 'g'): # It has a generator
+    if(pkt.control == 'g'): # It has a generator
       for p in self.expandGenerators(pkt):
         if(self.iface.send(str(p.data())) == -1):
           return False
         else:
           sentPkts += 1
+    elif(pkt.control == 'j'):
+      return
+    elif(pkt.control == 's'):
+      return
     else:
       if(self.iface.send(str(pkt.data())) == -1):
         return False
