@@ -878,14 +878,13 @@ class HexScreen:
       s, cid = self.cursorColumn(self.cX)
       sid = s.ID
       if(not s.exposed):
-        self.printToMBuf("Error:Cannot modify hidden section")
-        return
+        return "Error:Cannot modify hidden section"
+      if(self.cap.packets[self.ppadCY].control and self.cap.packets[self.ppadCY].control != 'g'):
+        return "Error:Cannot add generator or mask to control packet"
       if(s.RO):
-        self.printToMBuf("Error:Layer is read only")
-        return
+        return "Error:Layer is read only"
       if(not self.cap.packets[self.ppadCY].hasLayer(sid)):
-        self.printToMBuf("Error:Internal layer does not exist")
-        return
+        return "Error_Internal:Layer does not exist"
     
       if(f == 'generator'):
         count = args[0]
@@ -895,14 +894,12 @@ class HexScreen:
       elif(f == 'mask'):
         mask = args[0]
         if(len(mask) < 1):
-          self.printToMBuf("Error:Mask too short")
-          return
+          return "Error:Mask too short"
 
         # Mask can only contain hexChars
         mask = mask.translate(None, '.,:').strip().lower()
         if(len(mask.translate(None, ''.join(map(chr, cfg.hexChars)))) != 0):
-          self.printToMBuf("Error:Mask may only contain hex digits")
-          return
+          return "Error:Mask may only contain hex digits"
 
         # binMask must contain at least 1 zero
         # binMask cannot have more than one grouping of zeros    
@@ -910,46 +907,50 @@ class HexScreen:
         # Invalid masks: 00101, 110010, 0101
         binMask = cfg.hexStrToBinStr(mask)
         if(binMask.find('0') == -1):
-          self.printToMBuf("Error:Invalid mask")
-          return
+          return "Error:Invalid mask"
         if(binMask.startswith('0')):
           if(binMask.lstrip('0').find('0') != -1):
-            self.printToMBuf("Error:Invalid mask")
-            return
+            return "Error:Invalid mask"
         else:
           if(binMask.lstrip('1').lstrip('0').find('0') != -1):
-            self.printToMBuf("Error:Invalid mask")
-            return
+            return "Error:Invalid mask"
         return self.cap.packets[self.ppadCY].addMask(sid, cid, binMask)
+        # END modCol()
 
     if(f == 'generator'):
       if(len(args) != 2):
-        self.printToMBuf("Error:Internal bad arg count")
+        self.printToMBuf("Error_Internal:Bad arg count")
         return
-      rv = modCol('generator', *args)
+      else:
+        rv = modCol('generator', *args)
     else:
       if(len(args) != 1):
-        self.printToMBuf("Error:Internal bad arg count")
+        self.printToMBuf("Error_Internal:Bad arg count")
         return
-
-      if(f == 'mask'):
-        rv = modCol('mask', *args)
-      elif(f == 'sleep'):
-        rv = self.cap.packets[self.ppadCY].makeSleep(args[0])
-      elif(f == 'insert-sleep'):
-        rv = self.cap.insert('sleep', self.ppadCY, args[0])
-      elif(f == 'jump'):
-        jmpPid = args[0]
-        if((jmpPid < 1) or (jmpPid > len(self.cap.packets))):
-          self.printToMBuf("Error:pid outside of range")
-          return
-        rv = self.cap.packets[self.ppadCY].makeJump(jmpPid)
-      elif(f == 'insert-jump'):
-        jmpPid = args[0]
-        if((jmpPid < 1) or (jmpPid > len(self.cap.packets))):
-          self.printToMBuf("Error:pid outside of range")
-          return
-        rv = self.cap.insert('jump', self.ppadCY, jmpPid)
+      else:
+        if(f == 'mask'):
+          rv = modCol('mask', *args)
+        elif(f == 'sleep'):
+          rv = self.cap.packets[self.ppadCY].makeSleep(args[0])
+        elif(f == 'insert-sleep'):
+          rv = self.cap.insert('sleep', self.ppadCY, args[0])
+        elif(f == 'jump'):
+          jmpPid = args[0]
+          if(jmpPid < 1 or jmpPid > len(self.cap.packets)):
+            self.printToMBuf("Error:pid outside of range")
+            return
+          elif(jmpPid == self.ppadCY + 1):
+            self.printToMBuf("Error:Cannot jump to same packet")
+            return
+          else:
+            rv = self.cap.packets[self.ppadCY].makeJump(jmpPid)
+        elif(f == 'insert-jump'):
+          jmpPid = args[0]
+          if((jmpPid < 1) or (jmpPid > len(self.cap.packets))):
+            self.printToMBuf("Error:pid outside of range")
+            return
+          else:
+            rv = self.cap.insert('jump', self.ppadCY, jmpPid)
 
     # Should check return values for all packet modifying functions
     if(rv):
