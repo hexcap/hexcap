@@ -932,8 +932,6 @@ class HexScreen:
         self.printToMBuf("Error:Internal bad arg count")
         return
 
-      cfg.dbg("modPkt ppadCY:" + str(self.ppadCY))
-  
       if(f == 'mask'):
         rv = modCol('mask', *args)
       elif(f == 'sleep'):

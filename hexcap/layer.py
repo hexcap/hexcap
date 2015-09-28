@@ -175,8 +175,6 @@ class Control(Layer):
   cols['arg'] = cfg.pktIDWidth
 
   def __init__(self, t, arg=''):
-    cfg.dbg("layer.py Control.init t:" + t + " arg:" + str(arg))
-
     Layer.__init__(self)
     self.vals['c'] = format(t, '^' + str(self.cols['c']))
     self.vals['arg'] = format(str(arg), '^' + str(self.cols['arg']))

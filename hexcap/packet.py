@@ -126,7 +126,6 @@ class Packet:
       self.initLayers(d.data)
 
     else:
-      cfg.dbg(d)
       self.unsupport(d)
       return
 
