@@ -202,7 +202,6 @@ class Capture:
       rv = []
       for ii in xrange(numPkts):
         pkt = copy.deepcopy(gPkt)
-        pkt.layers.pop(1) # Remove the generator layer
         for lay in pkt.layers[0:]: # Ignore pktID
           for col,gDef in lay.gen.iteritems():
             lay.incColumn(col, (ii % gDef['count']) * gDef['step'])
@@ -213,7 +212,7 @@ class Capture:
         rv.append(pkt)
       return rv
 
-  # Function for sending a single packet
+  # Function for sending a single packet, either normal or generator
   # Takes a packet object to send
   # Returns number of actual packets sent on success and False on failure
   def tx(self, pkt):
@@ -227,10 +226,6 @@ class Capture:
           return False
         else:
           sentPkts += 1
-    elif(pkt.control == 'j'):
-      return
-    elif(pkt.control == 's'):
-      return
     else:
       if(self.iface.send(str(pkt.data())) == -1):
         return False

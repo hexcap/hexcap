@@ -753,29 +753,38 @@ class HexScreen:
     # Returns tuple [successes, failure, userBreak]
     # successes is packets sent successfully
     # failure is True if any packet failed to send, otherwise false
-    # input == True if user input detected, otherwise False
-    def sendPkts():
-      failure = False
+    # userBreak == True if user break detected, otherwise False
+    def sendPkts(packets):
       successes = 0
-      for jj in pkts:
-        if(self.cap.packets[jj].control == 's'): # Sleep
-          for halfSecond in xrange(2 * int(self.cap.packets[jj].layer('cntrl').vals['arg'].strip())):
+      failure = False
+      userBreak = False
+
+      for pkt in packets:
+        if(pkt.control == 's'): # Sleep
+          for halfSecond in xrange(2 * int(pkt.layer('cntrl').vals['arg'].strip())):
             sleep(0.5)
             if(self.getch() != -1):
               return successes, failure, True
-        elif(self.cap.packets[jj].control == 'j'): # Jump
-          continue #TODO: Implement this!
-        else:
-          rv = self.cap.tx(self.cap.packets[jj])
+
+        elif(pkt.control == 'j'): # Jump
+          jmpPid = int(pkt.layer('cntrl').vals['arg'].strip())
+          newPackets = [p for p in packets if(int(p.getPID()) >= jmpPid)]
+          ss,ff,ub = sendPkts(newPackets)
+          successes += ss
+          failure |= ff
+          userBreak |= ub
+          break
+
+        else: # Normal packet or generator
+          rv = self.cap.tx(pkt)
           if(rv):
             successes += rv
           else:
             failure = True
 
-        if(self.getch() != -1):
+        if(self.getch() != -1 or userBreak == True):
           return successes, failure, True
-
-      return successes, failure, False
+      return successes, failure, userBreak # End sendPkts()
 
     if(os.getuid() or os.geteuid()):
       return "Error:Requires root access"
@@ -784,7 +793,7 @@ class HexScreen:
     fail = False
     pktSent = 0
 
-    # Convert from user's 1-based numbering to internal 0-based numbering
+    # Convert from user's one-based numbering to internal zero-based numbering
     first -= 1
     last -= 1
 
@@ -794,7 +803,7 @@ class HexScreen:
       if(last > len(self.cap.packets) - 1):
         last =  len(self.cap.packets) - 1
       for jj in xrange(first, last+1):
-        pkts.append(jj)
+        pkts.append(self.cap.packets[jj])
 
     else: # User wants reverse ordering
       if(last < 0):
@@ -802,25 +811,35 @@ class HexScreen:
       if(first > len(self.cap.packets) - 1):
         first =  len(self.cap.packets) - 1
       for jj in xrange(first, last-1, -1):
-        pkts.append(jj)
+        pkts.append(self.cap.packets[jj])
+
+    # Check for illegal jumps before starting
+    for pkt in pkts:
+      if(pkt.control == 'j'):
+        jmpPid = pkt.layer('cntrl').vals['arg'].strip()
+        if(jmpPid < pkt.getPID()):
+          return "Error_Internal: Cannot jump backwards"
+        if(jmpPid not in [p.getPID().lstrip("0") for p in pkts]):
+          return "Error: Cannot jump outside of tx range"
 
     self.printToMBuf("Any key to break")
     self.stdscr.nodelay(1) # Unblock character input
     if(repeat == 0):
       while True:
-        successes, failure, userBreak = sendPkts()
+        successes, failure, userBreak = sendPkts(pkts)
         fail |= failure
         pktSent += successes
         if(userBreak):
           end()
+          return
     else:
       for ii in xrange(repeat):
-        successes, failure, userBreak = sendPkts()
+        successes, failure, userBreak = sendPkts(pkts)
         fail |= failure
         pktSent += successes
         if(userBreak):
           end()
-
+          return
     end()
 
   # Receives packets by calling capture.rx()
@@ -960,6 +979,9 @@ class HexScreen:
             return
           elif(jmpPid == self.ppadCY + 1):
             self.printToMBuf("Error:Cannot jump to same packet")
+            return
+          elif(jmpPid <= self.ppadCY):
+            self.printToMBuf("Error:Cannot jump backwards")
             return
           else:
             rv = self.cap.packets[self.ppadCY].makeJump(jmpPid)

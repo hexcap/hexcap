@@ -145,11 +145,13 @@ class Packet:
   def makeSleep(self, seconds):
     self.layers = self.layers[0:2]
     self.layers.append(layer.Control('s', seconds))
+    self.layer('tstamp').vals['tstamp'] = ''
 
   # Transforms a packet into a jump statement
   def makeJump(self, jmpPid):
     self.layers = self.layers[0:2]
     self.layers.append(layer.Control('j', jmpPid))
+    self.layer('tstamp').vals['tstamp'] = ''
 
   # Adds a generator to a layer
   def addGenerator(self, sid, cid, count, step):
@@ -160,7 +162,7 @@ class Packet:
           return rv
         else:
           if(not self.control):
-            self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
+            self.layer('tstamp').vals['tstamp'] = ''
             self.layers.insert(1, layer.Control('g'))
 
   # Adds a mask to a layer
@@ -169,7 +171,7 @@ class Packet:
       if(lay.ID == sid):
         lay.addMask(cid, mask)
         if(not self.control):
-          self.layers[1].vals['tstamp'] = '' # Clobber our timestamp
+          self.layer('tstamp').vals['tstamp'] = ''
           self.layers.insert(1, layer.Control('g'))
         break
 
@@ -228,12 +230,13 @@ class Packet:
   # Returns False if pcap data cannot be constructed
   def data(self):
     for lay in self.layers:
-      if(lay.ID == 'pid' or lay.ID == 'tstamp' or lay.ID == 'c'):
+      if(lay.ID == 'pid' or lay.ID == 'tstamp' or lay.ID == 'cntrl'):
         continue
       elif(isinstance(lay, layer.Ethernet)):
         rv = lay.toPcap()
       else:
         rv = self.pushDpktLayer(rv, lay.toPcap())
+
     return self.sizePkt(rv)
 
   # Totally unpythonic but don't care

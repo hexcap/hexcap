@@ -177,7 +177,7 @@ class Control(Layer):
   def __init__(self, t, arg=''):
     Layer.__init__(self)
     self.vals['c'] = format(t, '^' + str(self.cols['c']))
-    self.vals['arg'] = format(str(arg), '^' + str(self.cols['arg']))
+    self.vals['arg'] = format(str(arg), '^' + str(self.cols['arg']))  
 
 # Timestamp layer
 class TStamp(Layer):

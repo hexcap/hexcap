@@ -1,0 +1,6 @@
+Hitting up or down arrow in the minibuffer causes crash.
+No ability to remove generators.
+Trying to send packets with certain multicast destination MACs will fail.
+    This is most likely OS specific and unfixable.
+    The extent of this is unknown, but 01:00:0c:cc:cc:c[0-c,e-f] does not work on OpenBSD.
+    This is a rabbit hole that I'm not willing to go down.
