@@ -148,8 +148,6 @@ class Capture:
   # Can only insert control statement packets
   # Takes a packet type, zero based integer insert point, and single argument dependent on pktType
   def insert(self, pktType, first, arg):
-    cfg.dbg("capture.py_insert first:" + str(first))
-
     self.packets.insert(first, copy.deepcopy(self.packets[first]))
     if(pktType == 'sleep'):
       self.packets[first + 1].makeSleep(arg)

@@ -11,6 +11,7 @@ import curses
 import locale
 import sys
 import copy
+from time import sleep
 
 # hexcap specific imports
 import cfg
@@ -748,6 +749,34 @@ class HexScreen:
       else:
         self.printToMBuf(str(pktSent) + " packets egressed " + self.cap.ifName)
 
+    # Does the actual sending, returns on user input
+    # Returns tuple [successes, failure, userBreak]
+    # successes is packets sent successfully
+    # failure is True if any packet failed to send, otherwise false
+    # input == True if user input detected, otherwise False
+    def sendPkts():
+      failure = False
+      successes = 0
+      for jj in pkts:
+        if(self.cap.packets[jj].control == 's'): # Sleep
+          for halfSecond in xrange(2 * int(self.cap.packets[jj].layer('cntrl').vals['arg'].strip())):
+            sleep(0.5)
+            if(self.getch() != -1):
+              return successes, failure, True
+        elif(self.cap.packets[jj].control == 'j'): # Jump
+          continue #TODO: Implement this!
+        else:
+          rv = self.cap.tx(self.cap.packets[jj])
+          if(rv):
+            successes += rv
+          else:
+            failure = True
+
+        if(self.getch() != -1):
+          return successes, failure, True
+
+      return successes, failure, False
+
     if(os.getuid() or os.geteuid()):
       return "Error:Requires root access"
 
@@ -779,29 +808,19 @@ class HexScreen:
     self.stdscr.nodelay(1) # Unblock character input
     if(repeat == 0):
       while True:
-        for jj in pkts:
-          rv = self.cap.tx(self.cap.packets[jj])
-          if(rv):
-            pktSent += rv
-          else:
-            fail = True
-
-          if(self.getch() != -1):
-            end()
-            return
-
+        successes, failure, userBreak = sendPkts()
+        fail |= failure
+        pktSent += successes
+        if(userBreak):
+          end()
     else:
       for ii in xrange(repeat):
-        for jj in pkts:
-          rv = self.cap.tx(self.cap.packets[jj])
-          if(rv):
-            pktSent += rv
-          else:
-            fail = True
+        successes, failure, userBreak = sendPkts()
+        fail |= failure
+        pktSent += successes
+        if(userBreak):
+          end()
 
-          if(self.getch() != -1):
-            end()
-            return
     end()
 
   # Receives packets by calling capture.rx()

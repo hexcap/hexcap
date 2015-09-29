@@ -194,6 +194,12 @@ class Packet:
     return False
   control = property(_get_control)
 
+  # Returns the first layer with layID
+  def layer(self, layID):
+    for lay in self.layers:
+      if(lay.ID == layID):
+        return lay
+
   # Convenience method
   # Returns PID of packet
   def getPID(self):
