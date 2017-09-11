@@ -204,7 +204,7 @@ class Leftovers(Layer):
   dotWidth = 2 # How many trailing dots?
 
   cols = OrderedDict() 
-  cols['udefined'] = uWidth
+  cols['undefined'] = uWidth
 
   def __init__(self, data):
     Layer.__init__(self)
@@ -215,9 +215,9 @@ class Leftovers(Layer):
       s = s[:self.uWidth - self.dotWidth]
       for ii in xrange(self.dotWidth):
         s += "."
-      self.vals['udefined'] = s
+      self.vals['undefined'] = s
     else:
-      self.vals['udefined'] = s.ljust(self.uWidth, "x")
+      self.vals['undefined'] = s.ljust(self.uWidth, "x")
 
   def toPcap(self):
     return self.data
