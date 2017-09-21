@@ -6,7 +6,8 @@ All rights reserved.
 '''
 
 import sys
-sys.path.insert(0, sys.path[0] + '/../dpkt/')
+#sys.path.insert(0, sys.path[0] + '/../dpkt')
+sys.path.insert(0, '/home/smutt/hacking/dpkt')
 import dpkt
 from inspect import getmembers
 from pprint import pprint
@@ -23,9 +24,4 @@ else:
   pcIn = dpkt.pcap.Reader(open(sys.argv[1]))
   for ts, pkt in pcIn:
     p = dpkt.ethernet.Ethernet(pkt)
-    if(hasattr(p, 'tag')):
-      print "\n"
-      print "dot1q:" + hex(p.tag)
-      print "dot1p:" + hex(p.dot1p)
-      print "etype:" + hex(p.type)
     print repr(p)

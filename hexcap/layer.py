@@ -378,17 +378,17 @@ class Dot1q(Layer):
 
   def __init__(self, data):
     Layer.__init__(self)
-    self.vals['tag'] = self.intToHexStr(data.tag).rjust(4, "0")
-    self.vals['1p'] = self.intToHexStr(data.pcp).rjust(1, "0")
+    self.vals['tag'] = self.intToHexStr(data.id).rjust(4, "0")
+    self.vals['1p'] = self.intToHexStr(data.pri).rjust(1, "0")
     self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
-    self.vals['dei'] = data.dei
+    self.vals['cfi'] = data.cfi
 
   def toPcap(self):
-    rv = dpkt.dot1q.DOT1Q()
-    rv.tag = int(self.vals['tag'], 16)
-    rv.pcp = int(self.vals['1p'], 16)
+    rv = dpkt.ethernet.VLANtag8021Q()
+    rv.id = int(self.vals['tag'], 16)
+    rv.pri = int(self.vals['1p'], 16)
     rv.type = int(self.vals['etype'], 16)
-    rv.dei = self.vals['dei']
+    rv.cfi = self.vals['cfi']
     return rv
 
   def setColumn(self, col, val):

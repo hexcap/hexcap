@@ -59,6 +59,10 @@ class Packet:
 
     # TODO: There has to be a better way to do this, but right now this must suffice
     if(isinstance(d, dpkt.ethernet.Ethernet)):
+      if hasattr(d, 'vlan_tags'): # This does not support Cisco ISL
+        for tag in d.vlan_tags:
+          self.layers.append(layer.Dot1q(tag))
+
       if(d.type == 0x0800 or d.type == 0x0806 or d.type == 0x8100 or d.type == 0x86dd):
         self.layers.append(layer.EthernetII(d)) # Ethernet II
         self.initLayers(d.data)
@@ -84,10 +88,6 @@ class Packet:
     elif(isinstance(d, dpkt.edp.EDP)):
       self.layers.append(layer.EDP(d))
       return
-
-    elif(isinstance(d, dpkt.dot1q.DOT1Q)):
-      self.layers.append(layer.Dot1q(d))
-      self.initLayers(d.data)
 
     elif(isinstance(d, dpkt.stp.STP)):
       self.layers.append(layer.STP(d))
