@@ -59,53 +59,57 @@ class Packet:
 
     # TODO: There has to be a better way to do this, but right now this must suffice
     if(isinstance(d, dpkt.ethernet.Ethernet)):
-      if hasattr(d, 'vlan_tags'): # This does not support Cisco ISL
-        for tag in d.vlan_tags:
-          self.layers.append(layer.Dot1q(tag))
+      if hasattr(d, 'vlan_tags'):
+        if isinstance(d.vlan_tags[0], dpkt.ethernet.VLANtagISL):
+          self.unsupport(d)
+          return
+        else:
+          for tag in d.vlan_tags:
+            self.layers.append(layer.Dot1q(tag))
 
-      if(d.type == 0x0800 or d.type == 0x0806 or d.type == 0x8100 or d.type == 0x86dd):
+      if d.type > 1500:
         self.layers.append(layer.EthernetII(d)) # Ethernet II
         self.initLayers(d.data)
-      elif(hasattr(d, 'dsap')):
-        if((d.dsap == 170 or d.dsap == 171) and (d.ssap == 170 or d.ssap == 171)):
-          self.layers.append(layer.EthernetSNAP(d)) # SNAP
-          self.initLayers(d.data)
-        else:
-          self.layers.append(layer.EthernetDot2(d)) # 802.2
-          self.initLayers(d.data)
-      else:
+      elif d.type == dpkt.ethernet.ETH_TYPE_IPX: # IPX
         self.unsupport(d)
         return
+      else:
+        self.layers.append(layer.EthernetDot3(d)) # 802.3
+        self.initLayers(d.data)
 
-    elif(isinstance(d, dpkt.ieee80211.IEEE80211)):
+    elif isinstance(d, dpkt.ieee80211.IEEE80211):
       self.layers.append(layer.Dot11(d))
       self.initLayers(d.data)
 
-    elif(isinstance(d, dpkt.cdp.CDP)):
+    elif isinstance(d, dpkt.llc.LLC):
+      self.layers.append(layer.LLC(d))
+      self.initLayers(d.data)
+
+    elif isinstance(d, dpkt.cdp.CDP):
       self.layers.append(layer.CDP(d))
       return
 
-    elif(isinstance(d, dpkt.edp.EDP)):
+    elif isinstance(d, dpkt.edp.EDP):
       self.layers.append(layer.EDP(d))
       return
 
-    elif(isinstance(d, dpkt.stp.STP)):
+    elif isinstance(d, dpkt.stp.STP):
       self.layers.append(layer.STP(d))
       self.initLayers(d.data)
 
-    elif(isinstance(d, dpkt.arp.ARP)):
+    elif isinstance(d, dpkt.arp.ARP):
       self.layers.append(layer.ARP(d))
       self.initLayers(d.data)
                          
-    elif(isinstance(d, dpkt.ip.IP)):
+    elif isinstance(d, dpkt.ip.IP):
       self.layers.append(layer.IPv4(d))
       self.initLayers(d.data)
 
-    elif(isinstance(d, dpkt.ip6.IP6)):
+    elif isinstance(d, dpkt.ip6.IP6):
       self.layers.append(layer.IPv6(d))
       self.initLayers(d.data)
 
-    elif(isinstance(d, dpkt.igmp.IGMP)):
+    elif isinstance(d, dpkt.igmp.IGMP):
       if(d.type == 0x22): # IGMPv3
         self.unsupport(d)
         return
@@ -113,15 +117,15 @@ class Packet:
         self.layers.append(layer.IGMP(d))
         self.initLayers(d.data)
 
-    elif(isinstance(d, dpkt.icmp.ICMP)):
+    elif isinstance(d, dpkt.icmp.ICMP):
       self.layers.append(layer.ICMP(d))
       return
 
-    elif(isinstance(d, dpkt.tcp.TCP)):
+    elif isinstance(d, dpkt.tcp.TCP):
       self.layers.append(layer.TCP(d))
       self.initLayers(d.data)
 
-    elif(isinstance(d, dpkt.udp.UDP)):
+    elif isinstance(d, dpkt.udp.UDP):
       self.layers.append(layer.UDP(d))
       self.initLayers(d.data)
 

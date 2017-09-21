@@ -245,6 +245,7 @@ class Ethernet(Layer):
     rv.src = self.hexStrToPcap(self.vals['src'], ":")
     return rv
 
+
 # IEEE 802.3 Ethernet II
 class EthernetII(Ethernet):
   ID = "ethernet II"
@@ -263,65 +264,52 @@ class EthernetII(Ethernet):
     rv.type = int(self.vals['etype'], 16)
     return rv
 
-# IEEE 802.3 ethernet frame with IEEE 802.2 LLC header
-# We do not support IPX yet
-class EthernetDot2(Ethernet):
+
+# IEEE 802.3 ethernet frame
+class EthernetDot3(Ethernet):
   ID = "ethernet 802.3"
 
-  cols = OrderedDict() 
+  cols = OrderedDict()
   cols['dst'] = 17
   cols['src'] = 17
   cols['len'] = 4
-  cols['dsap'] = 4
-  cols['ssap'] = 4
-  cols['ctl'] = 3
 
   def __init__(self, data):
     Ethernet.__init__(self, data)
     self.vals['len'] = self.intToHexStr(data.type).rjust(4, "0")
-    self.vals['dsap'] = self.intToHexStr(data.dsap).rjust(2, "0")
-    self.vals['ssap'] = self.intToHexStr(data.ssap).rjust(2, "0")
-    self.vals['ctl'] = self.intToHexStr(data.ctl).rjust(2, "0")
 
   def toPcap(self):
     rv = Ethernet.toPcap(self)
     rv.type = int(self.vals['len'], 16)
-    rv.dsap = int(self.vals['dsap'], 16)
-    rv.ssap = int(self.vals['ssap'], 16)
-    rv.ctl = int(self.vals['ctl'], 16)
-    rv.org = True
     return rv
 
-# IEEE 802.3 SNAP 
-class EthernetSNAP(Ethernet):
-  ID = "ethernet SNAP"
 
-  cols = OrderedDict() 
-  cols['dst'] = 17
-  cols['src'] = 17
+# Logical Link Control
+class LLC(Layer):
+  ID = "LLC"
+  position = 20
+
+  cols = OrderedDict()
   cols['dsap'] = 4
   cols['ssap'] = 4
-  cols['pid'] = 4
+  cols['ctl'] = 3
+  cols['oui'] = 6
 
-  # Because of a hack in dpkt 'type' actually refers to the 802.2 SNAP header 'PID'
   def __init__(self, data):
-    Ethernet.__init__(self, data)
+    Layer.__init__(self)
     self.vals['dsap'] = self.intToHexStr(data.dsap).rjust(2, "0")
     self.vals['ssap'] = self.intToHexStr(data.ssap).rjust(2, "0")
     self.vals['ctl'] = self.intToHexStr(data.ctl).rjust(2, "0")
-    self.vals['org'] = self.intToHexStr(data.org).rjust(6, "0")
-    self.vals['pid'] = self.intToHexStr(data.type).rjust(4, "0")
-    self.vals['plen'] = data.plen
+    self.vals['oui'] = self.intToHexStr(data.oui).rjust(6, "0")
 
   def toPcap(self):
-    rv = Ethernet.toPcap(self)
+    rv = dpkt.llc.LLC()
     rv.dsap = int(self.vals['dsap'], 16)
     rv.ssap = int(self.vals['ssap'], 16)
     rv.ctl = int(self.vals['ctl'], 16)
-    rv.org = int(self.vals['org'], 16)
-    rv.type = int(self.vals['pid'], 16)
-    rv.plen = self.vals['plen']
+    rv.oui = int(self.vals['oui'], 16)
     return rv
+
 
 # IEEE 802.11 WLAN
 # Very basic
@@ -352,7 +340,7 @@ class Dot11(Layer):
     self.vals['order'] = self.intToHexStr(data.order)
 
   def toPcap(self):
-    rv = dpkt.ieee80211.IEEE80211()()
+    rv = dpkt.ieee80211.IEEE80211()
     rv.version = int(self.vals['ver'], 16)
     rv.type = int(self.vals['type'], 16)
     rv.subtype = int(self.vals['subt'], 16)
@@ -373,20 +361,20 @@ class Dot1q(Layer):
 
   cols = OrderedDict() 
   cols['tag'] = 5
-  cols['1p'] = 5
+  cols['pri'] = 5
   cols['etype'] = 5
 
   def __init__(self, data):
     Layer.__init__(self)
     self.vals['tag'] = self.intToHexStr(data.id).rjust(4, "0")
-    self.vals['1p'] = self.intToHexStr(data.pri).rjust(1, "0")
+    self.vals['pri'] = self.intToHexStr(data.pri).rjust(1, "0")
     self.vals['etype'] = self.intToHexStr(data.type).rjust(4, "0")
     self.vals['cfi'] = data.cfi
 
   def toPcap(self):
     rv = dpkt.ethernet.VLANtag8021Q()
     rv.id = int(self.vals['tag'], 16)
-    rv.pri = int(self.vals['1p'], 16)
+    rv.pri = int(self.vals['pri'], 16)
     rv.type = int(self.vals['etype'], 16)
     rv.cfi = self.vals['cfi']
     return rv
@@ -436,21 +424,21 @@ class EDP(Layer):
 
   def __init__(self, data):
     Layer.__init__(self)
-    self.vals['ver'] = self.intToHexStr(data.v).rjust(2, "0")
+    self.vals['ver'] = self.intToHexStr(data.version).rjust(2, "0")
     self.vals['len'] = self.intToHexStr(data.hlen).rjust(4, "0")
     self.vals['seq'] = self.intToHexStr(data.seq).rjust(4, "0")
     self.vals['mac'] = self.pcapToHexStr(data.mac, ":")
-    self.vals['res'] = data.res
-    self.vals['mid'] = data.mid    
+    self.vals['res'] = data.reserved
+    self.vals['mid'] = data.mid
     self.vals['data'] = data.data
 
   def toPcap(self):
     rv = dpkt.edp.EDP()
-    rv.v = int(self.vals['ver'], 16)
+    rv.version = int(self.vals['ver'], 16)
     rv.hlen = int(self.vals['len'], 16)
     rv.seq = int(self.vals['seq'], 16)
     rv.mac = self.hexStrToPcap(self.vals['mac'], ":")
-    rv.res = self.vals['res']
+    rv.reserved = self.vals['res']
     rv.mid = self.vals['mid']
     rv.data = self.vals['data']
     return rv
