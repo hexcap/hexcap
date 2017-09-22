@@ -81,7 +81,7 @@ class MiniBuffer:
     self.resetPrompt()
     self.tabOptions = 5 # How many options to display with tab completion?
     self.history = cfg.mBufHistory # Our CLI history
-    self.historyPtr = len(self.history) # Pointer to current history item 
+    self.historyPtr = -1 # Pointer to current history item 
 
   def __del__(self):
     pass
@@ -104,6 +104,9 @@ class MiniBuffer:
     # Will be printed for 1 cycle then discarded
     self.msg = ''
 
+    # Set history pointer to no history
+    self.historyPtr = -1
+
   # Returns string to be printed to minibuffer
   def out(self):
     if(len(self.msg) > 0):
@@ -120,7 +123,7 @@ class MiniBuffer:
       return None
     else:
       if(len(self.args) == len(self.cmds[self.func][1])):
-        cfg.mBufHistory.append([self.func, self.args])
+        cfg.mBufHistory.insert(0, [self.func, self.args])
         if(len(self.cmds[self.func][1]) == 0):
           return self.cmds[self.func][0]
         else:
@@ -137,7 +140,7 @@ class MiniBuffer:
 
   # Top-level input
   def input(self, c):
-    if(curses.keyname(c) == '^?'): # Backspace
+    if curses.keyname(c) == '^?' or curses.keyname(c) == 'KEY_BACKSPACE': # Backspace
       if(len(self.buf) > len(self.argPrompt)):
         self.buf = self.buf[:len(self.buf)-1]
         self.cX -= 1
@@ -150,17 +153,19 @@ class MiniBuffer:
       if(self.cX > 0):
         self.cX -= 1
 
-    elif(c == curses.KEY_UP):
-      if(self.historyPtr > 0):
-        self.historyPtr -= 1
-      self.buf = self.history[self.historyPtr][0]
-      self.cX = len(self.buf)
-
-    elif(c == curses.KEY_DOWN):
-      if(self.historyPtr < len(self.history) - 1):
+    elif c == curses.KEY_UP :
+      if self.historyPtr < len(self.history) - 1:
         self.historyPtr += 1
-      self.buf = self.history[self.historyPtr][0]
-      self.cX = len(self.buf)
+        self.buf = self.history[self.historyPtr][0]
+        self.cX = len(self.buf)
+
+    elif c == curses.KEY_DOWN:
+      if self.historyPtr == 0:
+        self.resetPrompt()
+      elif self.historyPtr > -1:
+        self.historyPtr -= 1
+        self.buf = self.history[self.historyPtr][0]
+        self.cX = len(self.buf)
 
     elif(curses.keyname(c) == '^A'): # Goto beginning of line
       self.cX = len(self.argPrompt)
